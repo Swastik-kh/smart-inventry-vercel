@@ -3,15 +3,15 @@ import React from 'react';
 
 export interface FiscalYear {
   id: string;
-  label: string; // The display value (e.g., २०८१/०८२)
-  value: string; // The internal value
+  label: string; 
+  value: string; 
 }
 
 export interface Option {
   id: string;
   label: string;
   value: string;
-  itemData?: any; // Allow carrying extra data
+  itemData?: any; 
 }
 
 export interface LoginFormData {
@@ -20,7 +20,6 @@ export interface LoginFormData {
   password: string;
 }
 
-// Added missing LoginFormProps interface to resolve error in components/LoginForm.tsx
 export interface LoginFormProps {
   users: User[];
   onLoginSuccess: (user: User, fiscalYear: string) => void;
@@ -38,7 +37,7 @@ export interface User {
   fullName: string;
   designation: string;
   phoneNumber: string;
-  allowedMenus?: string[]; // IDs of menu items this user can access
+  allowedMenus?: string[]; 
 }
 
 export interface OrganizationSettings {
@@ -60,7 +59,7 @@ export interface OrganizationSettings {
 
 export interface VaccinationDose {
   day: number;
-  date: string; // YYYY-MM-DD (English)
+  date: string; 
   status: 'Pending' | 'Given' | 'Missed';
   givenDate?: string;
 }
@@ -69,12 +68,12 @@ export interface RabiesPatient {
   id: string;
   fiscalYear: string; 
   regNo: string;
-  regNo_numeric?: number; // helper for generation
+  regNo_numeric?: number; 
   regMonth: string; 
   regDateBs: string; 
   regDateAd: string; 
   name: string;
-  age: string; // Kept as string to match input, will parse for logic
+  age: string; 
   sex: string;
   address: string;
   phone: string;
@@ -93,7 +92,6 @@ export interface MagItem {
   unit: string;
   quantity: string;
   remarks: string;
-  // Optional fields for Issue Report (Nikasha) context populated from Inventory
   codeNo?: string;
   rate?: number;
   totalAmount?: number;
@@ -107,14 +105,14 @@ export interface Signature {
 }
 
 export interface StoreKeeperSignature {
-  status: string; // 'market', 'stock', or 'market,stock'
+  status: string; 
   name: string;
 }
 
 export interface MagFormEntry {
   id: string;
   fiscalYear: string;
-  formNo: string; // Changed from number to string for format like 001-DA
+  formNo: string; 
   date: string;
   items: MagItem[];
   status?: 'Pending' | 'Verified' | 'Approved' | 'Rejected';
@@ -124,24 +122,21 @@ export interface MagFormEntry {
   receiver?: Signature;
   ledgerEntry?: Signature;
   approvedBy?: Signature;
-  rejectionReason?: string; // Added for rejection logic
-  // New fields for Storekeeper Verification Details
+  rejectionReason?: string; 
   selectedStoreId?: string; 
   issueItemType?: 'Expendable' | 'Non-Expendable';
-  isViewedByRequester?: boolean; // New: Tracks if the requester has seen the status update
+  isViewedByRequester?: boolean; 
 }
 
-// Purchase Order (Kharid Adesh) Structure
 export interface PurchaseOrderEntry {
   id: string;
-  magFormId: string; // Reference to the original demand form
-  magFormNo: string; // Changed from number to string
+  magFormId: string; 
+  magFormNo: string; 
   requestDate: string;
-  items: MagItem[]; // Items to be purchased
+  items: MagItem[]; 
   status: 'Pending' | 'Pending Account' | 'Account Verified' | 'Generated' | 'Stock Entry Requested' | 'Completed';
-  orderNo?: string; // The generated serial number
-  fiscalYear?: string; // Fiscal year of generation
-  // Fields to persist draft data
+  orderNo?: string; 
+  fiscalYear?: string; 
   vendorDetails?: {
     name: string;
     address: string;
@@ -153,46 +148,42 @@ export interface PurchaseOrderEntry {
     expHeadNo: string;
     activityNo: string;
   };
-  // Signature History
-  preparedBy?: Signature;      // Storekeeper
-  recommendedBy?: Signature;   // Recommendation
-  financeBy?: Signature;       // Account/Lekha
-  approvedBy?: Signature;      // Admin/Head
+  preparedBy?: Signature;      
+  recommendedBy?: Signature;   
+  financeBy?: Signature;       
+  approvedBy?: Signature;      
 }
 
-// Issue Report (Nikasha Pratibedan) Structure
 export interface IssueReportEntry {
   id: string;
-  magFormId: string; // Reference to the original demand form
-  magFormNo: string; // Changed from number to string
-  requestDate: string; // Date of the original demand form (original demand date)
-  issueNo?: string; // New: Unique ID for this Issue Report
-  issueDate?: string; // New: Date this report was generated/issued (today's date)
-  items: MagItem[]; // Items to be issued
-  status: 'Pending' | 'Pending Approval' | 'Issued' | 'Rejected'; // Updated status types
-  fiscalYear?: string; // Added fiscalYear to IssueReportEntry
-  itemType?: 'Expendable' | 'Non-Expendable'; // New: To categorize the report
-  demandBy?: Signature; // New: To track who demanded the items
-  preparedBy?: Signature;      // Who prepared this issue report (e.g., Storekeeper/Account)
-  recommendedBy?: Signature;   // Recommendation signature
-  approvedBy?: Signature;      // Final approval signature
-  rejectionReason?: string;    // New: Reason for rejection
+  magFormId: string; 
+  magFormNo: string; 
+  requestDate: string; 
+  issueNo?: string; 
+  issueDate?: string; 
+  items: MagItem[]; 
+  status: 'Pending' | 'Pending Approval' | 'Issued' | 'Rejected'; 
+  fiscalYear?: string; 
+  itemType?: 'Expendable' | 'Non-Expendable'; 
+  demandBy?: Signature; 
+  preparedBy?: Signature;      
+  recommendedBy?: Signature;   
+  approvedBy?: Signature;      
+  rejectionReason?: string;    
 }
 
-// Firm Listing Structure
 export interface FirmEntry {
   id: string;
-  firmRegNo: string; // Auto-generated registration number
+  firmRegNo: string; 
   firmName: string;
   vatPan: string;
   address: string;
   contactNo: string;
-  registrationDateAd: string; // English date for internal logic
-  registrationDateBs: string; // Nepali date for display
+  registrationDateAd: string; 
+  registrationDateBs: string; 
   fiscalYear: string;
 }
 
-// Quotation Entry Structure
 export interface QuotationEntry {
   id: string;
   fiscalYear: string;
@@ -200,52 +191,49 @@ export interface QuotationEntry {
   firmName: string;
   itemName: string;
   unit: string;
-  rate: string; // Stored as string to allow decimal input, convert to number for calculations
-  quotationDateAd: string; // English date for internal logic
-  quotationDateBs: string; // Nepali date for display
+  rate: string; 
+  quotationDateAd: string; 
+  quotationDateBs: string; 
 }
 
-// Store Structure
 export interface Store {
   id: string;
-  regNo: string; // e.g., S-081-001
+  regNo: string; 
   name: string;
   address: string;
   contactPerson?: string;
   contactPhone?: string;
-  fiscalYear: string; // When the store was registered/active for this FY
+  fiscalYear: string; 
 }
 
-// Inventory Stock Item Structure
 export interface InventoryItem {
-  id: string; // Unique ID for the inventory item (e.g., 'ITEM-001')
-  itemName: string; // Name of the item
-  uniqueCode?: string; // Unique code for the specific item
-  sanketNo?: string; // Sanket number
-  ledgerPageNo?: string; // Jinshi Khata Pana No
-  dakhilaNo?: string; // New: दाखिल नम्बर
-  itemType: 'Expendable' | 'Non-Expendable'; // खर्च हुने / खर्च नहुने (Required)
-  itemClassification?: string; // सामानको वर्गीकरण (Medicine, Equipment, etc.)
-  specification?: string; // New: Specification field for Dakhila mapping
-  unit: string; // Unit of measurement (e.g., 'Pcs', 'Kg')
-  currentQuantity: number; // The total available quantity of this item
-  rate?: number; // Rate of the item
-  tax?: number; // Tax percentage
-  totalAmount?: number; // Calculated total amount (quantity * rate + tax)
-  batchNo?: string; // Batch number
-  expiryDateAd?: string; // English expiry date
-  expiryDateBs?: string; // Nepali expiry date
-  lastUpdateDateAd: string; // English date of the last stock change
-  lastUpdateDateBs: string; // Nepali date of the last stock change
-  fiscalYear: string; // Fiscal year of the last update
-  receiptSource?: string; // 'Opening', 'Purchase', 'Donation', 'Return'
-  remarks?: string; // Optional remarks for the item itself
-  storeId: string; // New: ID of the store where this item is located
-  approvedStockLevel?: number; // ASL: Authorized Stock Level
-  emergencyOrderPoint?: number; // EOP: Emergency Order Point
+  id: string; 
+  itemName: string; 
+  uniqueCode?: string; 
+  sanketNo?: string; 
+  ledgerPageNo?: string; 
+  dakhilaNo?: string; 
+  itemType: 'Expendable' | 'Non-Expendable'; 
+  itemClassification?: string; 
+  specification?: string; 
+  unit: string; 
+  currentQuantity: number; 
+  rate?: number; 
+  tax?: number; 
+  totalAmount?: number; 
+  batchNo?: string; 
+  expiryDateAd?: string; 
+  expiryDateBs?: string; 
+  lastUpdateDateAd: string; 
+  lastUpdateDateBs: string; 
+  fiscalYear: string; 
+  receiptSource?: string; 
+  remarks?: string; 
+  storeId: string; 
+  approvedStockLevel?: number; 
+  emergencyOrderPoint?: number; 
 }
 
-// New: Stock Entry Request Structure for Approval Workflow
 export interface StockEntryRequest {
   id: string;
   requestDateBs: string;
@@ -255,86 +243,82 @@ export interface StockEntryRequest {
   receiptSource: string;
   supplier?: string;
   refNo?: string;
-  items: InventoryItem[]; // Items proposed to be added
+  dakhilaNo?: string; 
+  items: InventoryItem[]; 
   status: 'Pending' | 'Approved' | 'Rejected';
-  requestedBy: string; // Username of requester
-  requesterName?: string; // Full name of requester for reports
-  requesterDesignation?: string; // Designation of requester for reports
-  approvedBy?: string; // Username of approver
+  requestedBy: string; 
+  requesterName?: string; 
+  requesterDesignation?: string; 
+  approvedBy?: string; 
   rejectionReason?: string;
   mode: 'opening' | 'add';
 }
 
-// Dakhila Pratibedan (Entry Report) Structure
 export interface DakhilaItem {
   id: number;
   name: string;
-  codeNo: string; // Sanket No
+  codeNo: string; 
   specification: string;
-  source: string; // Receipt Source
+  source: string; 
   unit: string;
   quantity: number;
   rate: number;
-  totalAmount: number; // rate * qty (Excl VAT)
-  vatAmount: number; // VAT Amount
-  grandTotal: number; // total + vat
-  otherExpenses: number; // Other expenses
-  finalTotal: number; // grandTotal + otherExpenses
+  totalAmount: number; 
+  vatAmount: number; 
+  grandTotal: number; 
+  otherExpenses: number; 
+  finalTotal: number; 
   remarks: string;
 }
 
 export interface DakhilaPratibedanEntry {
   id: string;
   fiscalYear: string;
-  dakhilaNo: string; // Report Number
+  dakhilaNo: string; 
   date: string;
-  orderNo: string; // Purchase Order/Transfer Form No
+  orderNo: string; 
   items: DakhilaItem[];
   status: 'Draft' | 'Final';
-  // Signatures
   preparedBy?: Signature;
   recommendedBy?: Signature;
   approvedBy?: Signature;
 }
 
-// Jinshi Firta (Return) Structure
 export interface ReturnItem {
   id: number;
-  kharchaNikasaNo: string; // खर्च निकासा नं.
-  codeNo: string; // सङ्केत नं.
+  kharchaNikasaNo: string; 
+  codeNo: string; 
   name: string;
   specification: string;
   unit: string;
   quantity: number;
   rate: number;
-  totalAmount: number; // Excl VAT
-  vatAmount: number; // VAT Amount
-  grandTotal: number; // Incl VAT
-  condition: string; // New: सामानको हालको अवस्था
+  totalAmount: number; 
+  vatAmount: number; 
+  grandTotal: number; 
+  condition: string; 
   remarks: string;
 }
 
 export interface ReturnEntry {
   id: string;
   fiscalYear: string;
-  formNo: string; // जिन्सी फिर्ता फारम नं.
+  formNo: string; 
   date: string;
   items: ReturnItem[];
-  status?: 'Pending' | 'Verified' | 'Approved' | 'Rejected'; // Added workflow status
+  status?: 'Pending' | 'Verified' | 'Approved' | 'Rejected'; 
   rejectionReason?: string;
-  // Signatures
-  returnedBy: Signature; // फिर्ता गर्ने
-  preparedBy: Signature; // तयार गर्ने
-  recommendedBy: Signature; // सिफारिस गर्ने
-  approvedBy: Signature; // स्वीकृत गर्ने
+  returnedBy: Signature; 
+  preparedBy: Signature; 
+  recommendedBy: Signature; 
+  approvedBy: Signature; 
 }
 
-// Marmat Adesh (Maintenance Order) Structure - Form 402
 export interface MarmatItem {
   id: number;
   name: string;
   codeNo: string;
-  details: string; // विवरण (Condition/Issue)
+  details: string; 
   quantity: number;
   unit: string;
   remarks: string;
@@ -343,21 +327,19 @@ export interface MarmatItem {
 export interface MarmatEntry {
   id: string;
   fiscalYear: string;
-  formNo: string; // Anurodh No
+  formNo: string; 
   date: string;
   status: 'Pending' | 'Approved' | 'Completed';
   items: MarmatItem[];
-  // Signatures
-  requestedBy: Signature;   // अनुरोध गर्ने
-  recommendedBy: Signature; // सिफारिस गर्ने
-  approvedBy: Signature;    // आदेश दिने (स्वीकृत गर्ने)
-  maintainedBy?: Signature;  // मर्मत गर्ने (Optional/Later)
+  requestedBy: Signature;   
+  recommendedBy: Signature; 
+  approvedBy: Signature;    
+  maintainedBy?: Signature;  
 }
 
-// Dhuliyauna / Lilaam (Disposal) Structure
 export interface DhuliyaunaItem {
   id: number;
-  inventoryId?: string; // Link to inventory
+  inventoryId?: string; 
   codeNo: string;
   name: string;
   specification: string;
@@ -365,7 +347,7 @@ export interface DhuliyaunaItem {
   quantity: number;
   rate: number;
   totalAmount: number;
-  reason: string; // e.g. Expired, Damaged
+  reason: string; 
   remarks: string;
 }
 
@@ -381,21 +363,20 @@ export interface DhuliyaunaEntry {
   approvedBy: Signature;
 }
 
-// Log Book (Vehicle/Machine) Structure - Form 413 usually
 export interface LogBookEntry {
   id: string;
   fiscalYear: string;
-  date: string; // Miti
-  inventoryId: string; // Which asset (Vehicle/Generator)
-  assetName: string; // Display Name
-  codeNo: string; // Number Plate or Code
-  details: string; // Details of work/place
-  startTime: string; // Start Time or Meter Reading
-  endTime: string; // End Time or Meter Reading
-  total: number; // Total km or hours
-  fuelConsumed: number; // Liters
-  oilConsumed: number; // Liters (Mobil)
-  operatorName: string; // Driver/Operator
+  date: string; 
+  inventoryId: string; 
+  assetName: string; 
+  codeNo: string; 
+  details: string; 
+  startTime: string; 
+  endTime: string; 
+  total: number; 
+  fuelConsumed: number; 
+  oilConsumed: number; 
+  operatorName: string; 
   remarks: string;
 }
 
@@ -423,11 +404,9 @@ export interface DashboardProps {
   onDeleteUser: (userId: string) => void;
   onChangePassword: (userId: string, newPassword: string) => void;
   
-  // General Settings
   generalSettings: OrganizationSettings;
   onUpdateGeneralSettings: (settings: OrganizationSettings) => void;
 
-  // Lifted States
   magForms: MagFormEntry[];
   onSaveMagForm: (form: MagFormEntry) => void;
   
@@ -440,7 +419,6 @@ export interface DashboardProps {
   rabiesPatients: RabiesPatient[];
   onAddRabiesPatient: (patient: RabiesPatient) => void;
   onUpdateRabiesPatient: (patient: RabiesPatient) => void;
-  // Renamed from onDeleteRabiesPatient to onDeletePatient to fix destructuring error in Dashboard.tsx
   onDeletePatient: (patientId: string) => void; 
 
   firms: FirmEntry[];
@@ -449,44 +427,35 @@ export interface DashboardProps {
   quotations: QuotationEntry[];
   onAddQuotation: (quotation: QuotationEntry) => void;
 
-  // Inventory Stock Props
   inventoryItems: InventoryItem[];
   onAddInventoryItem: (item: InventoryItem) => void;
   onUpdateInventoryItem: (item: InventoryItem) => void;
 
-  // Stock Entry Request Props
   stockEntryRequests: StockEntryRequest[];
   onRequestStockEntry: (request: StockEntryRequest) => void;
-  onApproveStockEntry: (requestId: string, approverName: string) => void;
+  onApproveStockEntry: (requestId: string, approverName: string, approverDesignation: string) => void;
   onRejectStockEntry: (requestId: string, reason: string, approverName: string) => void;
 
-  // Store Management Props
   stores: Store[];
   onAddStore: (store: Store) => void;
   onUpdateStore: (store: Store) => void;
   onDeleteStore: (storeId: string) => void;
 
-  // Dakhila Reports
   dakhilaReports: DakhilaPratibedanEntry[];
   onSaveDakhilaReport: (report: DakhilaPratibedanEntry) => void;
 
-  // Return Entries
   returnEntries: ReturnEntry[];
   onSaveReturnEntry: (entry: ReturnEntry) => void;
 
-  // Marmat Entries
   marmatEntries: MarmatEntry[];
   onSaveMarmatEntry: (entry: MarmatEntry) => void;
 
-  // Dhuliyauna Entries (New)
   dhuliyaunaEntries: DhuliyaunaEntry[];
   onSaveDhuliyaunaEntry: (entry: DhuliyaunaEntry) => void;
 
-  // Log Book Entries (New)
   logBookEntries: LogBookEntry[];
   onSaveLogBookEntry: (entry: LogBookEntry) => void;
 
-  // Database Management
   onClearData: (sectionId: string) => void; 
 }
 

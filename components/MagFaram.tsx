@@ -222,8 +222,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
 
     // If Storekeeper is verifying
     if (isVerifying) {
-        // Only show metadata popup if the items are being issued from STOCK
-        // If it's for market purchase, we don't need to assign store/type right now
         if (formDetails.storeKeeper?.status === 'stock') {
             setShowVerifyPopup(true);
             return;
@@ -257,19 +255,26 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
     let nextStatus = formDetails.status || 'Pending';
     let nextIsViewed = true;
 
-    // Track original storekeeper data for update
+    // Track original signature objects
     let updatedStoreKeeper = { ...formDetails.storeKeeper };
+    let updatedApprovedBy = { ...formDetails.approvedBy };
 
     if (editingId && editingId !== 'new') {
         if (isVerifying) {
             nextStatus = 'Verified';
             nextIsViewed = false;
-            // Force current storekeeper name during verification
+            // Record who verified
             updatedStoreKeeper.name = currentUser.fullName;
         }
         else if (isApproving) {
             nextStatus = 'Approved';
             nextIsViewed = false;
+            // Record who approved
+            updatedApprovedBy = {
+                name: currentUser.fullName,
+                designation: currentUser.designation,
+                date: todayBS
+            };
         }
     }
 
@@ -282,7 +287,8 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
         status: nextStatus,
         isViewedByRequester: nextIsViewed,
         storeKeeper: updatedStoreKeeper,
-        rejectionReason: "" // Clear reason if successfully saved as non-rejected
+        approvedBy: updatedApprovedBy,
+        rejectionReason: "" 
     };
 
     const finalStoreId = extraData?.storeId || formDetails.selectedStoreId || '';
@@ -473,10 +479,10 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                       <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" alt="Nepal Emblem" className="h-20 w-20 object-contain" />
                   </div>
                   <div className="flex-1 text-center">
-                      <h1 className="text-lg font-bold">चौदण्डीगढी नगरपालिका</h1>
-                      <h2 className="text-base font-bold">नगरकार्यपालिकाको कार्यालय</h2>
-                      <h3 className="text-sm font-bold">स्वास्थ्य शाखा</h3>
-                      <h3 className="text-base font-bold">आधारभूत नगर अस्पताल बेल्टार</h3>
+                      <h1 className="text-lg font-bold">{generalSettings.orgNameNepali}</h1>
+                      <h2 className="text-base font-bold">{generalSettings.subTitleNepali}</h2>
+                      {generalSettings.subTitleNepali2 && <h3 className="text-sm font-bold">{generalSettings.subTitleNepali2}</h3>}
+                      {generalSettings.subTitleNepali3 && <h3 className="text-base font-bold">{generalSettings.subTitleNepali3}</h3>}
                   </div>
                   <div className="w-24"></div> 
               </div>
@@ -723,7 +729,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
        {/* VERIFICATION METADATA POPUP */}
        {showVerifyPopup && (
            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-               <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={() => setShowVerifyPopup(false)}></div>
+               <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowVerifyPopup(false)}></div>
                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
                     <div className="px-6 py-4 border-b bg-indigo-600 text-white flex justify-between items-center">
                         <div className="flex items-center gap-2">
