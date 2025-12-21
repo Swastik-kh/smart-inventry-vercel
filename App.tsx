@@ -6,7 +6,7 @@ import { APP_NAME, ORG_NAME } from './constants';
 import { Landmark, ShieldCheck } from 'lucide-react';
 import { User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, DakhilaItem } from './types';
 import { db } from './firebase';
-import { ref, onValue, set, remove, update, get } from "firebase/database";
+import { ref, onValue, set, remove, update, get, Unsubscribe } from "firebase/database";
 
 const INITIAL_SETTINGS: OrganizationSettings = {
     orgNameNepali: 'Smart Inventory System',
@@ -36,12 +36,13 @@ const DEFAULT_ADMIN: User = {
 };
 
 const App: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([DEFAULT_ADMIN]);
+  const [allUsers, setAllUsers] = useState<User[]>([]); // All users for login check
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentFiscalYear, setCurrentFiscalYear] = useState<string>('2081/082');
   const [generalSettings, setGeneralSettings] = useState<OrganizationSettings>(INITIAL_SETTINGS);
   const [isDbConnected, setIsDbConnected] = useState(false);
   
+  // Organization-specific data states
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [magForms, setMagForms] = useState<MagFormEntry[]>([]);
@@ -57,10 +58,12 @@ const App: React.FC = () => {
   const [dhuliyaunaEntries, setDhuliyaunaEntries] = useState<DhuliyaunaEntry[]>([]);
   const [logBookEntries, setLogBookEntries] = useState<LogBookEntry[]>([]);
 
+  // 1. Global Listeners (Connection & Login Validation)
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
     onValue(connectedRef, (snap) => setIsDbConnected(snap.val() === true));
 
+    // Ensure Super Admin exists for the portal
     const adminRef = ref(db, 'users/superadmin');
     get(adminRef).then((snapshot) => {
         if (!snapshot.exists()) {
@@ -68,59 +71,115 @@ const App: React.FC = () => {
         }
     });
 
+    // Listen to users globally for authentication
     const usersRef = ref(db, 'users');
-    onValue(usersRef, (snap) => {
+    const unsub = onValue(usersRef, (snap) => {
         const data = snap.val();
         const userList = data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : [];
-        if (userList.length === 0) {
-            setUsers([DEFAULT_ADMIN]);
-        } else {
-            setUsers(userList);
-        }
+        setAllUsers(userList.length > 0 ? userList : [DEFAULT_ADMIN]);
     });
 
-    const settingsRef = ref(db, 'settings');
-    onValue(settingsRef, (snap) => {
-        if (snap.val()) setGeneralSettings(snap.val());
-    });
+    return () => unsub();
+  }, []);
 
-    const setupListener = (path: string, setter: Function) => {
-        onValue(ref(db, path), (snap) => {
+  // 2. Organization-Specific Data Isolation logic
+  useEffect(() => {
+    if (!currentUser) {
+        // Full reset when logged out
+        setInventoryItems([]);
+        setStores([]);
+        setMagForms([]);
+        setPurchaseOrders([]);
+        setIssueReports([]);
+        setStockEntryRequests([]);
+        setDakhilaReports([]);
+        setReturnEntries([]);
+        setFirms([]);
+        setQuotations([]);
+        setRabiesPatients([]);
+        setMarmatEntries([]);
+        setDhuliyaunaEntries([]);
+        setLogBookEntries([]);
+        setGeneralSettings(INITIAL_SETTINGS);
+        return;
+    }
+
+    // CREATE SECURE PATH FOR THIS ORGANIZATION
+    const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
+    const orgPath = `orgData/${safeOrgName}`;
+    const unsubscribes: Unsubscribe[] = [];
+
+    const setupOrgListener = (subPath: string, setter: Function) => {
+        const unsub = onValue(ref(db, `${orgPath}/${subPath}`), (snap) => {
             const data = snap.val();
             setter(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
         });
+        unsubscribes.push(unsub);
     };
 
-    setupListener('inventory', setInventoryItems);
-    setupListener('stores', setStores);
-    setupListener('magForms', setMagForms);
-    setupListener('purchaseOrders', setPurchaseOrders);
-    setupListener('issueReports', setIssueReports);
-    setupListener('stockRequests', setStockEntryRequests);
-    setupListener('dakhilaReports', setDakhilaReports);
-    setupListener('returnEntries', setReturnEntries);
-    setupListener('firms', setFirms);
-    setupListener('quotations', setQuotations);
-    setupListener('rabiesPatients', setRabiesPatients);
-    setupListener('marmatEntries', setMarmatEntries);
-    setupListener('disposalEntries', setDhuliyaunaEntries);
-    setupListener('logBook', setLogBookEntries);
-  }, []);
+    // Load org-specific settings (or initialize if new org)
+    onValue(ref(db, `${orgPath}/settings`), (snap) => {
+        if (snap.exists()) {
+            setGeneralSettings(snap.val());
+        } else {
+            // First time org setup: create default settings
+            const firstSettings = { ...INITIAL_SETTINGS, orgNameNepali: currentUser.organizationName, orgNameEnglish: currentUser.organizationName };
+            set(ref(db, `${orgPath}/settings`), firstSettings);
+            setGeneralSettings(firstSettings);
+        }
+    });
+
+    // Subscriptions: Only listening to the folder of current organization
+    setupOrgListener('inventory', setInventoryItems);
+    setupOrgListener('stores', setStores);
+    setupOrgListener('magForms', setMagForms);
+    setupOrgListener('purchaseOrders', setPurchaseOrders);
+    setupOrgListener('issueReports', setIssueReports);
+    setupOrgListener('stockRequests', setStockEntryRequests);
+    setupOrgListener('dakhilaReports', setDakhilaReports);
+    setupOrgListener('returnEntries', setReturnEntries);
+    setupOrgListener('firms', setFirms);
+    setupOrgListener('quotations', setQuotations);
+    setupOrgListener('rabiesPatients', setRabiesPatients);
+    setupOrgListener('marmatEntries', setMarmatEntries);
+    setupOrgListener('disposalEntries', setDhuliyaunaEntries);
+    setupOrgListener('logBook', setLogBookEntries);
+
+    return () => {
+        unsubscribes.forEach(unsub => unsub());
+    };
+  }, [currentUser]);
 
   const handleLoginSuccess = (user: User, fiscalYear: string) => {
     setCurrentUser(user);
     setCurrentFiscalYear(fiscalYear);
   };
 
+  // Safe reference for organization data writing
+  const getOrgRef = (subPath: string) => {
+      const safeOrgName = currentUser?.organizationName.trim().replace(/[.#$[\]]/g, "_") || "unknown";
+      return ref(db, `orgData/${safeOrgName}/${subPath}`);
+  };
+
+  // Filter users list to pass ONLY same-org users to the Dashboard
+  const filteredUsersForDashboard = allUsers.filter(u => {
+      if (currentUser?.role === 'SUPER_ADMIN') return true; // Super admin sees everyone
+      return u.organizationName === currentUser?.organizationName; // Others see only their own
+  });
+
   const handleApproveStockEntry = async (requestId: string, approverName: string) => {
+      if (!currentUser) return;
       try {
-          const requestRef = ref(db, `stockRequests/${requestId}`);
+          const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
+          const orgPath = `orgData/${safeOrgName}`;
+          
+          const requestRef = ref(db, `${orgPath}/stockRequests/${requestId}`);
           const requestSnap = await get(requestRef);
           
           if (!requestSnap.exists()) return;
           const request: StockEntryRequest = requestSnap.val();
           
-          const invAllSnap = await get(ref(db, 'inventory'));
+          const invAllSnap = await get(ref(db, `${orgPath}/inventory`));
           const currentInvData = invAllSnap.val() || {};
           const currentInvList: InventoryItem[] = Object.keys(currentInvData).map(k => ({ ...currentInvData[k], id: k }));
 
@@ -128,7 +187,6 @@ const App: React.FC = () => {
           const dakhilaItems: DakhilaItem[] = [];
 
           for (const item of request.items) {
-              // 1. Identify Existing Item in specific store
               const existingItem = currentInvList.find(i => 
                   i.itemName.trim().toLowerCase() === item.itemName.trim().toLowerCase() && 
                   i.storeId === request.storeId &&
@@ -142,7 +200,6 @@ const App: React.FC = () => {
               const incomingVatAmount = incomingExclVat * (incomingTax / 100);
               const incomingTotal = incomingExclVat + incomingVatAmount;
 
-              // 2. Prepare Data for Formal Dakhila Report (Form 403)
               dakhilaItems.push({
                   id: Date.now() + Math.random(),
                   name: item.itemName,
@@ -161,13 +218,12 @@ const App: React.FC = () => {
               });
 
               if (existingItem) {
-                  // UPDATE: Merge New Quantities and Update Info
                   const newQty = (Number(existingItem.currentQuantity) || 0) + incomingQty;
                   const newVal = (Number(existingItem.totalAmount) || 0) + incomingTotal;
                   
-                  updates[`inventory/${existingItem.id}`] = {
-                      ...existingItem, // Keep old properties first
-                      ...item,         // Overwrite with new metadata (Ledger Page, Batch, Expiry etc)
+                  updates[`${orgPath}/inventory/${existingItem.id}`] = {
+                      ...existingItem,
+                      ...item,
                       id: existingItem.id, 
                       currentQuantity: newQty,
                       totalAmount: newVal,
@@ -179,9 +235,8 @@ const App: React.FC = () => {
                       dakhilaNo: request.items[0]?.dakhilaNo || existingItem.dakhilaNo
                   };
               } else {
-                  // CREATE: Fresh Entry
                   const newId = `ITEM-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-                  updates[`inventory/${newId}`] = {
+                  updates[`${orgPath}/inventory/${newId}`] = {
                       ...item,
                       id: newId,
                       totalAmount: incomingTotal,
@@ -195,11 +250,9 @@ const App: React.FC = () => {
               }
           }
 
-          // 3. Update Request Status
-          updates[`stockRequests/${requestId}/status`] = 'Approved';
-          updates[`stockRequests/${requestId}/approvedBy`] = approverName;
+          updates[`${orgPath}/stockRequests/${requestId}/status`] = 'Approved';
+          updates[`${orgPath}/stockRequests/${requestId}/approvedBy`] = approverName;
 
-          // 4. Create Official Dakhila Report
           const formalDakhilaId = `DA-${Date.now()}`;
           const formalReport: DakhilaPratibedanEntry = {
               id: formalDakhilaId,
@@ -212,7 +265,7 @@ const App: React.FC = () => {
               preparedBy: { name: request.requesterName || request.requestedBy, designation: request.requesterDesignation || 'Staff' },
               approvedBy: { name: approverName, designation: 'Approver' }
           };
-          updates[`dakhilaReports/${formalDakhilaId}`] = formalReport;
+          updates[`${orgPath}/dakhilaReports/${formalDakhilaId}`] = formalReport;
 
           await update(ref(db), updates);
       } catch (error) {
@@ -228,49 +281,49 @@ const App: React.FC = () => {
           onLogout={() => setCurrentUser(null)} 
           currentUser={currentUser}
           currentFiscalYear={currentFiscalYear} 
-          users={users}
+          users={filteredUsersForDashboard}
           onAddUser={(u) => set(ref(db, `users/${u.id}`), u)}
           onUpdateUser={(u) => set(ref(db, `users/${u.id}`), u)}
           onDeleteUser={(id) => remove(ref(db, `users/${id}`))}
           onChangePassword={(id, pass) => update(ref(db, `users/${id}`), { password: pass })}
           generalSettings={generalSettings}
-          onUpdateGeneralSettings={(s) => set(ref(db, 'settings'), s)}
+          onUpdateGeneralSettings={(s) => set(getOrgRef('settings'), s)}
           magForms={magForms}
-          onSaveMagForm={(f) => set(ref(db, `magForms/${f.id}`), f)}
+          onSaveMagForm={(f) => set(getOrgRef(`magForms/${f.id}`), f)}
           purchaseOrders={purchaseOrders}
-          onUpdatePurchaseOrder={(o) => set(ref(db, `purchaseOrders/${o.id}`), o)}
+          onUpdatePurchaseOrder={(o) => set(getOrgRef(`purchaseOrders/${o.id}`), o)}
           issueReports={issueReports}
-          onUpdateIssueReport={(r) => set(ref(db, `issueReports/${r.id}`), r)}
+          onUpdateIssueReport={(r) => set(getOrgRef(`issueReports/${r.id}`), r)}
           rabiesPatients={rabiesPatients}
-          onAddRabiesPatient={(p) => set(ref(db, `rabiesPatients/${p.id}`), p)}
-          onUpdateRabiesPatient={(p) => set(ref(db, `rabiesPatients/${p.id}`), p)}
-          onDeletePatient={(id) => remove(ref(db, `rabiesPatients/${id}`))}
+          onAddRabiesPatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}
+          onUpdateRabiesPatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}
+          onDeletePatient={(id) => remove(getOrgRef(`rabiesPatients/${id}`))}
           firms={firms}
-          onAddFirm={(f) => set(ref(db, `firms/${f.id}`), f)}
+          onAddFirm={(f) => set(getOrgRef(`firms/${f.id}`), f)}
           quotations={quotations}
-          onAddQuotation={(q) => set(ref(db, `quotations/${q.id}`), q)}
+          onAddQuotation={(q) => set(getOrgRef(`quotations/${q.id}`), q)}
           inventoryItems={inventoryItems}
-          onAddInventoryItem={(i) => set(ref(db, `inventory/${i.id}`), i)}
-          onUpdateInventoryItem={(i) => set(ref(db, `inventory/${i.id}`), i)}
+          onAddInventoryItem={(i) => set(getOrgRef(`inventory/${i.id}`), i)}
+          onUpdateInventoryItem={(i) => set(getOrgRef(`inventory/${i.id}`), i)}
           stockEntryRequests={stockEntryRequests}
-          onRequestStockEntry={(r) => set(ref(db, `stockRequests/${r.id}`), r)}
+          onRequestStockEntry={(r) => set(getOrgRef(`stockRequests/${r.id}`), r)}
           onApproveStockEntry={handleApproveStockEntry}
-          onRejectStockEntry={(id, res, app) => update(ref(db, `stockRequests/${id}`), { status: 'Rejected', rejectionReason: res, approvedBy: app })}
+          onRejectStockEntry={(id, res, app) => update(getOrgRef(`stockRequests/${id}`), { status: 'Rejected', rejectionReason: res, approvedBy: app })}
           stores={stores}
-          onAddStore={(s) => set(ref(db, `stores/${s.id}`), s)}
-          onUpdateStore={(s) => set(ref(db, `stores/${s.id}`), s)}
-          onDeleteStore={(id) => remove(ref(db, `stores/${id}`))}
+          onAddStore={(s) => set(getOrgRef(`stores/${s.id}`), s)}
+          onUpdateStore={(s) => set(getOrgRef(`stores/${s.id}`), s)}
+          onDeleteStore={(id) => remove(getOrgRef(`stores/${id}`))}
           dakhilaReports={dakhilaReports}
-          onSaveDakhilaReport={(r) => set(ref(db, `dakhilaReports/${r.id}`), r)}
+          onSaveDakhilaReport={(r) => set(getOrgRef(`dakhilaReports/${r.id}`), r)}
           returnEntries={returnEntries}
-          onSaveReturnEntry={(e) => set(ref(db, `returnEntries/${e.id}`), e)}
+          onSaveReturnEntry={(e) => set(getOrgRef(`returnEntries/${e.id}`), e)}
           marmatEntries={marmatEntries}
-          onSaveMarmatEntry={(e) => set(ref(db, `marmatEntries/${e.id}`), e)}
+          onSaveMarmatEntry={(e) => set(getOrgRef(`marmatEntries/${e.id}`), e)}
           dhuliyaunaEntries={dhuliyaunaEntries}
-          onSaveDhuliyaunaEntry={(e) => set(ref(db, `disposalEntries/${e.id}`), e)}
+          onSaveDhuliyaunaEntry={(e) => set(getOrgRef(`disposalEntries/${e.id}`), e)}
           logBookEntries={logBookEntries}
-          onSaveLogBookEntry={(e) => set(ref(db, `logBook/${e.id}`), e)}
-          onClearData={(p) => remove(ref(db, p))}
+          onSaveLogBookEntry={(e) => set(getOrgRef(`logBook/${e.id}`), e)}
+          onClearData={(p) => remove(getOrgRef(p))}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
@@ -292,9 +345,9 @@ const App: React.FC = () => {
               </div>
               <div className="p-10">
                 <LoginForm 
-                    users={users} 
+                    users={allUsers} 
                     onLoginSuccess={handleLoginSuccess} 
-                    initialFiscalYear={generalSettings.activeFiscalYear} 
+                    initialFiscalYear={'2081/082'} 
                 />
               </div>
               <div className="bg-slate-50 p-5 text-center border-t border-slate-100 flex items-center justify-center gap-3">
