@@ -129,15 +129,27 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
       return combined.sort((a, b) => b.id.localeCompare(a.id));
   }, [existingForms, isAdminOrApproval, isStrictStoreKeeper, currentUser.fullName]);
 
-  const itemOptions = useMemo(() => inventoryItems.map(item => {
-    const typeLabel = item.itemType === 'Expendable' ? 'खर्च हुने' : 'खर्च नहुने';
-    return {
-      id: item.id,
-      value: item.itemName,
-      label: `${item.itemName} (${item.unit}) - मौज्दात: ${item.currentQuantity} [${typeLabel}]`,
-      itemData: item
-    };
-  }), [inventoryItems]);
+  const itemOptions = useMemo(() => {
+    return inventoryItems.map(item => {
+      const typeLabel = item.itemType === 'Expendable' ? 'खर्च हुने' : 'खर्च नहुने';
+      return {
+        id: item.id,
+        value: item.itemName,
+        label: `${item.itemName} (${item.unit}) - मौज्दात: ${item.currentQuantity} [${typeLabel}]`,
+        itemData: item
+      };
+    }).sort((a, b) => {
+        // Priority 1: Stock > 0
+        const aHasStock = a.itemData.currentQuantity > 0;
+        const bHasStock = b.itemData.currentQuantity > 0;
+        
+        if (aHasStock && !bHasStock) return -1;
+        if (!aHasStock && bHasStock) return 1;
+        
+        // Priority 2: Alphabetical Name
+        return a.value.localeCompare(b.value);
+    });
+  }, [inventoryItems]);
 
   const storeOptions: Option[] = useMemo(() => stores.map(s => ({ id: s.id, value: s.id, label: s.name })), [stores]);
 

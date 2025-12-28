@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, Syringe, Activity, 
   ClipboardList, FileSpreadsheet, FilePlus, ShoppingCart, FileOutput, 
   BookOpen, Book, Archive, RotateCcw, Wrench, Scroll, BarChart3,
-  Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, ArrowRightCircle, AlertTriangle, Pill, Scissors, Clock, Calculator, Trash2 
+  Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, ArrowRightCircle, AlertTriangle, Pill, Scissors, Clock, Calculator, Trash2, UsersRound, CalendarCheck, UserPlus, Droplets, Info, TrendingUp
 } from 'lucide-react';
 import { APP_NAME, ORG_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps, PurchaseOrderEntry, InventoryItem } from '../types'; 
@@ -32,6 +32,8 @@ import { DatabaseManagement } from './DatabaseManagement';
 import { DhuliyaunaFaram } from './DhuliyaunaFaram';
 import { LogBook } from './LogBook';
 import { GeneralSetting } from './GeneralSetting';
+// @ts-ignore
+import NepaliDate from 'nepali-date-converter';
 
 interface ExtendedDashboardProps extends DashboardProps {
   onUploadData: (sectionId: string, data: any[], extraMeta?: any) => Promise<void>;
@@ -98,15 +100,93 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [lastSeenNotificationId, setLastSeenNotificationId] = useState<string | null>(null);
 
+  // Statistics Calculations for Main Dashboard
+  const todayAd = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  // 1. New Registrations Today
+  const rabiesTodayNew = useMemo(() => {
+    return rabiesPatients.filter(p => p.regDateAd === todayAd).length;
+  }, [rabiesPatients, todayAd]);
+
+  // 2. Total Scheduled for Today (All status)
+  const rabiesTotalScheduledToday = useMemo(() => {
+    return rabiesPatients.filter(p => 
+      p.schedule.some(dose => dose.date === todayAd)
+    ).length;
+  }, [rabiesPatients, todayAd]);
+
+  // 3. Actually Received among those scheduled for today
+  const rabiesReceivedToday = useMemo(() => {
+    return rabiesPatients.filter(p => 
+      p.schedule.some(dose => dose.date === todayAd && dose.status === 'Given')
+    ).length;
+  }, [rabiesPatients, todayAd]);
+
+  // 4. Remaining (Pending) Patients for today
+  const rabiesRemainingToday = useMemo(() => {
+      return rabiesPatients.filter(p => 
+          p.schedule.some(dose => dose.date === todayAd && dose.status === 'Pending')
+      ).length;
+  }, [rabiesPatients, todayAd]);
+
+  // 5. IMPROVED: Vaccine Forecasting Logic for TODAY and TOTAL Pending
+  const vaccineForecast = useMemo(() => {
+      const mlPerDose = 0.2;
+
+      // Today's Load
+      const todayCount = rabiesRemainingToday;
+      const todayMl = todayCount * mlPerDose;
+
+      // Total Load (All pending doses in system for all dates)
+      const totalPendingDosesCount = rabiesPatients.reduce((acc, p) => 
+          acc + p.schedule.filter(d => d.status === 'Pending').length, 0);
+      const totalMl = totalPendingDosesCount * mlPerDose;
+      
+      return {
+          today: {
+            patients: todayCount,
+            ml: todayMl.toFixed(1),
+            vials05: Math.ceil(todayMl / 0.5),
+            vials10: Math.ceil(todayMl / 1.0)
+          },
+          overall: {
+            patients: totalPendingDosesCount,
+            ml: totalMl.toFixed(1),
+            vials05: Math.ceil(totalMl / 0.5),
+            vials10: Math.ceil(totalMl / 1.0)
+          }
+      };
+  }, [rabiesRemainingToday, rabiesPatients]);
+
+  const inventoryTotalCount = useMemo(() => inventoryItems.length, [inventoryItems]);
+  const magFormsPendingCount = useMemo(() => magForms.filter(f => f.status === 'Pending').length, [magForms]);
+
   const latestApprovedDakhila = useMemo(() => {
       const approved = stockEntryRequests.filter(req => req.status === 'Approved');
       return approved.length > 0 ? approved.sort((a, b) => parseInt(b.id) - parseInt(a.id))[0] : null;
   }, [stockEntryRequests]);
 
+  // Helper to check permission for a specific menu
+  const hasAccess = (menuId: string) => {
+      if (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN') return true;
+      return currentUser.allowedMenus?.includes(menuId);
+  };
+
   const handleNotificationClick = () => {
       if (latestApprovedDakhila) {
           setLastSeenNotificationId(latestApprovedDakhila.id);
           setShowNotificationModal(true);
+      }
+  };
+
+  const handleDashboardAction = (menuId: string) => {
+      if (hasAccess(menuId)) {
+          setActiveItem(menuId);
+      } else {
+          alert("तपाईंलाई यो विवरण हेर्न अनुमति छैन। (Access Denied)");
       }
   };
 
@@ -219,7 +299,225 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   const renderContent = () => {
     switch (activeItem) {
       case 'general_setting': return <GeneralSetting currentUser={currentUser} settings={generalSettings} onUpdateSettings={onUpdateGeneralSettings} />;
-      case 'dashboard': return <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4"><div className="flex items-center gap-3 border-b pb-4"><div className="bg-indigo-100 p-2 rounded-lg text-indigo-600"><Activity size={24} /></div><div><h2 className="text-xl font-bold text-slate-800 font-nepali">मुख्य जानकारी</h2><p className="text-sm text-slate-500">प्रणालीको हालको अवस्था</p></div></div><p className="text-slate-500 italic">कृपया मेनुबाट विकल्प छान्नुहोस्।</p></div>;
+      case 'dashboard': return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex items-center gap-3 border-b pb-4">
+            <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
+              <Activity size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-800 font-nepali">प्रणाली ड्यासबोर्ड (System Dashboard)</h2>
+              <p className="text-sm text-slate-500">प्रणालीको हालको अवस्था र तथ्याङ्क</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Rabies Clinic Summary Card */}
+            <div className={`bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group overflow-hidden relative ${!hasAccess('rabies') ? 'opacity-75 grayscale-[0.5]' : ''}`}>
+              <div className="absolute -right-4 -top-4 bg-red-50 w-24 h-24 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+              {!hasAccess('rabies') && <div className="absolute top-3 right-3 text-slate-300 z-20"><Lock size={16} /></div>}
+              
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Rabies Vaccine Clinic</p>
+                        <h3 className="text-sm font-bold text-slate-700 font-nepali">आजको क्लिनिक सारांश</h3>
+                    </div>
+                    <div className="bg-red-100 p-3 rounded-xl text-red-600 shadow-inner">
+                        <Syringe size={24} />
+                    </div>
+                </div>
+
+                <div className="space-y-4 flex-1">
+                    <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-white rounded-lg text-indigo-600 shadow-sm border border-indigo-50"><UserPlus size={16}/></div>
+                            <span className="text-xs font-bold text-slate-600 font-nepali">आजको नयाँ दर्ता</span>
+                        </div>
+                        <span className="text-xl font-black text-slate-800">{rabiesTodayNew} <span className="text-[10px] font-medium text-slate-400">जना</span></span>
+                    </div>
+
+                    <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
+                        <div className="flex items-center justify-between mb-2">
+                             <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-white rounded-lg text-orange-600 shadow-sm border border-orange-50"><CalendarCheck size={16}/></div>
+                                <span className="text-xs font-bold text-orange-800 font-nepali">आजको खोप विवरण</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-xl font-black text-orange-600">{rabiesReceivedToday} / {rabiesTotalScheduledToday}</span>
+                                <p className="text-[9px] font-bold text-orange-400 uppercase leading-none">Done / Total</p>
+                            </div>
+                        </div>
+                        <div className="w-full bg-orange-200 h-1.5 rounded-full overflow-hidden">
+                             <div 
+                                className="bg-orange-600 h-full transition-all duration-1000 ease-out" 
+                                style={{ width: `${rabiesTotalScheduledToday > 0 ? (rabiesReceivedToday / rabiesTotalScheduledToday) * 100 : 0}%` }}
+                             />
+                        </div>
+                    </div>
+                </div>
+
+                <button 
+                    onClick={() => handleDashboardAction('rabies')} 
+                    className={`mt-6 w-full py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${
+                        hasAccess('rabies') 
+                        ? 'bg-slate-800 text-white hover:bg-red-600 shadow-lg shadow-slate-200' 
+                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    }`}
+                >
+                    {hasAccess('rabies') ? 'Manage Patients' : 'Access Locked'} <ArrowRightCircle size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* ENHANCED: Vaccine Forecasting Card with TODAY and TOTAL data */}
+            <div className={`bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group overflow-hidden relative ${!hasAccess('rabies') ? 'opacity-75 grayscale-[0.5]' : ''}`}>
+              <div className="absolute -right-4 -top-4 bg-cyan-50 w-24 h-24 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+              {!hasAccess('rabies') && <div className="absolute top-3 right-3 text-slate-300 z-20"><Lock size={16} /></div>}
+              
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Vaccine Logistics</p>
+                        <h3 className="text-sm font-bold text-slate-700 font-nepali">खोप पूर्वानुमान (Forecast)</h3>
+                    </div>
+                    <div className="bg-cyan-100 p-3 rounded-xl text-cyan-600 shadow-inner">
+                        <Calculator size={24} />
+                    </div>
+                </div>
+
+                <div className="space-y-4 flex-1">
+                    {/* Today's Section */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-end border-b border-slate-100 pb-1">
+                            <span className="text-[10px] font-black text-slate-500 uppercase flex items-center gap-1"><Clock size={10}/> आजको लागि (Today)</span>
+                            <span className="text-[10px] font-bold text-cyan-600 bg-cyan-50 px-1.5 rounded">{vaccineForecast.today.ml} ml</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">
+                                <p className="text-[8px] font-bold text-slate-400 uppercase">0.5 ml</p>
+                                <p className="text-base font-black text-slate-700">{vaccineForecast.today.vials05}</p>
+                            </div>
+                            <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">
+                                <p className="text-[8px] font-bold text-slate-400 uppercase">1.0 ml</p>
+                                <p className="text-base font-black text-slate-700">{vaccineForecast.today.vials10}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Overall/Total Section */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-end border-b border-slate-100 pb-1">
+                            <span className="text-[10px] font-black text-indigo-500 uppercase flex items-center gap-1"><TrendingUp size={10}/> कुल बाँकी (Total Pending)</span>
+                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 rounded">{vaccineForecast.overall.ml} ml</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-indigo-50/50 p-2 rounded-lg border border-indigo-100 text-center">
+                                <p className="text-[8px] font-bold text-indigo-400 uppercase">0.5 ml</p>
+                                <p className="text-base font-black text-indigo-700">{vaccineForecast.overall.vials05}</p>
+                            </div>
+                            <div className="bg-blue-50/50 p-2 rounded-lg border border-blue-100 text-center">
+                                <p className="text-[8px] font-bold text-blue-400 uppercase">1.0 ml</p>
+                                <p className="text-base font-black text-blue-700">{vaccineForecast.overall.vials10}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-start gap-2 bg-amber-50 p-2 rounded-lg text-[9px] text-amber-700 leading-tight border border-amber-100">
+                        <Clock size={12} className="shrink-0 mt-0.5" />
+                        <p className="font-medium italic font-nepali">खोलिएको ६ घण्टाभित्र प्रयोग गरिसक्नुपर्छ।</p>
+                    </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-50 text-center">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Doses: {vaccineForecast.overall.patients}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Inventory Items Card */}
+            <div className={`bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group overflow-hidden relative ${!hasAccess('jinshi_maujdat') ? 'opacity-75 grayscale-[0.5]' : ''}`}>
+              <div className="absolute -right-4 -top-4 bg-blue-50 w-24 h-24 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+              {!hasAccess('jinshi_maujdat') && <div className="absolute top-3 right-3 text-slate-300 z-20"><Lock size={16} /></div>}
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Inventory Management</p>
+                        <h3 className="text-sm font-bold text-slate-700 font-nepali">कुल जिन्सी सामानहरू</h3>
+                    </div>
+                    <div className="bg-blue-100 p-3 rounded-xl text-blue-600 shadow-inner">
+                        <Warehouse size={24} />
+                    </div>
+                </div>
+                
+                <div className="flex items-baseline gap-2 flex-1">
+                    <span className="text-5xl font-black text-blue-600 leading-none">{inventoryTotalCount}</span>
+                    <span className="text-xs text-slate-400 font-bold font-nepali uppercase tracking-wider">Items in Stock</span>
+                </div>
+
+                <button 
+                    onClick={() => handleDashboardAction('jinshi_maujdat')} 
+                    className={`mt-6 w-full py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${
+                        hasAccess('jinshi_maujdat') 
+                        ? 'bg-slate-50 text-slate-600 hover:bg-blue-50 hover:text-blue-700 border border-slate-100' 
+                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    }`}
+                >
+                    {hasAccess('jinshi_maujdat') ? 'Stock Details' : 'Access Locked'} <ArrowRightCircle size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Pending Demand Forms Card */}
+            <div className={`bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group overflow-hidden relative ${!hasAccess('mag_faram') ? 'opacity-75 grayscale-[0.5]' : ''}`}>
+              <div className="absolute -right-4 -top-4 bg-orange-50 w-24 h-24 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+              {!hasAccess('mag_faram') && <div className="absolute top-3 right-3 text-slate-300 z-20"><Lock size={16} /></div>}
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Demands & Requests</p>
+                        <h3 className="text-sm font-bold text-slate-700 font-nepali">बाँकी माग फारमहरू</h3>
+                    </div>
+                    <div className="bg-orange-100 p-3 rounded-xl text-orange-600 shadow-inner">
+                        <FilePlus size={24} />
+                    </div>
+                </div>
+
+                <div className="flex items-baseline gap-2 flex-1">
+                    <span className="text-5xl font-black text-orange-600 leading-none">{magFormsPendingCount}</span>
+                    <span className="text-xs text-slate-400 font-bold font-nepali uppercase tracking-wider">Awaiting Review</span>
+                </div>
+
+                <button 
+                    onClick={() => handleDashboardAction('mag_faram')} 
+                    className={`mt-6 w-full py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${
+                        hasAccess('mag_faram') 
+                        ? 'bg-slate-50 text-slate-600 hover:bg-orange-50 hover:text-orange-700 border border-slate-100' 
+                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    }`}
+                >
+                    {hasAccess('mag_faram') ? 'Review Demands' : 'Access Locked'} <ArrowRightCircle size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                  <div className="bg-indigo-600 p-3 rounded-xl text-white shadow-lg shadow-indigo-200">
+                    <CheckCircle2 size={24} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-indigo-900 font-nepali text-lg">प्रणाली सुचारु छ (System Active)</h4>
+                    <p className="text-indigo-700 text-sm">सबै मोड्युलहरू सही रूपमा चलिरहेका छन्। कृपया थप कार्यको लागि बायाँ मेनु प्रयोग गर्नुहोस्।</p>
+                  </div>
+              </div>
+              <div className="text-xs font-bold text-indigo-400 uppercase tracking-widest bg-white/50 px-4 py-2 rounded-full border border-indigo-200">
+                  Last Login: {new Date().toLocaleTimeString()}
+              </div>
+          </div>
+        </div>
+      );
       case 'user_management': return <UserManagement currentUser={currentUser} users={users} onAddUser={onAddUser} onUpdateUser={onUpdateUser} onDeleteUser={onDeleteUser} />;
       case 'change_password': return <ChangePassword currentUser={currentUser} users={users} onChangePassword={onChangePassword} />;
       case 'store_setup': return <StoreSetup currentUser={currentUser} currentFiscalYear={currentFiscalYear} stores={stores} onAddStore={onAddStore} onUpdateStore={onUpdateStore} onDeleteStore={onDeleteStore} inventoryItems={inventoryItems} onUpdateInventoryItem={onUpdateInventoryItem} />;
