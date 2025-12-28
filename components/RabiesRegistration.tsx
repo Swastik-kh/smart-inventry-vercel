@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Save, RotateCcw, Syringe, Calendar, FileDigit, User, Phone, MapPin, CalendarRange, Clock, CheckCircle2, Search, X, AlertTriangle, Trash2, Info } from 'lucide-react';
+/* Added Info to the import list below */
+import { Save, RotateCcw, Syringe, Calendar, FileDigit, User, Phone, MapPin, CalendarRange, Clock, CheckCircle2, Search, X, AlertTriangle, Trash2, Pencil, Check, Info } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
@@ -51,6 +52,35 @@ const whoCategoryOptions: Option[] = [
     { id: 'cat3', value: 'Category III', label: 'Category III (Transdermal bites, scratches, saliva on broken skin)' },
 ];
 
+const formatDateLocal = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
+const convertAdToBsFull = (adDateStr: string) => {
+    if (!adDateStr) return '';
+    try {
+        const ad = new Date(adDateStr);
+        const nd = new NepaliDate(ad);
+        return nd.format('YYYY-MM-DD');
+    } catch (e) {
+        return '';
+    }
+};
+
+const formatAdDateToBsDisplay = (adDateStr: string) => {
+    if (!adDateStr) return '';
+    try {
+        const ad = new Date(adDateStr);
+        const nd = new NepaliDate(ad);
+        return nd.format('MM-DD');
+    } catch (e) {
+        return adDateStr.split('-').slice(1).join('-');
+    }
+};
+
 export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({ 
   currentFiscalYear, 
   patients, 
@@ -62,6 +92,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [modalDateBs, setModalDateBs] = useState('');
   const [doseUpdateError, setDoseUpdateError] = useState<string | null>(null);
+  const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
   
   const [selectedDoseInfo, setSelectedDoseInfo] = useState<{
       patient: RabiesPatient;
@@ -69,8 +100,8 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
       dose: VaccinationDose;
   } | null>(null);
 
-  const canDelete = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN';
-  const getTodayDateAd = () => new Date().toISOString().split('T')[0];
+  const isAdmin = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN';
+  const getTodayDateAd = () => formatDateLocal(new Date());
 
   const generateRegNo = () => {
     const fyClean = currentFiscalYear.replace('/', '');
@@ -97,7 +128,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
     address: '',
     phone: '',
     animalType: '',
-    exposureCategory: '', // WHO Category
+    exposureCategory: '', 
     bodyPart: '',
     exposureDateBs: '',
     regimen: 'Intradermal',
@@ -105,19 +136,21 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
   });
 
   useEffect(() => {
-    const today = new NepaliDate();
-    const todayBs = today.format('YYYY-MM-DD');
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    
-    setFormData(prev => ({
-      ...prev,
-      regNo: generateRegNo(),
-      regDateBs: todayBs,
-      regMonth: month,
-      regDateAd: new Date().toISOString().split('T')[0],
-      exposureDateBs: todayBs
-    }));
-  }, [currentFiscalYear, patients.length]);
+    if (!editingPatientId) {
+        const today = new NepaliDate();
+        const todayBs = today.format('YYYY-MM-DD');
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        
+        setFormData(prev => ({
+          ...prev,
+          regNo: generateRegNo(),
+          regDateBs: todayBs,
+          regMonth: month,
+          regDateAd: formatDateLocal(new Date()),
+          exposureDateBs: todayBs
+        }));
+    }
+  }, [currentFiscalYear, patients.length, editingPatientId]);
 
   const handleRegDateBsChange = (val: string) => {
     let month = formData.regMonth;
@@ -129,7 +162,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                 const [y, m, d] = parts.map(Number);
                 month = String(m).padStart(2, '0');
                 const nd = new NepaliDate(y, m - 1, d);
-                adDateStr = nd.toJsDate().toISOString().split('T')[0];
+                adDateStr = formatDateLocal(nd.toJsDate());
             }
         } catch (e) {
             console.error("Date conversion error", e);
@@ -142,7 +175,10 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
             regMonth: month,
             regDateAd: adDateStr
         };
-        updated.schedule = calculateSchedule(adDateStr, prev.regimen);
+        // Only auto-recalculate schedule if NOT editing an existing patient
+        if (!editingPatientId) {
+            updated.schedule = calculateSchedule(adDateStr, prev.regimen);
+        }
         return updated;
     });
   };
@@ -157,7 +193,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
           doseDate.setDate(start.getDate() + dayOffset);
           schedule.push({
               day: dayOffset,
-              date: doseDate.toISOString().split('T')[0],
+              date: formatDateLocal(doseDate),
               status: 'Pending'
           });
       });
@@ -170,25 +206,42 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
           alert("कृपया आवश्यक विवरणहरू भर्नुहोस् (नाम, मिति र WHO Category अनिवार्य छन्)");
           return;
       }
-      const newPatient = {
-          ...formData,
-          id: Date.now().toString(),
-          schedule: calculateSchedule(formData.regDateAd, formData.regimen)
-      };
-      onAddPatient(newPatient);
-      handleReset();
-      alert('बिरामी सफलतापूर्वक दर्ता भयो');
+
+      if (editingPatientId) {
+          onUpdatePatient({
+              ...formData,
+              id: editingPatientId
+          });
+          alert('बिरामीको विवरण सफलतापूर्वक अपडेट भयो');
+          handleReset();
+      } else {
+          const newPatient = {
+              ...formData,
+              id: Date.now().toString(),
+              schedule: calculateSchedule(formData.regDateAd, formData.regimen)
+          };
+          onAddPatient(newPatient);
+          handleReset();
+          alert('बिरामी सफलतापूर्वक दर्ता भयो');
+      }
+  };
+
+  const handleEditPatient = (p: RabiesPatient) => {
+      setEditingPatientId(p.id);
+      setFormData({ ...p });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleReset = () => {
     const today = new NepaliDate();
+    setEditingPatientId(null);
     setFormData({
         id: '',
         fiscalYear: currentFiscalYear,
         regNo: generateRegNo(),
         regMonth: String(today.getMonth() + 1).padStart(2, '0'),
         regDateBs: today.format('YYYY-MM-DD'),
-        regDateAd: new Date().toISOString().split('T')[0],
+        regDateAd: formatDateLocal(new Date()),
         name: '', age: '', sex: '', address: '', phone: '',
         animalType: '', exposureCategory: '', bodyPart: '',
         exposureDateBs: today.format('YYYY-MM-DD'),
@@ -207,30 +260,41 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
   const confirmDoseUpdate = () => {
       if (!selectedDoseInfo) return;
       setDoseUpdateError(null);
+      
       if (!modalDateBs) {
           setDoseUpdateError("कृपया खोप लगाएको मिति छान्नुहोस्");
           return;
       }
+
       const { patient, doseIndex, dose } = selectedDoseInfo;
       let givenDateAd = '';
       try {
           const parts = modalDateBs.split(/[-/]/);
           const [y, m, d] = parts.map(Number);
           const nd = new NepaliDate(y, m - 1, d);
-          givenDateAd = nd.toJsDate().toISOString().split('T')[0];
+          givenDateAd = formatDateLocal(nd.toJsDate());
       } catch (e) {
           setDoseUpdateError("मिति ढाँचा मिलेन");
           return;
       }
-      if (dose.day !== 0 && givenDateAd < dose.date) {
-          setDoseUpdateError("तपाईंले छान्नुभएको मिति खोप तालिका भन्दा अगाडि छ।");
+      
+      if (givenDateAd < dose.date) {
+          const scheduledBs = convertAdToBsFull(dose.date);
+          setDoseUpdateError(`यो खोपको निर्धारित मिति ${scheduledBs} हो। तोकिएको मिति भन्दा अगाडि खोप लगाएको विवरण राख्न मिल्दैन।`);
           return;
       }
+
+      const todayAd = formatDateLocal(new Date());
+      if (givenDateAd > todayAd) {
+          setDoseUpdateError("आजको मिति भन्दा पछिको विवरण राख्न मिल्दैन।");
+          return;
+      }
+
       const updatedSchedule = [...patient.schedule];
       updatedSchedule[doseIndex] = {
           ...updatedSchedule[doseIndex],
           status: 'Given',
-          givenDate: givenDateAd
+          givenDate: modalDateBs 
       };
       onUpdatePatient({ ...patient, schedule: updatedSchedule });
       setSelectedDoseInfo(null);
@@ -239,12 +303,22 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
   const handleDoseClick = (p: RabiesPatient, idx: number, dose: VaccinationDose) => {
       setSelectedDoseInfo({ patient: p, doseIndex: idx, dose });
       setDoseUpdateError(null);
-      try {
-          const scheduledDate = new Date(dose.date);
-          const nd = new NepaliDate(scheduledDate);
-          setModalDateBs(nd.format('YYYY-MM-DD'));
-      } catch (e) {
-          setModalDateBs('');
+      
+      if (dose.status === 'Given' && dose.givenDate) {
+          setModalDateBs(dose.givenDate);
+      } else {
+          try {
+              const today = new NepaliDate();
+              const todayAdStr = formatDateLocal(new Date());
+              
+              if (todayAdStr < dose.date) {
+                  setModalDateBs(convertAdToBsFull(dose.date));
+              } else {
+                  setModalDateBs(today.format('YYYY-MM-DD'));
+              }
+          } catch (e) {
+              setModalDateBs('');
+          }
       }
   };
 
@@ -263,13 +337,19 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                 <Syringe size={24} />
             </div>
             <div>
-                <h2 className="text-xl font-bold text-slate-800 font-nepali">रेबिज खोप दर्ता (Rabies Registration)</h2>
+                <h2 className="text-xl font-bold text-slate-800 font-nepali">
+                    {editingPatientId ? 'विवरण सच्याउनुहोस् (Edit Details)' : 'रेबिज खोप दर्ता (Rabies Registration)'}
+                </h2>
                 <p className="text-sm text-slate-500 font-nepali">नयाँ बिरामी दर्ता र खोप तालिका व्यवस्थापन</p>
             </div>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+      {/* Registration Form */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+          {editingPatientId && (
+              <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600"></div>
+          )}
           <form onSubmit={handleSubmit} className="grid md:grid-cols-3 gap-6">
               <div className="md:col-span-3 bg-indigo-50 p-4 rounded-lg border border-indigo-100 flex items-center gap-4">
                   <div className="bg-white p-2 rounded border border-indigo-200">
@@ -286,7 +366,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
               </div>
 
               <div className="md:col-span-1">
-                 <NepaliDatePicker label="दर्ता मिति (BS)" value={formData.regDateBs} onChange={handleRegDateBsChange} required />
+                 <NepaliDatePicker label="दर्ता मिति (BS)" value={formData.regDateBs} onChange={handleRegDateBsChange} required disabled={!!editingPatientId && !isAdmin} />
               </div>
 
               <Select label="दर्ता महिना" value={formData.regMonth} onChange={e => setFormData({...formData, regMonth: e.target.value})} options={nepaliMonthOptions} icon={<CalendarRange size={16} />} />
@@ -309,12 +389,15 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
               <Select label="WHO Category (Exposure)" value={formData.exposureCategory} onChange={e => setFormData({...formData, exposureCategory: e.target.value})} options={whoCategoryOptions} required icon={<AlertTriangle size={16} />} />
 
               <div className="md:col-span-3 pt-4 border-t border-slate-100 flex justify-end gap-3">
-                  <button type="button" className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg flex items-center gap-2" onClick={handleReset}><RotateCcw size={18} /> रिसेट</button>
-                  <button type="submit" className="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg shadow-sm flex items-center gap-2 font-medium font-nepali"><Save size={18} /> दर्ता गर्नुहोस्</button>
+                  <button type="button" className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg flex items-center gap-2" onClick={handleReset}><RotateCcw size={18} /> {editingPatientId ? 'रद्द गर्नुहोस्' : 'रिसेट'}</button>
+                  <button type="submit" className="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg shadow-sm flex items-center gap-2 font-medium font-nepali">
+                      <Save size={18} /> {editingPatientId ? 'अपडेट गर्नुहोस्' : 'दर्ता गर्नुहोस्'}
+                  </button>
               </div>
           </form>
       </div>
 
+      {/* Patient List */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="flex items-center gap-3">
@@ -332,16 +415,16 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                   <tr>
                       <th className="px-6 py-3">दर्ता नं</th>
                       <th className="px-6 py-3">बिरामी / जनावर / Category</th>
-                      <th className="px-6 py-3">खोप तालिका (Follow-up)</th>
-                      {canDelete && <th className="px-6 py-3 text-right">कार्य (Action)</th>}
+                      <th className="px-6 py-3">खोप तालिका (Follow-up) [BS Month-Day]</th>
+                      <th className="px-6 py-3 text-right">कार्य (Action)</th>
                   </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                   {filteredPatients.length === 0 ? (
-                      <tr><td colSpan={canDelete ? 4 : 3} className="px-6 py-8 text-center text-slate-400 italic font-nepali">डाटा फेला परेन</td></tr>
+                      <tr><td colSpan={4} className="px-6 py-8 text-center text-slate-400 italic font-nepali">डाटा फेला परेन</td></tr>
                   ) : (
                       filteredPatients.map(p => (
-                          <tr key={p.id} className="hover:bg-slate-50">
+                          <tr key={p.id} className={`hover:bg-slate-50 ${editingPatientId === p.id ? 'bg-indigo-50/30' : ''}`}>
                               <td className="px-6 py-4 font-mono font-medium text-indigo-600">{p.regNo}</td>
                               <td className="px-6 py-4">
                                   <div className="font-medium text-slate-800">{p.name}</div>
@@ -350,33 +433,46 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                                     <span className={`px-1 rounded font-bold border ${
                                         p.exposureCategory === 'Category III' ? 'bg-red-50 text-red-700 border-red-200' :
                                         p.exposureCategory === 'Category II' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                                        'bg-blue-50 text-blue-700 border-blue-200'
+                                        'bg-blue-50 text-blue-700 border-blue-100'
                                     }`}>{p.exposureCategory}</span>
                                   </div>
                               </td>
                               <td className="px-6 py-4">
                                   <div className="flex items-center gap-2">
-                                      {p.schedule.map((dose, idx) => (
-                                          <button key={idx} type="button" onClick={() => handleDoseClick(p, idx, dose)} className={`flex flex-col items-center justify-center w-12 h-14 rounded-lg border transition-all ${
-                                                  dose.status === 'Given' ? 'bg-green-50 border-green-200 text-green-700' :
-                                                  dose.date === todayAd ? 'bg-orange-50 border-orange-200 text-orange-700 animate-pulse ring-2 ring-orange-100' :
-                                                  'bg-slate-50 border-slate-200 text-slate-400'
-                                              }`}
-                                          >
-                                              <span className="text-[10px] font-bold uppercase">D{dose.day}</span>
-                                              {dose.status === 'Given' ? <CheckCircle2 size={16} /> : <Clock size={16} />}
-                                              <span className="text-[9px] mt-0.5">{dose.date.split('-').slice(1).join('-')}</span>
-                                          </button>
-                                      ))}
+                                      {p.schedule.map((dose, idx) => {
+                                          const isOverdue = dose.status === 'Pending' && dose.date < todayAd;
+                                          const isToday = dose.date === todayAd;
+                                          
+                                          return (
+                                              <button key={idx} type="button" onClick={() => handleDoseClick(p, idx, dose)} className={`flex flex-col items-center justify-center w-12 h-14 rounded-lg border transition-all ${
+                                                      dose.status === 'Given' ? 'bg-green-100 border-green-300 text-green-800 shadow-sm' :
+                                                      isToday ? 'bg-orange-50 border-orange-300 text-orange-700 animate-pulse ring-2 ring-orange-100' :
+                                                      isOverdue ? 'bg-red-100 border-red-400 text-red-800 shadow-inner font-bold ring-1 ring-red-200' :
+                                                      'bg-slate-50 border-slate-200 text-slate-400'
+                                                  }`}
+                                              >
+                                                  <span className="text-[10px] font-bold uppercase">D{dose.day}</span>
+                                                  {dose.status === 'Given' ? <CheckCircle2 size={16} /> : (isOverdue ? <AlertTriangle size={16} className="animate-bounce text-red-600" /> : <Clock size={16} />)}
+                                                  <span className="text-[9px] mt-0.5 font-nepali">{formatAdDateToBsDisplay(dose.date)}</span>
+                                              </button>
+                                          );
+                                      })}
                                   </div>
                               </td>
-                              {canDelete && (
-                                  <td className="px-6 py-4 text-right">
-                                      <button onClick={() => handleDeleteClick(p.id, p.name)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-all" title="बिरामी विवरण हटाउनुहोस्">
-                                          <Trash2 size={18} />
-                                      </button>
-                                  </td>
-                              )}
+                              <td className="px-6 py-4 text-right">
+                                  <div className="flex justify-end gap-1">
+                                      {isAdmin && (
+                                          <button onClick={() => handleEditPatient(p)} className="text-indigo-400 hover:text-indigo-600 p-2 hover:bg-indigo-50 rounded-full transition-all" title="बिरामी विवरण सच्याउनुहोस्">
+                                              <Pencil size={18} />
+                                          </button>
+                                      )}
+                                      {isAdmin && (
+                                          <button onClick={() => handleDeleteClick(p.id, p.name)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-all" title="बिरामी विवरण हटाउनुहोस्">
+                                              <Trash2 size={18} />
+                                          </button>
+                                      )}
+                                  </div>
+                              </td>
                           </tr>
                       ))
                   )}
@@ -385,6 +481,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
           </div>
       </div>
 
+      {/* Dose Update Modal */}
       {selectedDoseInfo && (
           <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-12 sm:pt-24">
               <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedDoseInfo(null)}></div>
@@ -392,39 +489,70 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                   <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50/50">
                       <div className="flex items-center gap-2">
                           <Syringe size={20} className="text-indigo-600"/>
-                          <h3 className="font-bold text-slate-800 font-nepali text-sm">खोप विवरण (Update Vaccine Status)</h3>
+                          <h3 className="font-bold text-slate-800 font-nepali text-sm">खोप विवरण (Update Status)</h3>
                       </div>
                       <button type="button" onClick={() => setSelectedDoseInfo(null)} className="p-2 hover:bg-white/50 rounded-full transition-colors"><X size={20} className="text-slate-400"/></button>
                   </div>
                   <div className="p-6 space-y-4">
                       <div className="text-center">
                           <h4 className="text-lg font-bold text-slate-800">{selectedDoseInfo.patient.name}</h4>
-                          <div className="flex justify-center gap-2 mt-2">
+                          <div className="flex flex-col items-center gap-1 mt-2">
                             <span className="text-[10px] font-bold bg-slate-100 px-2 py-1 rounded-full uppercase">{selectedDoseInfo.patient.exposureCategory}</span>
-                            <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full">{selectedDoseInfo.dose.date}</span>
+                            <span className={`text-xs font-bold px-3 py-1 rounded-lg border ${
+                                (selectedDoseInfo.dose.status === 'Pending' && selectedDoseInfo.dose.date < todayAd) 
+                                ? 'bg-red-50 text-red-700 border-red-100' 
+                                : 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                            }`}>
+                                तालिका (Scheduled): {convertAdToBsFull(selectedDoseInfo.dose.date)}
+                            </span>
                           </div>
                       </div>
-                      {selectedDoseInfo.dose.status === 'Given' ? (
-                          <div className="bg-green-50 border border-green-100 p-3 rounded-lg text-center font-nepali text-green-700">
-                              <CheckCircle2 size={18} className="mx-auto mb-1" /> खोप लगाइसकियो
-                              <p className="text-xs mt-1">लगाएको मिति: {selectedDoseInfo.dose.givenDate}</p>
-                          </div>
-                      ) : (
-                          <div className="space-y-3">
-                              <NepaliDatePicker label="खोप लगाएको मिति (Given Date - BS)" value={modalDateBs} onChange={setModalDateBs} />
-                              {doseUpdateError && (
-                                <div className="flex items-center gap-2 text-[10px] text-red-500 font-medium bg-red-50 p-2 rounded border border-red-100">
-                                  <AlertTriangle size={14} />
-                                  <span>{doseUpdateError}</span>
-                                </div>
-                              )}
-                          </div>
-                      )}
+                      
+                      <div className="space-y-3">
+                          <NepaliDatePicker 
+                            label="खोप लगाएको मिति (Given Date - BS)" 
+                            value={modalDateBs} 
+                            onChange={setModalDateBs} 
+                            minDate={convertAdToBsFull(selectedDoseInfo.dose.date)}
+                            popupAlign="right"
+                            disabled={selectedDoseInfo.dose.status === 'Given' && !isAdmin}
+                          />
+                          
+                          {selectedDoseInfo.dose.status === 'Given' && isAdmin && (
+                              <div className="bg-indigo-50 text-indigo-600 p-2 rounded text-[10px] font-bold flex items-center gap-2">
+                                  <Info size={14} /> तपाईंले लगाएको मिति सच्याउन सक्नुहुन्छ।
+                              </div>
+                          )}
+
+                          {selectedDoseInfo.dose.status === 'Given' && !isAdmin && (
+                              <div className="bg-green-50 border border-green-100 p-3 rounded-lg text-center font-nepali text-green-700">
+                                  <CheckCircle2 size={20} className="mx-auto mb-1" />
+                                  <span className="font-bold">खोप लगाइसकियो</span>
+                              </div>
+                          )}
+
+                          {selectedDoseInfo.dose.status !== 'Given' && selectedDoseInfo.dose.date < todayAd && (
+                              <div className="flex items-start gap-2 text-[11px] text-red-600 font-bold bg-red-50 p-2 rounded border border-red-100">
+                                  <AlertTriangle size={14} className="shrink-0" />
+                                  <span>यो खोप लगाउन ढिला भइसकेको छ (Overdue)!</span>
+                              </div>
+                          )}
+
+                          {doseUpdateError && (
+                            <div className="flex items-start gap-2 text-[11px] text-red-600 font-bold bg-red-50 p-3 rounded-lg border border-red-100 animate-pulse">
+                              <AlertTriangle size={18} className="shrink-0" />
+                              <span className="font-nepali leading-snug">{doseUpdateError}</span>
+                            </div>
+                          )}
+                      </div>
                   </div>
                   <div className="p-4 border-t border-slate-100 flex gap-3 bg-slate-50">
-                      <button type="button" onClick={() => setSelectedDoseInfo(null)} className="flex-1 py-2 text-slate-600 font-medium font-nepali hover:bg-slate-200 rounded-lg transition-colors text-sm">रद्द (Cancel)</button>
-                      {selectedDoseInfo.dose.status !== 'Given' && (
-                          <button type="button" onClick={confirmDoseUpdate} className="flex-1 py-2 bg-green-600 text-white rounded-lg font-medium shadow-sm font-nepali hover:bg-green-700 transition-colors text-sm">सुरक्षित (Confirm)</button>
+                      <button type="button" onClick={() => setSelectedDoseInfo(null)} className="flex-1 py-2 text-slate-600 font-medium font-nepali hover:bg-slate-200 rounded-lg transition-colors text-sm">बन्द (Close)</button>
+                      {(selectedDoseInfo.dose.status !== 'Given' || isAdmin) && (
+                          <button type="button" onClick={confirmDoseUpdate} className="flex-1 py-2 bg-green-600 text-white rounded-lg font-medium shadow-sm font-nepali hover:bg-green-700 transition-all active:scale-95 text-sm flex items-center justify-center gap-2">
+                              {selectedDoseInfo.dose.status === 'Given' ? <Save size={16} /> : <Check size={16} />}
+                              {selectedDoseInfo.dose.status === 'Given' ? 'अपडेट गर्नुहोस्' : 'सुरक्षित गर्नुहोस्'}
+                          </button>
                       )}
                   </div>
               </div>

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 // @ts-ignore
@@ -90,27 +90,47 @@ export const NepaliDatePicker: React.FC<NepaliDatePickerProps> = ({
     if (inputRef.current) {
       const rect = inputRef.current.getBoundingClientRect();
       const calendarWidth = 288; 
-      const calendarHeight = 310; // Approximate height
+      const calendarHeight = 320; 
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
       
       let left = popupAlign === 'right' ? rect.right - calendarWidth : rect.left;
       
+      // Horizontal boundary check
       if (left < 10) left = 10;
-      if (left + calendarWidth > window.innerWidth) left = window.innerWidth - calendarWidth - 10;
+      if (left + calendarWidth > viewportWidth) left = viewportWidth - calendarWidth - 10;
 
-      // Position ABOVE by default
-      let top = rect.top - calendarHeight - 10;
-      
-      // Fallback if not enough space at top
-      if (top < 10) {
-          top = rect.bottom + 10;
+      // Vertical positioning logic
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      let top;
+      // If there's enough space below, or more space below than above, show it below
+      if (spaceBelow >= calendarHeight || spaceBelow > spaceAbove) {
+        top = rect.bottom + 5;
+      } else {
+        // Show above if not enough space below
+        top = rect.top - calendarHeight - 5;
       }
 
-      setDropdownPosition({
-        top: top,
-        left: left
-      });
+      // Final boundary check to ensure it's not off-screen at all
+      if (top + calendarHeight > viewportHeight) {
+          top = Math.max(10, viewportHeight - calendarHeight - 10);
+      }
+      if (top < 10) {
+          top = 10;
+      }
+
+      setDropdownPosition({ top, left });
     }
   }, [popupAlign]);
+
+  // Use useLayoutEffect for immediate positioning update before browser paint
+  useLayoutEffect(() => {
+      if (showCalendar) {
+          updatePosition();
+      }
+  }, [showCalendar, updatePosition]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -122,7 +142,6 @@ export const NepaliDatePicker: React.FC<NepaliDatePickerProps> = ({
     };
 
     if (showCalendar) {
-      updatePosition();
       document.addEventListener('mousedown', handleClickOutside);
       window.addEventListener('resize', updatePosition);
       window.addEventListener('scroll', updatePosition, true);
@@ -321,7 +340,6 @@ export const NepaliDatePicker: React.FC<NepaliDatePickerProps> = ({
                 const { year, month } = parseDate(value);
                 setViewYear(year);
                 setViewMonth(month);
-                updatePosition();
             }
             setShowCalendar(!showCalendar);
         }}
