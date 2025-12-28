@@ -538,7 +538,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
              {/* Expired Items Card - CLICKABLE */}
              <div 
                 onClick={() => openExpiryDetail('expired')}
-                className="bg-white p-6 rounded-2xl border border-red-200 shadow-sm hover:shadow-lg transition-all group overflow-hidden relative cursor-pointer active:scale-[0.98]"
+                className="bg-white p-6 rounded-2xl border border-red-200 shadow-sm hover:shadow-lg transition-all group overflow-hidden relative cursor-pointer active:scale-[0.98] no-print"
              >
                 <div className="absolute -right-4 -top-4 bg-red-50 w-24 h-24 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                 <div className="relative z-10">
@@ -562,7 +562,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
              {/* Expiring in 3 Months Card - CLICKABLE */}
              <div 
                 onClick={() => openExpiryDetail('near-expiry')}
-                className="bg-white p-6 rounded-2xl border border-amber-200 shadow-sm hover:shadow-lg transition-all group overflow-hidden relative cursor-pointer active:scale-[0.98]"
+                className="bg-white p-6 rounded-2xl border border-amber-200 shadow-sm hover:shadow-lg transition-all group overflow-hidden relative cursor-pointer active:scale-[0.98] no-print"
              >
                 <div className="absolute -right-4 -top-4 bg-amber-50 w-24 h-24 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                 <div className="relative z-10">
@@ -584,7 +584,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
              </div>
           </div>
 
-          <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 no-print">
               <div className="flex items-center gap-4">
                   <div className="bg-indigo-600 p-3 rounded-xl text-white shadow-lg shadow-indigo-200">
                     <CheckCircle2 size={24} />
@@ -697,11 +697,13 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
             {renderContent()}
         </main>
 
-        {/* STOCK HEALTH MODAL (EXPIRED / NEAR EXPIRED LIST) */}
+        {/* STOCK HEALTH MODAL (EXPIRED / NEAR EXPIRED LIST) - REFINED FOR CLEAN PRINTING */}
         {showExpiryModal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4 no-print-bg">
                 <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm no-print" onClick={() => setShowExpiryModal(false)}></div>
-                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-slate-200">
+                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl md:h-[85vh] h-full overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-slate-200 print:shadow-none print:border-none print:static print:h-auto print:overflow-visible">
+                    
+                    {/* Modal Header: Hidden on print */}
                     <div className={`px-6 py-4 border-b flex justify-between items-center no-print ${expiryModalType === 'expired' ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-800'}`}>
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${expiryModalType === 'expired' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
@@ -709,11 +711,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                             </div>
                             <div>
                                 <h3 className="font-bold text-lg font-nepali">
-                                    {expiryModalType === 'expired' ? 'म्याद नाघेका सामानहरूको सूची (Expired Items List)' : 'म्याद सकिन लागेका सामानहरूको सूची (Near Expiry List)'}
+                                    {expiryModalType === 'expired' ? 'म्याद नाघेका सामानहरूको सूची' : 'म्याद सकिन लागेका सामानहरूको सूची'}
                                 </h3>
-                                <p className="text-xs opacity-75">
-                                    {expiryModalType === 'expired' ? 'हाल स्टकमा रहेका र म्याद सकिएका सामानहरू' : 'आगामी ९० दिनभित्र म्याद सकिने सामानहरू'}
-                                </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -726,67 +725,73 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-8 bg-white" id="expiry-report-area">
-                        {/* Print Only Header */}
-                        <div className="hidden print:block text-center mb-8">
-                            <h1 className="text-xl font-bold text-red-600">{generalSettings.orgNameNepali}</h1>
-                            <h2 className="text-lg font-bold underline mt-1">
-                                {expiryModalType === 'expired' ? 'म्याद नाघेका सामानहरूको प्रतिवेदन' : 'म्याद सकिन लागेका सामानहरूको प्रतिवेदन'}
+                    {/* Print Content Area: This handles multiple pages automatically */}
+                    <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-white print:p-0 print:overflow-visible print:block" id="expiry-report-area">
+                        {/* Print Header: Only visible on print */}
+                        <div className="hidden print:block text-center mb-6">
+                            <h1 className="text-xl font-bold text-slate-900">{generalSettings.orgNameNepali}</h1>
+                            {generalSettings.subTitleNepali && <h2 className="text-base font-bold">{generalSettings.subTitleNepali}</h2>}
+                            <h2 className="text-lg font-bold underline mt-4">
+                                {expiryModalType === 'expired' ? 'म्याद नाघेका (Expired) सामानहरूको प्रतिवेदन' : 'म्याद सकिन लागेका (Near Expiry) सामानहरूको प्रतिवेदन'}
                             </h2>
-                            <p className="text-sm mt-2">प्रिन्ट मिति: {new NepaliDate().format('YYYY-MM-DD')}</p>
+                            <div className="flex justify-between items-center mt-4 text-[11px] font-bold">
+                                <span>आर्थिक वर्ष: {currentFiscalYear}</span>
+                                <span>प्रिन्ट मिति: {new NepaliDate().format('YYYY-MM-DD')}</span>
+                            </div>
                         </div>
 
-                        <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        {/* Responsive & Page-Breaking Table */}
+                        <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm print:shadow-none print:border-slate-800 print:rounded-none">
                             <table className="w-full text-sm text-left border-collapse">
-                                <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                                <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 print:bg-slate-100 print:text-slate-900 print:border-slate-800">
                                     <tr>
-                                        <th className="px-4 py-3 w-10 text-center">क्र.सं.</th>
-                                        <th className="px-4 py-3">सामानको नाम (Item Name)</th>
-                                        <th className="px-4 py-3">गोदाम (Store)</th>
-                                        <th className="px-4 py-3">ब्याच नं (Batch)</th>
-                                        <th className="px-4 py-3">म्याद सकिने मिति (Expiry AD)</th>
-                                        <th className="px-4 py-3 text-center">परिमाण (Qty)</th>
-                                        <th className="px-4 py-3 text-right">दर (Rate)</th>
-                                        <th className="px-4 py-3 text-right">कुल मूल्य</th>
+                                        <th className="px-3 py-2 w-10 text-center border-r print:border-slate-800">क्र.सं.</th>
+                                        <th className="px-3 py-2 border-r print:border-slate-800">सामानको नाम (Item Name)</th>
+                                        <th className="px-3 py-2 border-r print:border-slate-800">गोदाम (Store)</th>
+                                        <th className="px-3 py-2 border-r print:border-slate-800">ब्याच नं</th>
+                                        <th className="px-3 py-2 border-r print:border-slate-800">म्याद सकिने मिति (AD)</th>
+                                        <th className="px-3 py-2 text-center border-r print:border-slate-800">परिमाण</th>
+                                        <th className="px-3 py-2 text-right border-r print:border-slate-800">दर</th>
+                                        <th className="px-3 py-2 text-right">कुल मूल्य</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-100">
+                                <tbody className="divide-y divide-slate-100 print:divide-slate-800">
                                     {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).map((item, idx) => {
                                         const storeName = stores.find(s => s.id === item.storeId)?.name || 'Unknown';
                                         return (
-                                            <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                                                <td className="px-4 py-3 text-center text-slate-400">{idx + 1}</td>
-                                                <td className="px-4 py-3">
-                                                    <div className="font-bold text-slate-800">{item.itemName}</div>
-                                                    <div className="text-[10px] text-slate-400 uppercase font-mono">{item.uniqueCode || item.sanketNo}</div>
+                                            <tr key={item.id} className="hover:bg-slate-50/50 transition-colors print:page-break-inside-avoid">
+                                                <td className="px-3 py-2 text-center text-slate-400 border-r print:border-slate-800 print:text-slate-900">{idx + 1}</td>
+                                                <td className="px-3 py-2 border-r print:border-slate-800">
+                                                    <div className="font-bold text-slate-800 print:text-black">{item.itemName}</div>
+                                                    <div className="text-[10px] text-slate-400 print:text-slate-600 uppercase font-mono">{item.uniqueCode || item.sanketNo}</div>
                                                 </td>
-                                                <td className="px-4 py-3 text-slate-600">{storeName}</td>
-                                                <td className="px-4 py-3 font-mono text-slate-600">{item.batchNo || '-'}</td>
-                                                <td className={`px-4 py-3 font-bold ${expiryModalType === 'expired' ? 'text-red-600' : 'text-amber-600'}`}>
+                                                <td className="px-3 py-2 text-slate-600 border-r print:border-slate-800 print:text-black">{storeName}</td>
+                                                <td className="px-3 py-2 font-mono text-slate-600 border-r print:border-slate-800 print:text-black">{item.batchNo || '-'}</td>
+                                                <td className={`px-3 py-2 font-bold border-r print:border-slate-800 ${expiryModalType === 'expired' ? 'text-red-600 print:text-black' : 'text-amber-600 print:text-black'}`}>
                                                     {item.expiryDateAd}
-                                                    <div className="text-[10px] font-normal text-slate-400">{item.expiryDateBs} (BS)</div>
+                                                    <div className="text-[10px] font-normal text-slate-400 print:text-slate-600">{item.expiryDateBs} (BS)</div>
                                                 </td>
-                                                <td className="px-4 py-3 text-center font-black text-slate-700 bg-slate-50/30">
-                                                    {item.currentQuantity} <span className="text-[10px] font-normal text-slate-400">{item.unit}</span>
+                                                <td className="px-3 py-2 text-center font-black text-slate-700 bg-slate-50/30 border-r print:border-slate-800 print:bg-transparent print:text-black">
+                                                    {item.currentQuantity} <span className="text-[10px] font-normal text-slate-400 print:text-slate-600">{item.unit}</span>
                                                 </td>
-                                                <td className="px-4 py-3 text-right text-slate-600">{item.rate?.toFixed(2) || '-'}</td>
-                                                <td className="px-4 py-3 text-right font-black text-slate-800">{item.totalAmount?.toFixed(2) || '-'}</td>
+                                                <td className="px-3 py-2 text-right text-slate-600 border-r print:border-slate-800 print:text-black">{item.rate?.toFixed(2) || '-'}</td>
+                                                <td className="px-3 py-2 text-right font-black text-slate-800 print:text-black">{item.totalAmount?.toFixed(2) || '-'}</td>
                                             </tr>
                                         );
                                     })}
                                     {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).length === 0 && (
                                         <tr>
-                                            <td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic">
-                                                कुनै रेकर्ड भेटिएन। (No items found in this category)
+                                            <td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic font-nepali">
+                                                कुनै रेकर्ड भेटिएन।
                                             </td>
                                         </tr>
                                     )}
                                 </tbody>
                                 {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).length > 0 && (
-                                    <tfoot className="bg-slate-50 font-bold border-t border-slate-200">
+                                    <tfoot className="bg-slate-50 font-bold border-t border-slate-200 print:bg-transparent print:border-slate-800">
                                         <tr>
-                                            <td colSpan={7} className="px-4 py-3 text-right uppercase tracking-wider text-xs">जम्मा मूल्य (Grand Total)</td>
-                                            <td className="px-4 py-3 text-right text-base text-indigo-700">
+                                            <td colSpan={7} className="px-3 py-3 text-right uppercase tracking-wider text-xs border-r print:border-slate-800">जम्मा मूल्य (Grand Total)</td>
+                                            <td className="px-3 py-3 text-right text-base text-indigo-700 print:text-black">
                                                 रु. {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).reduce((sum, i) => sum + (i.totalAmount || 0), 0).toFixed(2)}
                                             </td>
                                         </tr>
@@ -795,14 +800,15 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                             </table>
                         </div>
 
-                        {/* Print Only Footer */}
-                        <div className="hidden print:grid grid-cols-3 gap-10 mt-16 text-center text-xs">
+                        {/* Print Footer: Signatures at the end of last page */}
+                        <div className="hidden print:grid grid-cols-3 gap-10 mt-16 text-center text-xs print:page-break-inside-avoid">
                             <div className="border-t border-slate-800 pt-2 font-bold">तयार गर्ने (Prepared By)</div>
                             <div className="border-t border-slate-800 pt-2 font-bold">जिन्सी शाखा (Store Section)</div>
                             <div className="border-t border-slate-800 pt-2 font-bold">स्वीकृत गर्ने (Approved By)</div>
                         </div>
                     </div>
 
+                    {/* Modal Bottom Bar: Hidden on print */}
                     <div className="p-4 bg-slate-50 border-t no-print flex justify-between items-center">
                         <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase">
                             Total: {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).length} Items
