@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, Syringe, Activity, 
   ClipboardList, FileSpreadsheet, FilePlus, ShoppingCart, FileOutput, 
   BookOpen, Book, Archive, RotateCcw, Wrench, Scroll, BarChart3,
-  Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, ArrowRightCircle, AlertTriangle, Pill, Scissors, Clock, Calculator, Trash2, UsersRound, CalendarCheck, UserPlus, Droplets, Info, TrendingUp
+  Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, ArrowRightCircle, AlertTriangle, Pill, Scissors, Clock, Calculator, Trash2, UsersRound, CalendarCheck, UserPlus, Droplets, Info, TrendingUp, AlertOctagon, Timer, Printer
 } from 'lucide-react';
 import { APP_NAME, ORG_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps, PurchaseOrderEntry, InventoryItem } from '../types'; 
@@ -100,6 +100,10 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [lastSeenNotificationId, setLastSeenNotificationId] = useState<string | null>(null);
 
+  // Expiry List States
+  const [showExpiryModal, setShowExpiryModal] = useState(false);
+  const [expiryModalType, setExpiryModalType] = useState<'expired' | 'near-expiry'>('expired');
+
   // Statistics Calculations for Main Dashboard
   const todayAd = useMemo(() => {
     const now = new Date();
@@ -155,13 +159,36 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
           overall: {
             patients: totalPendingDosesCount,
             ml: totalMl.toFixed(1),
-            vials05: Math.ceil(totalMl / 0.5),
-            vials10: Math.ceil(totalMl / 1.0)
+            vials05: Math.ceil(todayMl / 0.5),
+            vials10: Math.ceil(todayMl / 1.0)
           }
       };
   }, [rabiesRemainingToday, rabiesPatients]);
 
-  const inventoryTotalCount = useMemo(() => inventoryItems.length, [inventoryItems]);
+  // 6. Expiry Statistics & Lists
+  const expiredItems = useMemo(() => {
+      const now = new Date();
+      return inventoryItems.filter(item => 
+          item.expiryDateAd && item.currentQuantity > 0 && new Date(item.expiryDateAd) < now
+      );
+  }, [inventoryItems]);
+
+  const nearExpiryItems = useMemo(() => {
+      const now = new Date();
+      const threeMonthsLater = new Date();
+      threeMonthsLater.setDate(now.getDate() + 90); // 90 days from today
+      
+      return inventoryItems.filter(item => {
+          if (!item.expiryDateAd || item.currentQuantity <= 0) return false;
+          const expiryDate = new Date(item.expiryDateAd);
+          return expiryDate >= now && expiryDate <= threeMonthsLater;
+      });
+  }, [inventoryItems]);
+
+  const inventoryTotalCount = useMemo(() => 
+    inventoryItems.filter(i => i.currentQuantity > 0).length, 
+  [inventoryItems]);
+
   const magFormsPendingCount = useMemo(() => magForms.filter(f => f.status === 'Pending').length, [magForms]);
 
   const latestApprovedDakhila = useMemo(() => {
@@ -188,6 +215,11 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       } else {
           alert("तपाईंलाई यो विवरण हेर्न अनुमति छैन। (Access Denied)");
       }
+  };
+
+  const openExpiryDetail = (type: 'expired' | 'near-expiry') => {
+      setExpiryModalType(type);
+      setShowExpiryModal(true);
   };
 
   interface MenuItem {
@@ -435,7 +467,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
               </div>
             </div>
 
-            {/* Total Inventory Items Card */}
+            {/* Total Inventory Items Card - UPDATED TO ONLY COUNT ITEMS WITH STOCK */}
             <div className={`bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group overflow-hidden relative ${!hasAccess('jinshi_maujdat') ? 'opacity-75 grayscale-[0.5]' : ''}`}>
               <div className="absolute -right-4 -top-4 bg-blue-50 w-24 h-24 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
               {!hasAccess('jinshi_maujdat') && <div className="absolute top-3 right-3 text-slate-300 z-20"><Lock size={16} /></div>}
@@ -452,7 +484,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                 
                 <div className="flex items-baseline gap-2 flex-1">
                     <span className="text-5xl font-black text-blue-600 leading-none">{inventoryTotalCount}</span>
-                    <span className="text-xs text-slate-400 font-bold font-nepali uppercase tracking-wider">Items in Stock</span>
+                    <span className="text-xs text-slate-400 font-bold font-nepali uppercase tracking-wider">In Stock</span>
                 </div>
 
                 <button 
@@ -500,6 +532,56 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             {/* Expired Items Card - CLICKABLE */}
+             <div 
+                onClick={() => openExpiryDetail('expired')}
+                className="bg-white p-6 rounded-2xl border border-red-200 shadow-sm hover:shadow-lg transition-all group overflow-hidden relative cursor-pointer active:scale-[0.98]"
+             >
+                <div className="absolute -right-4 -top-4 bg-red-50 w-24 h-24 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="bg-red-100 p-3 rounded-xl text-red-600 shadow-inner">
+                            <AlertOctagon size={24} />
+                        </div>
+                        <div className="text-right">
+                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Stock Health</p>
+                             <h3 className="text-sm font-bold text-slate-700 font-nepali text-red-600">म्याद नाघेका सामानहरू</h3>
+                        </div>
+                    </div>
+                    <div className="flex items-baseline gap-3">
+                         <span className="text-4xl font-black text-red-600">{expiredItems.length}</span>
+                         <span className="text-xs font-bold text-slate-400 font-nepali uppercase flex items-center gap-1">Items Expired <ChevronRight size={14}/></span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-2 italic font-nepali">यी सामानहरू तुरुन्त हटाउन वा नष्ट गर्नुपर्छ। (Click to view)</p>
+                </div>
+             </div>
+
+             {/* Expiring in 3 Months Card - CLICKABLE */}
+             <div 
+                onClick={() => openExpiryDetail('near-expiry')}
+                className="bg-white p-6 rounded-2xl border border-amber-200 shadow-sm hover:shadow-lg transition-all group overflow-hidden relative cursor-pointer active:scale-[0.98]"
+             >
+                <div className="absolute -right-4 -top-4 bg-amber-50 w-24 h-24 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="bg-amber-100 p-3 rounded-xl text-amber-600 shadow-inner">
+                            <Timer size={24} />
+                        </div>
+                        <div className="text-right">
+                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Near Expiry</p>
+                             <h3 className="text-sm font-bold text-slate-700 font-nepali text-amber-600">३ महिनाभित्र सकिने</h3>
+                        </div>
+                    </div>
+                    <div className="flex items-baseline gap-3">
+                         <span className="text-4xl font-black text-amber-600">{nearExpiryItems.length}</span>
+                         <span className="text-xs font-bold text-slate-400 font-nepali uppercase flex items-center gap-1">Items Near Expiry <ChevronRight size={14}/></span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-2 italic font-nepali">३ महिना (९० दिन) भित्र म्याद सकिने सामानहरू। (Click to view)</p>
+                </div>
+             </div>
           </div>
 
           <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -614,6 +696,124 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         <main className="flex-1 overflow-y-auto bg-slate-50/50 p-4 md:p-6 relative">
             {renderContent()}
         </main>
+
+        {/* STOCK HEALTH MODAL (EXPIRED / NEAR EXPIRED LIST) */}
+        {showExpiryModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm no-print" onClick={() => setShowExpiryModal(false)}></div>
+                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-slate-200">
+                    <div className={`px-6 py-4 border-b flex justify-between items-center no-print ${expiryModalType === 'expired' ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-800'}`}>
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${expiryModalType === 'expired' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                                {expiryModalType === 'expired' ? <AlertOctagon size={24} /> : <Timer size={24} />}
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-lg font-nepali">
+                                    {expiryModalType === 'expired' ? 'म्याद नाघेका सामानहरूको सूची (Expired Items List)' : 'म्याद सकिन लागेका सामानहरूको सूची (Near Expiry List)'}
+                                </h3>
+                                <p className="text-xs opacity-75">
+                                    {expiryModalType === 'expired' ? 'हाल स्टकमा रहेका र म्याद सकिएका सामानहरू' : 'आगामी ९० दिनभित्र म्याद सकिने सामानहरू'}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-900 transition-colors">
+                                <Printer size={16} /> रिपोर्ट प्रिन्ट गर्नुहोस्
+                            </button>
+                            <button onClick={() => setShowExpiryModal(false)} className="p-1.5 hover:bg-black/10 rounded-full transition-colors">
+                                <X size={24} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-8 bg-white" id="expiry-report-area">
+                        {/* Print Only Header */}
+                        <div className="hidden print:block text-center mb-8">
+                            <h1 className="text-xl font-bold text-red-600">{generalSettings.orgNameNepali}</h1>
+                            <h2 className="text-lg font-bold underline mt-1">
+                                {expiryModalType === 'expired' ? 'म्याद नाघेका सामानहरूको प्रतिवेदन' : 'म्याद सकिन लागेका सामानहरूको प्रतिवेदन'}
+                            </h2>
+                            <p className="text-sm mt-2">प्रिन्ट मिति: {new NepaliDate().format('YYYY-MM-DD')}</p>
+                        </div>
+
+                        <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                            <table className="w-full text-sm text-left border-collapse">
+                                <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                                    <tr>
+                                        <th className="px-4 py-3 w-10 text-center">क्र.सं.</th>
+                                        <th className="px-4 py-3">सामानको नाम (Item Name)</th>
+                                        <th className="px-4 py-3">गोदाम (Store)</th>
+                                        <th className="px-4 py-3">ब्याच नं (Batch)</th>
+                                        <th className="px-4 py-3">म्याद सकिने मिति (Expiry AD)</th>
+                                        <th className="px-4 py-3 text-center">परिमाण (Qty)</th>
+                                        <th className="px-4 py-3 text-right">दर (Rate)</th>
+                                        <th className="px-4 py-3 text-right">कुल मूल्य</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).map((item, idx) => {
+                                        const storeName = stores.find(s => s.id === item.storeId)?.name || 'Unknown';
+                                        return (
+                                            <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="px-4 py-3 text-center text-slate-400">{idx + 1}</td>
+                                                <td className="px-4 py-3">
+                                                    <div className="font-bold text-slate-800">{item.itemName}</div>
+                                                    <div className="text-[10px] text-slate-400 uppercase font-mono">{item.uniqueCode || item.sanketNo}</div>
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-600">{storeName}</td>
+                                                <td className="px-4 py-3 font-mono text-slate-600">{item.batchNo || '-'}</td>
+                                                <td className={`px-4 py-3 font-bold ${expiryModalType === 'expired' ? 'text-red-600' : 'text-amber-600'}`}>
+                                                    {item.expiryDateAd}
+                                                    <div className="text-[10px] font-normal text-slate-400">{item.expiryDateBs} (BS)</div>
+                                                </td>
+                                                <td className="px-4 py-3 text-center font-black text-slate-700 bg-slate-50/30">
+                                                    {item.currentQuantity} <span className="text-[10px] font-normal text-slate-400">{item.unit}</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right text-slate-600">{item.rate?.toFixed(2) || '-'}</td>
+                                                <td className="px-4 py-3 text-right font-black text-slate-800">{item.totalAmount?.toFixed(2) || '-'}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).length === 0 && (
+                                        <tr>
+                                            <td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic">
+                                                कुनै रेकर्ड भेटिएन। (No items found in this category)
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                                {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).length > 0 && (
+                                    <tfoot className="bg-slate-50 font-bold border-t border-slate-200">
+                                        <tr>
+                                            <td colSpan={7} className="px-4 py-3 text-right uppercase tracking-wider text-xs">जम्मा मूल्य (Grand Total)</td>
+                                            <td className="px-4 py-3 text-right text-base text-indigo-700">
+                                                रु. {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).reduce((sum, i) => sum + (i.totalAmount || 0), 0).toFixed(2)}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                )}
+                            </table>
+                        </div>
+
+                        {/* Print Only Footer */}
+                        <div className="hidden print:grid grid-cols-3 gap-10 mt-16 text-center text-xs">
+                            <div className="border-t border-slate-800 pt-2 font-bold">तयार गर्ने (Prepared By)</div>
+                            <div className="border-t border-slate-800 pt-2 font-bold">जिन्सी शाखा (Store Section)</div>
+                            <div className="border-t border-slate-800 pt-2 font-bold">स्वीकृत गर्ने (Approved By)</div>
+                        </div>
+                    </div>
+
+                    <div className="p-4 bg-slate-50 border-t no-print flex justify-between items-center">
+                        <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase">
+                            Total: {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).length} Items
+                        </div>
+                        <button onClick={() => setShowExpiryModal(false)} className="px-8 py-2 bg-slate-800 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-200 hover:bg-slate-900 transition-all">
+                            बन्द गर्नुहोस्
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
       </div>
     </div>
   );

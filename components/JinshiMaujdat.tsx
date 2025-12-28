@@ -785,11 +785,21 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
 
   const storeOptions: Option[] = useMemo(() => stores.map(s => ({ id: s.id, value: s.id, label: s.name })), [stores]);
 
-  const expendableCount = useMemo(() => inventoryItems.filter(i => i.itemType === 'Expendable').length, [inventoryItems]);
-  const nonExpendableCount = useMemo(() => inventoryItems.filter(i => i.itemType === 'Non-Expendable').length, [inventoryItems]);
+  // UPDATED: Filter out items with 0 currentQuantity for counts
+  const expendableCount = useMemo(() => 
+    inventoryItems.filter(i => i.itemType === 'Expendable' && i.currentQuantity > 0).length, 
+  [inventoryItems]);
+  
+  const nonExpendableCount = useMemo(() => 
+    inventoryItems.filter(i => i.itemType === 'Non-Expendable' && i.currentQuantity > 0).length, 
+  [inventoryItems]);
 
+  // UPDATED: Filter out items with 0 currentQuantity for listing
   const filteredItems = useMemo(() => {
     return inventoryItems.filter(item => {
+        // Essential condition: Must have stock
+        if (item.currentQuantity <= 0) return false;
+
         const matchesSearch = item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                              (item.uniqueCode && item.uniqueCode.toLowerCase().includes(searchTerm.toLowerCase())) || 
                              (item.sanketNo && item.sanketNo.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -847,7 +857,7 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
           <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600"><Warehouse size={24} /></div>
           <div>
             <h2 className="text-xl font-bold text-slate-800 font-nepali">जिन्सी मौज्दात (Inventory Stock)</h2>
-            <p className="text-sm text-slate-500">कुल {inventoryItems.length} सामानहरू प्रणालीमा उपलब्ध छन्।</p>
+            <p className="text-sm text-slate-500">हाल {filteredItems.length} सामानहरू मौज्दातमा उपलब्ध छन्।</p>
           </div>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
@@ -865,7 +875,7 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
                   <div className={`p-2 rounded-lg ${filterType === '' ? 'bg-white/20' : 'bg-indigo-50 text-indigo-600'}`}><List size={20} /></div>
                   <span className="font-bold font-nepali">सबै सामानहरू (All)</span>
               </div>
-              <span className={`text-lg font-black ${filterType === '' ? 'text-white' : 'text-slate-400'}`}>{inventoryItems.length}</span>
+              <span className={`text-lg font-black ${filterType === '' ? 'text-white' : 'text-slate-400'}`}>{filteredItems.length}</span>
           </button>
 
           <button 
@@ -906,7 +916,7 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
                   <Package size={18} className="text-slate-400" />
                   {filterType === '' ? 'सबै मौज्दात सूची' : filterType === 'Expendable' ? 'खर्च हुने सामानको सूची' : 'खर्च नहुने सामानको सूची'}
               </h3>
-              <span className="text-xs font-medium bg-slate-200 text-slate-600 px-3 py-1 rounded-full">{filteredItems.length} Items Matching</span>
+              <span className="text-xs font-medium bg-slate-200 text-slate-600 px-3 py-1 rounded-full">{filteredItems.length} Items with Stock</span>
           </div>
           <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
@@ -927,7 +937,7 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                       {paginatedItems.length === 0 ? (
-                          <tr><td colSpan={11} className="px-6 py-12 text-center text-slate-400 italic font-nepali text-base">माथि छानिएको प्रकारमा कुनै सामान भेटिएन। (No items found.)</td></tr>
+                          <tr><td colSpan={11} className="px-6 py-12 text-center text-slate-400 italic font-nepali text-base">माथि छानिएको प्रकारमा कुनै सामान भेटिएन। (No items with stock found.)</td></tr>
                       ) : (
                           paginatedItems.map((item, index) => {
                               const storeName = storeOptions.find(s => s.value === item.storeId)?.label || 'Unknown';
