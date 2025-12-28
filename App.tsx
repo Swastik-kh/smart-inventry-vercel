@@ -18,7 +18,7 @@ const INITIAL_SETTINGS: OrganizationSettings = {
     website: 'www.smartinventory.com',
     panNo: 'XXXXXXXXX',
     defaultVatRate: '13',
-    activeFiscalYear: '2081/082',
+    activeFiscalYear: '2082/083',
     enableEnglishDate: 'no',
     logoUrl: ''
 };
@@ -38,7 +38,7 @@ const DEFAULT_ADMIN: User = {
 const App: React.FC = () => {
   const [allUsers, setAllUsers] = useState<User[]>([]); 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [currentFiscalYear, setCurrentFiscalYear] = useState<string>('2081/082');
+  const [currentFiscalYear, setCurrentFiscalYear] = useState<string>('2082/083');
   const [generalSettings, setGeneralSettings] = useState<OrganizationSettings>(INITIAL_SETTINGS);
   const [isDbConnected, setIsDbConnected] = useState(false);
   
@@ -152,19 +152,59 @@ const App: React.FC = () => {
       return u.organizationName === currentUser?.organizationName;
   });
 
+  // Wrapped Mag Form Handler to create PO if market purchase is checked
+  const handleSaveMagForm = async (f: MagFormEntry) => {
+      if (!currentUser) return;
+      try {
+          const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
+          const orgPath = `orgData/${safeOrgName}`;
+          
+          const updates: Record<string, any> = {};
+          updates[`${orgPath}/magForms/${f.id}`] = f;
+
+          // Logic: If the form is Approved AND it was marked as "Market Purchase Required"
+          if (f.status === 'Approved' && f.storeKeeper?.status === 'market') {
+              const poId = `PO-${f.id}`;
+              const poPath = `${orgPath}/purchaseOrders/${poId}`;
+              
+              // Only create if not already exists to avoid overwriting processed POs
+              const poSnap = await get(ref(db, poPath));
+              if (!poSnap.exists()) {
+                  const newPO: PurchaseOrderEntry = {
+                      id: poId,
+                      magFormId: f.id,
+                      magFormNo: f.formNo,
+                      requestDate: f.date,
+                      items: f.items,
+                      status: 'Pending',
+                      fiscalYear: f.fiscalYear,
+                      preparedBy: { name: '', designation: '', date: '' },
+                      recommendedBy: { name: '', designation: '', date: '' },
+                      financeBy: { name: '', designation: '', date: '' },
+                      approvedBy: { name: '', designation: '', date: '' }
+                  };
+                  updates[poPath] = newPO;
+              }
+          }
+          
+          await update(ref(db), updates);
+      } catch (error) {
+          console.error("Error saving Mag Form / Creating PO:", error);
+          alert("माग फारम सुरक्षित गर्दा समस्या आयो।");
+      }
+  };
+
   const handleApproveStockEntry = async (requestId: string, approverName: string, approverDesignation: string) => {
       if (!currentUser) return;
       try {
           const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
           const orgPath = `orgData/${safeOrgName}`;
           
-          // 1. Get the original request data
           const requestRef = ref(db, `${orgPath}/stockRequests/${requestId}`);
           const requestSnap = await get(requestRef);
           if (!requestSnap.exists()) return;
           const request: StockEntryRequest = requestSnap.val();
           
-          // 2. Fetch current inventory to check for existing items
           const invAllSnap = await get(ref(db, `${orgPath}/inventory`));
           const currentInvData = invAllSnap.val() || {};
           const currentInvList: InventoryItem[] = Object.keys(currentInvData).map(k => ({ ...currentInvData[k], id: k }));
@@ -172,9 +212,7 @@ const App: React.FC = () => {
           const updates: Record<string, any> = {};
           const dakhilaItems: DakhilaItem[] = [];
 
-          // 3. Process each item in the request
           for (const item of request.items) {
-              // Exact match: Name + Store + Type
               const existingItem = currentInvList.find(i => 
                   i.itemName.trim().toLowerCase() === item.itemName.trim().toLowerCase() && 
                   i.storeId === request.storeId &&
@@ -186,7 +224,6 @@ const App: React.FC = () => {
               const incomingTax = Number(item.tax) || 0;
               const incomingTotal = incomingQty * incomingRate * (1 + incomingTax / 100);
 
-              // Prepare item for formal Dakhila Report
               dakhilaItems.push({
                   id: Date.now() + Math.random(),
                   name: item.itemName,
@@ -205,7 +242,6 @@ const App: React.FC = () => {
               });
 
               if (existingItem) {
-                  // UPDATE Existing: Increase quantity
                   const newQty = (Number(existingItem.currentQuantity) || 0) + incomingQty;
                   const newVal = (Number(existingItem.totalAmount) || 0) + incomingTotal;
                   updates[`${orgPath}/inventory/${existingItem.id}`] = {
@@ -217,7 +253,6 @@ const App: React.FC = () => {
                       dakhilaNo: request.dakhilaNo || item.dakhilaNo || existingItem.dakhilaNo
                   };
               } else {
-                  // ADD New: Create new inventory record
                   const newId = item.id.startsWith('TEMP') ? `ITEM-${Date.now()}-${Math.random().toString(36).substring(7)}` : item.id;
                   updates[`${orgPath}/inventory/${newId}`] = {
                       ...item,
@@ -233,12 +268,9 @@ const App: React.FC = () => {
               }
           }
 
-          // 4. Update request status and set the Approver Name & Designation
           updates[`${orgPath}/stockRequests/${requestId}/status`] = 'Approved';
-          updates[`${orgPath}/stockRequests/${requestId}/approvedBy`] = approverName; // Name
-          // Note: We'll store name and post in the formal report too
+          updates[`${orgPath}/stockRequests/${requestId}/approvedBy`] = approverName;
 
-          // 5. Generate a formal Dakhila Pratibedan (Form 403)
           const formalDakhilaId = `DA-${Date.now()}`;
           const formalReport: DakhilaPratibedanEntry = {
               id: formalDakhilaId,
@@ -248,20 +280,11 @@ const App: React.FC = () => {
               orderNo: request.refNo || 'BULK-ENTRY',
               items: dakhilaItems,
               status: 'Final',
-              preparedBy: { 
-                  name: request.requesterName || request.requestedBy, 
-                  designation: request.requesterDesignation || 'Staff', 
-                  date: request.requestDateBs 
-              },
-              approvedBy: { 
-                  name: approverName, 
-                  designation: approverDesignation, 
-                  date: request.requestDateBs 
-              }
+              preparedBy: { name: request.requesterName || request.requestedBy, designation: request.requesterDesignation || 'Staff', date: request.requestDateBs },
+              approvedBy: { name: approverName, designation: approverDesignation, date: request.requestDateBs }
           };
           updates[`${orgPath}/dakhilaReports/${formalDakhilaId}`] = formalReport;
 
-          // 6. Push all updates to database at once (Atomic Update)
           await update(ref(db), updates);
       } catch (error) {
           console.error("Critical Error during stock approval:", error);
@@ -284,7 +307,7 @@ const App: React.FC = () => {
           generalSettings={generalSettings}
           onUpdateGeneralSettings={(s) => set(getOrgRef('settings'), s)}
           magForms={magForms}
-          onSaveMagForm={(f) => set(getOrgRef(`magForms/${f.id}`), f)}
+          onSaveMagForm={handleSaveMagForm}
           purchaseOrders={purchaseOrders}
           onUpdatePurchaseOrder={(o) => set(getOrgRef(`purchaseOrders/${o.id}`), o)}
           issueReports={issueReports}
@@ -342,7 +365,7 @@ const App: React.FC = () => {
                 <LoginForm 
                     users={allUsers} 
                     onLoginSuccess={handleLoginSuccess} 
-                    initialFiscalYear={'2081/082'} 
+                    initialFiscalYear={'2082/083'} 
                 />
               </div>
               <div className="bg-slate-50 p-5 text-center border-t border-slate-100 flex items-center justify-center gap-3">

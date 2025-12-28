@@ -8,7 +8,7 @@ import { LoginFormData, LoginFormProps } from '../types';
 
 export const LoginForm: React.FC<LoginFormProps> = ({ users, onLoginSuccess, initialFiscalYear }) => {
   const [formData, setFormData] = useState<LoginFormData>({
-    fiscalYear: initialFiscalYear || '2081/082',
+    fiscalYear: initialFiscalYear || '2082/083',
     username: '',
     password: '',
   });

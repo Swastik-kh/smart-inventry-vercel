@@ -331,7 +331,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
 
   if (!editingId) {
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 no-print">
             <div className="flex justify-between items-center border-b border-slate-200 pb-4">
                 <div>
                     <h2 className="text-xl font-bold text-slate-800 font-nepali">माग फारम व्यवस्थापन (Mag Faram)</h2>
@@ -470,7 +470,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
            </div>
        )}
 
-       <div id="mag-form-print" className="bg-white p-6 md:p-10 max-w-[210mm] mx-auto min-h-[297mm] font-nepali text-slate-900 print:p-0 print:shadow-none print:w-full border shadow-lg rounded-xl">
+       <div id="mag-form-print" className="bg-white p-6 md:p-10 max-w-[210mm] mx-auto min-h-[297mm] font-nepali text-slate-900 print:p-0 print:shadow-none print:w-full print-full-width border shadow-lg rounded-xl">
           <div className="text-right font-bold text-[10px] mb-2">म.ले.प.फारम नं: ४०१</div>
           
           <div className="mb-6">
@@ -677,7 +677,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
 
        {/* REJECTION REASON MODAL */}
        {showRejectModal && (
-           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 no-print">
                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={() => setShowRejectModal(false)}></div>
                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
                     <div className="px-6 py-4 border-b bg-red-600 text-white flex justify-between items-center">
@@ -728,7 +728,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
 
        {/* VERIFICATION METADATA POPUP */}
        {showVerifyPopup && (
-           <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+           <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 no-print">
                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowVerifyPopup(false)}></div>
                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
                     <div className="px-6 py-4 border-b bg-indigo-600 text-white flex justify-between items-center">

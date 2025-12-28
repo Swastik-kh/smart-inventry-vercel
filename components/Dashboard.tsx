@@ -358,9 +358,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       {isSidebarOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-20 md:hidden transition-opacity duration-300" onClick={() => setIsSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-20 md:hidden transition-opacity duration-300 no-print" onClick={() => setIsSidebarOpen(false)} />
       )}
-      <aside className={`fixed md:relative z-30 h-full bg-slate-900 text-white flex flex-col shadow-xl transition-all duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64 md:w-0 md:translate-x-0 md:overflow-hidden'}`}>
+      <aside className={`fixed md:relative z-30 h-full bg-slate-900 text-white flex flex-col shadow-xl transition-all duration-300 ease-in-out no-print ${isSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64 md:w-0 md:translate-x-0 md:overflow-hidden'}`}>
         <div className="p-6 border-b border-slate-800 flex items-center gap-3 bg-slate-950 shrink-0">
             <div className="bg-primary-600 p-2 rounded-lg shadow-lg shadow-primary-500/20">
                 <Activity size={20} className="text-white" />
@@ -421,7 +421,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </aside>
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
-        <header className="bg-white border-b border-slate-200 p-4 flex md:hidden items-center justify-between shadow-sm z-10 shrink-0">
+        <header className="bg-white border-b border-slate-200 p-4 flex md:hidden items-center justify-between shadow-sm z-10 shrink-0 no-print">
             <div className="flex items-center gap-3">
                  <button onClick={() => setIsSidebarOpen(true)} className="bg-primary-600 p-1.5 rounded-md hover:bg-primary-700 transition-colors">
                     <Menu size={18} className="text-white" />
@@ -440,7 +440,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <button onClick={onLogout} className="text-slate-500 hover:text-red-500"><LogOut size={20} /></button>
             </div>
         </header>
-        <div className="hidden md:flex bg-white border-b border-slate-200 px-8 py-4 justify-between items-center shadow-sm z-10 shrink-0">
+        <div className="hidden md:flex bg-white border-b border-slate-200 px-8 py-4 justify-between items-center shadow-sm z-10 shrink-0 no-print">
             <div className="flex items-center gap-4">
                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors" title={isSidebarOpen ? "Hide Menu" : "Show Menu"}><Menu size={24} /></button>
                <h2 className="text-lg font-semibold text-slate-700">ड्यासबोर्ड (Dashboard)</h2>
@@ -466,7 +466,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </main>
       </div>
       {showNotificationModal && latestApprovedDakhila && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 no-print">
               <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowNotificationModal(false)}></div>
               <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
                   <div className="px-6 py-4 border-b border-green-100 flex justify-between items-center bg-green-50">
