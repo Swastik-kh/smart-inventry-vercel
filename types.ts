@@ -411,6 +411,7 @@ export interface DashboardProps {
 
   magForms: MagFormEntry[];
   onSaveMagForm: (form: MagFormEntry) => void;
+  onDeleteMagForm: (formId: string) => void; // Added for history deletion
   
   purchaseOrders: PurchaseOrderEntry[];
   onUpdatePurchaseOrder: (order: PurchaseOrderEntry) => void; 

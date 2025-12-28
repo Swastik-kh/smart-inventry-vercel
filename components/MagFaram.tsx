@@ -18,12 +18,13 @@ interface MagFaramProps {
   currentUser: User;
   existingForms: MagFormEntry[];
   onSave: (form: MagFormEntry) => void;
+  onDelete?: (formId: string) => void; // Prop for deletion
   inventoryItems: InventoryItem[];
   stores?: Store[];
   generalSettings: OrganizationSettings;
 }
 
-export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUser, existingForms, onSave, inventoryItems, generalSettings, stores = [] }) => {
+export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUser, existingForms, onSave, onDelete, inventoryItems, generalSettings, stores = [] }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -210,6 +211,14 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
       }
       
       setValidationError(null);
+  };
+
+  const handleDeleteClick = (id: string, formNo: string) => {
+      if (!onDelete) return;
+      if (window.confirm(`के तपाईं निश्चित हुनुहुन्छ कि तपाईं माग फारम नं. ${formNo} इतिहासबाट हटाउन चाहनुहुन्छ? यो कार्य पूर्ववत गर्न सकिँदैन।`)) {
+          onDelete(id);
+          alert(`माग फारम नं. ${formNo} सफलतापूर्वक हटाइयो।`);
+      }
   };
 
   const handleSave = () => {
@@ -404,9 +413,16 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                                         </div>
                                     </td>
                                     <td className="px-6 py-3 text-right">
-                                        <button onClick={() => handleLoadForm(f, true)} className={`p-2 rounded-full transition-colors ${isNewUpdate ? 'text-primary-600 bg-primary-100 hover:bg-primary-200' : 'text-slate-400 hover:text-primary-600'}`} title="Preview">
-                                            <Eye size={18} />
-                                        </button>
+                                        <div className="flex justify-end gap-1">
+                                            <button onClick={() => handleLoadForm(f, true)} className={`p-2 rounded-full transition-colors ${isNewUpdate ? 'text-primary-600 bg-primary-100 hover:bg-primary-200' : 'text-slate-400 hover:text-primary-600'}`} title="Preview">
+                                                <Eye size={18} />
+                                            </button>
+                                            {isAdminOrApproval && (
+                                                <button onClick={() => handleDeleteClick(f.id, f.formNo)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors" title="Delete History">
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             );
@@ -483,6 +499,15 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                       <h2 className="text-base font-bold">{generalSettings.subTitleNepali}</h2>
                       {generalSettings.subTitleNepali2 && <h3 className="text-sm font-bold">{generalSettings.subTitleNepali2}</h3>}
                       {generalSettings.subTitleNepali3 && <h3 className="text-base font-bold">{generalSettings.subTitleNepali3}</h3>}
+                      
+                      {/* Contact and Identity Info Row */}
+                      <div className="text-[10px] mt-2 space-x-3 font-medium text-slate-600">
+                          {generalSettings.address && <span>{generalSettings.address}</span>}
+                          {generalSettings.phone && <span>| फोन: {generalSettings.phone}</span>}
+                          {generalSettings.email && <span>| ईमेल: {generalSettings.email}</span>}
+                          {generalSettings.website && <span>| वेबसाइट: {generalSettings.website}</span>}
+                          {generalSettings.panNo && <span>| पान/भ्याट नं: {generalSettings.panNo}</span>}
+                      </div>
                   </div>
                   <div className="w-24"></div> 
               </div>

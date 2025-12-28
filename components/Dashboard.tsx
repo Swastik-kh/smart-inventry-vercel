@@ -46,6 +46,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onUpdateGeneralSettings,
   magForms,
   onSaveMagForm,
+  onDeleteMagForm,
   purchaseOrders,
   onUpdatePurchaseOrder,
   issueReports,
@@ -314,12 +315,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
       case 'tb_leprosy':
         return <TBPatientRegistration currentFiscalYear={currentFiscalYear} />;
       case 'rabies':
-        /* Fixed: Changed onUpdatePatient to use onUpdateRabiesPatient which is destructured from props */
         return <RabiesRegistration currentFiscalYear={currentFiscalYear} patients={rabiesPatients} onAddPatient={onAddRabiesPatient} onUpdatePatient={onUpdateRabiesPatient} onDeletePatient={onDeletePatient} currentUser={currentUser} />;
       case 'report_rabies':
         return <RabiesReport currentFiscalYear={currentFiscalYear} currentUser={currentUser} patients={rabiesPatients} />;
       case 'mag_faram':
-        return <MagFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} existingForms={magForms} onSave={onSaveMagForm} inventoryItems={inventoryItems} stores={stores} generalSettings={generalSettings} />;
+        return <MagFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} existingForms={magForms} onSave={onSaveMagForm} onDelete={onDeleteMagForm} inventoryItems={inventoryItems} stores={stores} generalSettings={generalSettings} />;
       case 'kharid_adesh':
         return <KharidAdesh orders={purchaseOrders} currentFiscalYear={currentFiscalYear} onSave={onUpdatePurchaseOrder} currentUser={currentUser} firms={firms} quotations={quotations} onDakhilaClick={handleDakhilaFromPo} generalSettings={generalSettings} />;
       case 'nikasha_pratibedan':

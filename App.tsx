@@ -194,6 +194,21 @@ const App: React.FC = () => {
       }
   };
 
+  // Specific delete for Mag Form
+  const handleDeleteMagForm = async (formId: string) => {
+    if (!currentUser) return;
+    try {
+        const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
+        const orgPath = `orgData/${safeOrgName}/magForms/${formId}`;
+        await remove(ref(db, orgPath));
+        // Also check if there's an associated PO and ask to remove? Or keep PO for tracking?
+        // Simple implementation: just remove the form.
+    } catch (error) {
+        console.error("Error deleting Mag Form:", error);
+        alert("माग फारम हटाउन सकिएन।");
+    }
+  };
+
   const handleApproveStockEntry = async (requestId: string, approverName: string, approverDesignation: string) => {
       if (!currentUser) return;
       try {
@@ -308,6 +323,7 @@ const App: React.FC = () => {
           onUpdateGeneralSettings={(s) => set(getOrgRef('settings'), s)}
           magForms={magForms}
           onSaveMagForm={handleSaveMagForm}
+          onDeleteMagForm={handleDeleteMagForm}
           purchaseOrders={purchaseOrders}
           onUpdatePurchaseOrder={(o) => set(getOrgRef(`purchaseOrders/${o.id}`), o)}
           issueReports={issueReports}
