@@ -59,7 +59,6 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
         }
 
         let colIndex = -1;
-        // Updated mapping to match exactly with the new values from registration
         switch(p.animalType) {
             case 'Dog bite': colIndex = 0; break;
             case 'Monkey bite': colIndex = 1; break;
@@ -88,6 +87,14 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+      {/* Landscape Print Helper CSS */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page { size: landscape; margin: 1cm; }
+          .print-container { width: 100% !important; max-width: none !important; border: none !important; padding: 0 !important; }
+        }
+      ` }} />
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
          <div className="flex items-end gap-4 w-full md:w-auto">
              <div className="w-48">
@@ -97,68 +104,74 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
                 <Select label="महिना" options={nepaliMonthOptions} value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} icon={<Filter size={18} />} />
             </div>
          </div>
-         <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium shadow-sm"><Printer size={18} /> Print</button>
+         <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-bold shadow-md transition-all active:scale-95"><Printer size={18} /> रिपोर्ट प्रिन्ट गर्नुहोस्</button>
       </div>
 
-      <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-lg overflow-x-auto min-w-[1000px]">
+      <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-lg overflow-x-auto print-container">
         <div className="text-center space-y-1 mb-6 font-bold text-slate-900">
-            <h4 className="text-sm uppercase">NG/MOH</h4>
-            <h3 className="text-base uppercase">EPIDEMIOLOGY AND DISEASE CONTROL DIVISION</h3>
+            <h4 className="text-xs uppercase">NG/MOH</h4>
+            <h3 className="text-sm uppercase">EPIDEMIOLOGY AND DISEASE CONTROL DIVISION</h3>
             <h2 className="text-lg uppercase">MONTHLY RECORDS OF POST EXPOSURE TREATMENT OF RABIES IN HUMANS</h2>
-            <div className="flex justify-between items-center mt-6 pt-4 px-4 text-sm">
-                <span>Institution: <span className="font-medium underline">{currentUser.organizationName}</span></span>
-                <span>Month: <span className="font-medium underline">{nepaliMonthOptions.find(m => m.value === selectedMonth)?.label}</span></span>
-                <span>Year: <span className="font-medium underline">{selectedFiscalYear}</span></span>
+            <div className="flex justify-between items-center mt-6 pt-4 px-4 text-xs font-bold uppercase tracking-wider">
+                <span>Institution: <span className="underline">{currentUser.organizationName}</span></span>
+                <span>Month: <span className="underline">{nepaliMonthOptions.find(m => m.value === selectedMonth)?.label}</span></span>
+                <span>Year: <span className="underline">{selectedFiscalYear}</span></span>
             </div>
         </div>
 
-        <table className="w-full text-xs border-collapse border border-slate-800 text-center">
+        <table className="w-full text-[10px] border-collapse border border-slate-800 text-center">
             <thead>
                 <tr className="bg-slate-100 font-bold">
-                    <th className="border border-slate-800 p-1" rowSpan={2}>Description</th>
-                    <th className="border border-slate-800 p-1" colSpan={10}>Source of Exposure</th>
-                    <th className="border border-slate-800 p-1" rowSpan={2}>Total</th>
-                    <th className="border border-slate-800 p-1" rowSpan={2}>Prev Balance</th>
-                    <th className="border border-slate-800 p-1" rowSpan={2}>Received</th>
-                    <th className="border border-slate-800 p-1" rowSpan={2}>Doses Used</th>
-                    <th className="border border-slate-800 p-1" rowSpan={2}>Remaining</th>
+                    <th className="border border-slate-800 p-2" rowSpan={2}>Description</th>
+                    <th className="border border-slate-800 p-2" colSpan={10}>Source of Exposure</th>
+                    <th className="border border-slate-800 p-2" rowSpan={2}>Total</th>
+                    <th className="border border-slate-800 p-2" rowSpan={2}>Prev Balance</th>
+                    <th className="border border-slate-800 p-2" rowSpan={2}>Received</th>
+                    <th className="border border-slate-800 p-2" rowSpan={2}>Doses Used</th>
+                    <th className="border border-slate-800 p-2" rowSpan={2}>Remaining</th>
                 </tr>
-                <tr>
-                    {animals.map((a, i) => <th key={i} className="border border-slate-800 p-1">{a}</th>)}
+                <tr className="bg-slate-50">
+                    {animals.map((a, i) => <th key={i} className="border border-slate-800 p-1 text-[9px] font-bold">{a}</th>)}
                 </tr>
             </thead>
             <tbody>
                 {rowLabels.map((label, rIndex) => (
-                    <tr key={rIndex}>
-                        <td className="border border-slate-800 p-1 text-left font-bold">{label}</td>
-                        {generatedMatrix[rIndex].map((val, cIndex) => <td key={cIndex} className="border border-slate-800">{val || '-'}</td>)}
-                        <td className="border border-slate-800 font-bold bg-slate-50">{getRowTotal(rIndex)}</td>
-                        <td className="border border-slate-800 bg-slate-100"></td>
-                        <td className="border border-slate-800 bg-slate-100"></td>
-                        <td className="border border-slate-800 bg-slate-100"></td>
-                        <td className="border border-slate-800 bg-slate-100"></td>
+                    <tr key={rIndex} className="hover:bg-slate-50">
+                        <td className="border border-slate-800 p-2 text-left font-bold bg-slate-50/30">{label}</td>
+                        {generatedMatrix[rIndex].map((val, cIndex) => (
+                            <td key={cIndex} className={`border border-slate-800 p-1 ${val > 0 ? 'font-bold text-slate-900' : 'text-slate-300'}`}>
+                                {val || '-'}
+                            </td>
+                        ))}
+                        <td className="border border-slate-800 font-black bg-slate-100/50">{getRowTotal(rIndex)}</td>
+                        <td className="border border-slate-800 bg-slate-100/20"></td>
+                        <td className="border border-slate-800 bg-slate-100/20"></td>
+                        <td className="border border-slate-800 bg-slate-100/20"></td>
+                        <td className="border border-slate-800 bg-slate-100/20"></td>
                     </tr>
                 ))}
                 <tr className="font-bold bg-slate-100">
-                    <td className="border border-slate-800 p-1 text-left">TOTAL</td>
-                    {animals.map((_, i) => <td key={i} className="border border-slate-800">{getColTotal(i)}</td>)}
-                    <td className="border border-slate-800">{grandTotalCases}</td>
-                    <td className="border border-slate-800">{stockData.opening}</td>
-                    <td className="border border-slate-800">{stockData.received}</td>
-                    <td className="border border-slate-800">{stockData.expenditure}</td>
-                    <td className="border border-slate-800">{balanceDose}</td>
+                    <td className="border border-slate-800 p-2 text-left uppercase">TOTAL CASES</td>
+                    {animals.map((_, i) => <td key={i} className="border border-slate-800 p-1">{getColTotal(i)}</td>)}
+                    <td className="border border-slate-800 p-1 text-lg">{grandTotalCases}</td>
+                    <td className="border border-slate-800 p-1">{stockData.opening}</td>
+                    <td className="border border-slate-800 p-1">{stockData.received}</td>
+                    <td className="border border-slate-800 p-1">{stockData.expenditure}</td>
+                    <td className="border border-slate-800 p-1 text-lg">{balanceDose}</td>
                 </tr>
             </tbody>
         </table>
 
-        <div className="mt-12 grid grid-cols-2 gap-20">
+        <div className="mt-16 grid grid-cols-2 gap-40 px-10">
             <div className="text-center">
-                <div className="border-t border-slate-800 pt-2 font-bold">Prepared By</div>
-                <div className="text-xs">{currentUser.fullName}</div>
+                <div className="border-t border-slate-800 pt-3 font-bold text-sm uppercase">Prepared By</div>
+                <div className="text-xs mt-1">{currentUser.fullName}</div>
+                <div className="text-[10px] text-slate-500 uppercase mt-0.5">Signature & Designation</div>
             </div>
             <div className="text-center">
-                <div className="border-t border-slate-800 pt-2 font-bold">Approved By</div>
-                <div className="text-xs">Medical Officer / In-Charge</div>
+                <div className="border-t border-slate-800 pt-3 font-bold text-sm uppercase">Approved By</div>
+                <div className="text-xs mt-1">Medical Officer / In-Charge</div>
+                <div className="text-[10px] text-slate-500 uppercase mt-0.5">Stamp & Signature</div>
             </div>
         </div>
       </div>
