@@ -72,6 +72,8 @@ export interface RabiesPatient {
   regMonth: string; 
   regDateBs: string; 
   regDateAd: string; 
+  vaccineStartDateBs?: string; // New: Anchor for schedule
+  vaccineStartDateAd?: string; // New: Anchor for schedule
   name: string;
   age: string; 
   sex: string;

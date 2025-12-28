@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-/* Added Info to the import list below */
-import { Save, RotateCcw, Syringe, Calendar, FileDigit, User, Phone, MapPin, CalendarRange, Clock, CheckCircle2, Search, X, AlertTriangle, Trash2, Pencil, Check, Info } from 'lucide-react';
+/* Added AlertTriangle to the imports */
+import { Save, RotateCcw, Syringe, Calendar, FileDigit, User, Phone, MapPin, CalendarRange, Clock, CheckCircle2, Search, X, AlertCircle, Trash2, Pencil, Check, Info, AlertTriangle } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
@@ -122,6 +122,8 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
     regMonth: '',
     regDateBs: '',
     regDateAd: '',
+    vaccineStartDateBs: '',
+    vaccineStartDateAd: '',
     name: '',
     age: '',
     sex: '',
@@ -140,13 +142,16 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
         const today = new NepaliDate();
         const todayBs = today.format('YYYY-MM-DD');
         const month = String(today.getMonth() + 1).padStart(2, '0');
+        const todayAd = formatDateLocal(new Date());
         
         setFormData(prev => ({
           ...prev,
           regNo: generateRegNo(),
           regDateBs: todayBs,
           regMonth: month,
-          regDateAd: formatDateLocal(new Date()),
+          regDateAd: todayAd,
+          vaccineStartDateBs: todayBs,
+          vaccineStartDateAd: todayAd,
           exposureDateBs: todayBs
         }));
     }
@@ -173,14 +178,39 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
             ...prev,
             regDateBs: val,
             regMonth: month,
-            regDateAd: adDateStr
+            regDateAd: adDateStr,
+            // Automatically set start date same as reg date by default for new entries
+            vaccineStartDateBs: prev.vaccineStartDateBs || val,
+            vaccineStartDateAd: prev.vaccineStartDateAd || adDateStr
         };
-        // Only auto-recalculate schedule if NOT editing an existing patient
         if (!editingPatientId) {
-            updated.schedule = calculateSchedule(adDateStr, prev.regimen);
+            updated.schedule = calculateSchedule(updated.vaccineStartDateAd || adDateStr, prev.regimen);
         }
         return updated;
     });
+  };
+
+  const handleVaccineStartDateChange = (val: string) => {
+      let adDateStr = '';
+      if (val) {
+          try {
+              const parts = val.split(/[-/]/);
+              const [y, m, d] = parts.map(Number);
+              const nd = new NepaliDate(y, m - 1, d);
+              adDateStr = formatDateLocal(nd.toJsDate());
+          } catch (e) {}
+      }
+      setFormData(prev => {
+          const updated = {
+              ...prev,
+              vaccineStartDateBs: val,
+              vaccineStartDateAd: adDateStr
+          };
+          if (!editingPatientId) {
+              updated.schedule = calculateSchedule(adDateStr, prev.regimen);
+          }
+          return updated;
+      });
   };
 
   const calculateSchedule = (startDateAd: string, regimen: string): VaccinationDose[] => {
@@ -218,7 +248,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
           const newPatient = {
               ...formData,
               id: Date.now().toString(),
-              schedule: calculateSchedule(formData.regDateAd, formData.regimen)
+              schedule: calculateSchedule(formData.vaccineStartDateAd || formData.regDateAd, formData.regimen)
           };
           onAddPatient(newPatient);
           handleReset();
@@ -234,6 +264,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
 
   const handleReset = () => {
     const today = new NepaliDate();
+    const todayAd = formatDateLocal(new Date());
     setEditingPatientId(null);
     setFormData({
         id: '',
@@ -241,7 +272,9 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
         regNo: generateRegNo(),
         regMonth: String(today.getMonth() + 1).padStart(2, '0'),
         regDateBs: today.format('YYYY-MM-DD'),
-        regDateAd: formatDateLocal(new Date()),
+        regDateAd: todayAd,
+        vaccineStartDateBs: today.format('YYYY-MM-DD'),
+        vaccineStartDateAd: todayAd,
         name: '', age: '', sex: '', address: '', phone: '',
         animalType: '', exposureCategory: '', bodyPart: '',
         exposureDateBs: today.format('YYYY-MM-DD'),
@@ -278,7 +311,8 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
           return;
       }
       
-      if (givenDateAd < dose.date) {
+      // Allow Day 0 (D0) to be before scheduled date (Reg Date) even for non-admins
+      if (!isAdmin && dose.day !== 0 && givenDateAd < dose.date) {
           const scheduledBs = convertAdToBsFull(dose.date);
           setDoseUpdateError(`यो खोपको निर्धारित मिति ${scheduledBs} हो। तोकिएको मिति भन्दा अगाडि खोप लगाएको विवरण राख्न मिल्दैन।`);
           return;
@@ -345,7 +379,6 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
         </div>
       </div>
 
-      {/* Registration Form */}
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
           {editingPatientId && (
               <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600"></div>
@@ -365,8 +398,9 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                   </div>
               </div>
 
-              <div className="md:col-span-1">
+              <div className="grid grid-cols-2 md:col-span-1 gap-4">
                  <NepaliDatePicker label="दर्ता मिति (BS)" value={formData.regDateBs} onChange={handleRegDateBsChange} required disabled={!!editingPatientId && !isAdmin} />
+                 <NepaliDatePicker label="खोप सुरु मिति (D0)" value={formData.vaccineStartDateBs || ''} onChange={handleVaccineStartDateChange} required disabled={!!editingPatientId && !isAdmin} />
               </div>
 
               <Select label="दर्ता महिना" value={formData.regMonth} onChange={e => setFormData({...formData, regMonth: e.target.value})} options={nepaliMonthOptions} icon={<CalendarRange size={16} />} />
@@ -397,7 +431,6 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
           </form>
       </div>
 
-      {/* Patient List */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="flex items-center gap-3">
@@ -481,7 +514,6 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
           </div>
       </div>
 
-      {/* Dose Update Modal */}
       {selectedDoseInfo && (
           <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-12 sm:pt-24">
               <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedDoseInfo(null)}></div>
@@ -513,21 +545,17 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                             label="खोप लगाएको मिति (Given Date - BS)" 
                             value={modalDateBs} 
                             onChange={setModalDateBs} 
-                            minDate={convertAdToBsFull(selectedDoseInfo.dose.date)}
+                            /* D0 dose allows selection before scheduled date for correction */
+                            minDate={isAdmin || selectedDoseInfo.dose.day === 0 ? undefined : convertAdToBsFull(selectedDoseInfo.dose.date)}
                             popupAlign="right"
-                            disabled={selectedDoseInfo.dose.status === 'Given' && !isAdmin}
+                            disabled={selectedDoseInfo.dose.status === 'Given'}
                           />
                           
-                          {selectedDoseInfo.dose.status === 'Given' && isAdmin && (
-                              <div className="bg-indigo-50 text-indigo-600 p-2 rounded text-[10px] font-bold flex items-center gap-2">
-                                  <Info size={14} /> तपाईंले लगाएको मिति सच्याउन सक्नुहुन्छ।
-                              </div>
-                          )}
-
-                          {selectedDoseInfo.dose.status === 'Given' && !isAdmin && (
+                          {selectedDoseInfo.dose.status === 'Given' && (
                               <div className="bg-green-50 border border-green-100 p-3 rounded-lg text-center font-nepali text-green-700">
                                   <CheckCircle2 size={20} className="mx-auto mb-1" />
-                                  <span className="font-bold">खोप लगाइसकियो</span>
+                                  <span className="font-bold">खोप लगाइसकियो (Locked)</span>
+                                  {isAdmin && <p className="text-[10px] text-slate-500 mt-1 italic">एकपटक 'Given' भएपछि मिति सच्याउन मिल्दैन।</p>}
                               </div>
                           )}
 
@@ -548,10 +576,10 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                   </div>
                   <div className="p-4 border-t border-slate-100 flex gap-3 bg-slate-50">
                       <button type="button" onClick={() => setSelectedDoseInfo(null)} className="flex-1 py-2 text-slate-600 font-medium font-nepali hover:bg-slate-200 rounded-lg transition-colors text-sm">बन्द (Close)</button>
-                      {(selectedDoseInfo.dose.status !== 'Given' || isAdmin) && (
+                      {selectedDoseInfo.dose.status !== 'Given' && (
                           <button type="button" onClick={confirmDoseUpdate} className="flex-1 py-2 bg-green-600 text-white rounded-lg font-medium shadow-sm font-nepali hover:bg-green-700 transition-all active:scale-95 text-sm flex items-center justify-center gap-2">
-                              {selectedDoseInfo.dose.status === 'Given' ? <Save size={16} /> : <Check size={16} />}
-                              {selectedDoseInfo.dose.status === 'Given' ? 'अपडेट गर्नुहोस्' : 'सुरक्षित गर्नुहोस्'}
+                              <Check size={16} />
+                              सुरक्षित गर्नुहोस्
                           </button>
                       )}
                   </div>
