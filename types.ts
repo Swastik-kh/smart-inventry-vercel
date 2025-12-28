@@ -433,6 +433,7 @@ export interface DashboardProps {
   inventoryItems: InventoryItem[];
   onAddInventoryItem: (item: InventoryItem) => void;
   onUpdateInventoryItem: (item: InventoryItem) => void;
+  onDeleteInventoryItem: (itemId: string) => void; // Added for single item deletion
 
   stockEntryRequests: StockEntryRequest[];
   onRequestStockEntry: (request: StockEntryRequest) => void;

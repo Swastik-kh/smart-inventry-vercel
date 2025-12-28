@@ -33,7 +33,11 @@ import { DhuliyaunaFaram } from './DhuliyaunaFaram';
 import { LogBook } from './LogBook';
 import { GeneralSetting } from './GeneralSetting';
 
-export const Dashboard: React.FC<DashboardProps> = ({ 
+interface ExtendedDashboardProps extends DashboardProps {
+  onUploadData: (sectionId: string, data: any[], extraMeta?: any) => Promise<void>;
+}
+
+export const Dashboard: React.FC<ExtendedDashboardProps> = ({ 
   onLogout, 
   currentUser, 
   currentFiscalYear,
@@ -62,6 +66,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   inventoryItems,
   onAddInventoryItem,
   onUpdateInventoryItem,
+  onDeleteInventoryItem,
   stockEntryRequests,
   onRequestStockEntry,
   onApproveStockEntry,
@@ -80,7 +85,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onSaveDhuliyaunaEntry,
   logBookEntries,
   onSaveLogBookEntry,
-  onClearData
+  onClearData,
+  onUploadData
 }) => {
   const fiscalYearLabel = FISCAL_YEARS.find(fy => fy.value === currentFiscalYear)?.label || currentFiscalYear;
 
@@ -225,7 +231,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       case 'nikasha_pratibedan': return <NikashaPratibedan reports={issueReports} onSave={onUpdateIssueReport} currentUser={currentUser} currentFiscalYear={currentFiscalYear} generalSettings={generalSettings} />;
       case 'form_suchikaran': return <FirmListing currentFiscalYear={currentFiscalYear} firms={firms} onAddFirm={onAddFirm} />;
       case 'quotation': return <Quotation currentFiscalYear={currentFiscalYear} firms={firms} quotations={quotations} onAddQuotation={onAddQuotation} inventoryItems={inventoryItems} />;
-      case 'jinshi_maujdat': return <JinshiMaujdat currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} onAddInventoryItem={onAddInventoryItem} onUpdateInventoryItem={onUpdateInventoryItem} stores={stores} onRequestStockEntry={onRequestStockEntry} pendingPoDakhila={pendingPoDakhila} onClearPendingPoDakhila={() => setPendingPoDakhila(null)} />;
+      case 'jinshi_maujdat': return <JinshiMaujdat currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} onAddInventoryItem={onAddInventoryItem} onUpdateInventoryItem={onUpdateInventoryItem} onDeleteInventoryItem={onDeleteInventoryItem} stores={stores} onRequestStockEntry={onRequestStockEntry} pendingPoDakhila={pendingPoDakhila} onClearPendingPoDakhila={() => setPendingPoDakhila(null)} />;
       case 'stock_entry_approval': return <StockEntryApproval requests={stockEntryRequests} currentUser={currentUser} onApprove={onApproveStockEntry} onReject={onRejectStockEntry} stores={stores} />;
       case 'dakhila_pratibedan': return <DakhilaPratibedan dakhilaReports={dakhilaReports} onSaveDakhilaReport={onSaveDakhilaReport} currentFiscalYear={currentFiscalYear} currentUser={currentUser} stockEntryRequests={stockEntryRequests} onApproveStockEntry={onApproveStockEntry} onRejectStockEntry={onRejectStockEntry} generalSettings={generalSettings} stores={stores} />;
       case 'sahayak_jinshi_khata': return <SahayakJinshiKhata currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} issueReports={issueReports} dakhilaReports={dakhilaReports} stockEntryRequests={stockEntryRequests} users={users} returnEntries={returnEntries} generalSettings={generalSettings} />;
@@ -235,23 +241,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
       case 'dhuliyauna_faram': return <DhuliyaunaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} dhuliyaunaEntries={dhuliyaunaEntries} onSaveDhuliyaunaEntry={onSaveDhuliyaunaEntry} stores={stores} />;
       case 'log_book': return <LogBook currentUser={currentUser} currentFiscalYear={currentFiscalYear} inventoryItems={inventoryItems} logBookEntries={logBookEntries} onAddLogEntry={onSaveLogBookEntry} />;
       case 'report_inventory_monthly': return <InventoryMonthlyReport currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} stores={stores} magForms={magForms} onSaveMagForm={onSaveMagForm} generalSettings={generalSettings} />;
-      case 'database_management': return <DatabaseManagement currentUser={currentUser} users={users} inventoryItems={inventoryItems} magForms={magForms} purchaseOrders={purchaseOrders} issueReports={issueReports} rabiesPatients={rabiesPatients} firms={firms} stores={stores} onClearData={onClearData} />;
+      case 'database_management': return <DatabaseManagement currentUser={currentUser} users={users} inventoryItems={inventoryItems} magForms={magForms} purchaseOrders={purchaseOrders} issueReports={issueReports} rabiesPatients={rabiesPatients} firms={firms} stores={stores} dakhilaReports={dakhilaReports} returnEntries={returnEntries} marmatEntries={marmatEntries} dhuliyaunaEntries={dhuliyaunaEntries} logBookEntries={logBookEntries} onClearData={onClearData} onUploadData={onUploadData} />;
       default: return null;
     }
   };
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
-      {isSidebarOpen && <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden no-print" onClick={() => setIsSidebarOpen(false)} />}
-      <aside className={`fixed md:relative z-50 h-full bg-slate-900 text-white flex flex-col transition-all duration-300 ease-in-out no-print ${isSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full w-0 md:w-0 md:translate-x-0'}`}>
+      {/* Sidebar Overlay for Mobile */}
+      {isSidebarOpen && <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden no-print" onClick={() => setIsSidebarOpen(false)} />}
+      
+      {/* Improved Sidebar with Full Hide Logic */}
+      <aside 
+        className={`fixed md:relative z-50 h-full bg-slate-900 text-white flex flex-col transition-all duration-300 ease-in-out no-print overflow-hidden
+          ${isSidebarOpen 
+            ? 'w-64 translate-x-0 opacity-100' 
+            : 'w-0 -translate-x-full md:translate-x-0 opacity-0 md:opacity-0'
+          }`}
+      >
         <div className="p-6 border-b border-slate-800 flex items-center gap-3 bg-slate-950 shrink-0 overflow-hidden">
             <div className="bg-primary-600 p-2 rounded-lg shrink-0"><Activity size={20} className="text-white" /></div>
             <div className="whitespace-nowrap"><h2 className="font-nepali font-bold text-lg">{APP_NAME}</h2><p className="text-xs text-slate-400 font-nepali truncate">{currentUser.organizationName || ORG_NAME}</p></div>
         </div>
+        
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden">
              {menuItems.map((item) => (
                <div key={item.id} className="w-full">
-                  <button onClick={() => handleMenuClick(item)} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl group transition-all duration-200 ${activeItem === item.id ? 'bg-primary-600 text-white' : (expandedMenu === item.id ? 'bg-slate-800' : 'text-slate-400 hover:text-white hover:bg-slate-800')}`}>
+                  <button onClick={() => handleMenuClick(item)} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl group transition-all duration-200 ${activeItem === item.id ? 'bg-primary-600 text-white shadow-lg' : (expandedMenu === item.id ? 'bg-slate-800' : 'text-slate-400 hover:text-white hover:bg-slate-800')}`}>
                     <div className="flex items-center gap-3 min-w-0"><div className="shrink-0">{item.icon}</div><span className="font-medium font-nepali text-left truncate">{item.label}</span></div>
                     {item.subItems && <div className="text-slate-500 shrink-0">{expandedMenu === item.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</div>}
                   </button>
@@ -268,28 +284,38 @@ export const Dashboard: React.FC<DashboardProps> = ({
                </div>
              ))}
         </nav>
-        <div className="p-4 border-t border-slate-800 bg-slate-950 shrink-0"><button onClick={onLogout} className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 w-full rounded-xl transition-all whitespace-nowrap"><LogOut size={18} /><span>लगआउट</span></button></div>
+        
+        <div className="p-4 border-t border-slate-800 bg-slate-950 shrink-0">
+            <button onClick={onLogout} className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 w-full rounded-xl transition-all whitespace-nowrap"><LogOut size={18} /><span>लगआउट</span></button>
+        </div>
       </aside>
+
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
         <header className="bg-white border-b p-4 flex md:hidden items-center justify-between z-10 no-print">
-            <div className="flex items-center gap-3"><button onClick={() => setIsSidebarOpen(true)} className="bg-primary-600 p-1.5 rounded-md"><Menu size={18} className="text-white" /></button><span className="font-bold text-slate-700 font-nepali truncate">{APP_NAME}</span></div>
+            <div className="flex items-center gap-3"><button onClick={() => setIsSidebarOpen(true)} className="bg-primary-600 p-1.5 rounded-md shadow-md active:scale-95 transition-transform"><Menu size={18} className="text-white" /></button><span className="font-bold text-slate-700 font-nepali truncate">{APP_NAME}</span></div>
             <div className="flex items-center gap-4">{latestApprovedDakhila && <button onClick={handleNotificationClick} className="relative p-1 text-slate-600"><Bell size={20} />{latestApprovedDakhila.id !== lastSeenNotificationId && <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>}</button>}<button onClick={onLogout} className="text-slate-500"><LogOut size={20} /></button></div>
         </header>
+
+        {/* Desktop Header */}
         <div className="hidden md:flex bg-white border-b px-8 py-4 justify-between items-center z-10 no-print">
             <div className="flex items-center gap-4">
-                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-lg hover:bg-slate-100 transition-colors"><Menu size={24} /></button>
+                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-lg hover:bg-slate-100 transition-colors shadow-sm bg-white border border-slate-200"><Menu size={24} /></button>
                 <h2 className="text-lg font-semibold text-slate-700 font-nepali">ड्यासबोर्ड</h2>
-                <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"><Calendar size={14} /><span className="font-nepali">आ.व. {fiscalYearLabel}</span></div>
+                <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium border border-blue-100"><Calendar size={14} /><span className="font-nepali">आ.व. {fiscalYearLabel}</span></div>
             </div>
             <div className="flex items-center gap-6">
-                <button onClick={handleNotificationClick} className="p-2 text-slate-600 relative" disabled={!latestApprovedDakhila}><Bell size={22} />{latestApprovedDakhila && latestApprovedDakhila.id !== lastSeenNotificationId && <span className="absolute top-1.5 right-2 h-3 w-3 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>}</button>
-                <div className="flex items-center gap-3">
+                <button onClick={handleNotificationClick} className="p-2 text-slate-600 relative hover:bg-slate-50 rounded-full transition-colors" disabled={!latestApprovedDakhila}><Bell size={22} />{latestApprovedDakhila && latestApprovedDakhila.id !== lastSeenNotificationId && <span className="absolute top-1.5 right-2 h-3 w-3 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>}</button>
+                <div className="flex items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-2xl border border-slate-200">
                     <div className="text-right"><p className="text-sm font-bold truncate max-w-[150px]">{currentUser.fullName}</p><p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">{currentUser.role}</p></div>
-                    <div className="w-10 h-10 bg-primary-100 text-primary-700 rounded-xl flex items-center justify-center font-bold uppercase shadow-sm">{currentUser.username.charAt(0)}</div>
+                    <div className="w-10 h-10 bg-primary-100 text-primary-700 rounded-xl flex items-center justify-center font-bold uppercase shadow-sm border border-primary-200">{currentUser.username.charAt(0)}</div>
                 </div>
             </div>
         </div>
-        <main className="flex-1 overflow-y-auto bg-slate-50/50 p-4 md:p-6 relative">{renderContent()}</main>
+
+        <main className="flex-1 overflow-y-auto bg-slate-50/50 p-4 md:p-6 relative">
+            {renderContent()}
+        </main>
       </div>
     </div>
   );

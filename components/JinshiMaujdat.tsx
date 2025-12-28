@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Package, Calendar, Plus, RotateCcw, Save, X, CheckCircle2, Search, 
   ArrowUpCircle, ArrowDownCircle, Warehouse, DollarSign, Tag, ClipboardList, Barcode,
-  Hash, BookOpen, Layers, ScrollText, Store as StoreIcon, User, FileText, Filter, PieChart, Send, Info, Edit, Calculator, SlidersHorizontal, BarChart4, ChevronRight, History, CheckSquare, List
+  Hash, BookOpen, Layers, ScrollText, Store as StoreIcon, User, FileText, Filter, PieChart, Send, Info, Edit, Calculator, SlidersHorizontal, BarChart4, ChevronRight, History, CheckSquare, List, Loader2, Trash2
 } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
@@ -20,6 +21,7 @@ interface JinshiMaujdatProps {
   inventoryItems: InventoryItem[];
   onAddInventoryItem: (item: InventoryItem) => void;
   onUpdateInventoryItem: (item: InventoryItem) => void;
+  onDeleteInventoryItem: (itemId: string) => void; 
   onRequestStockEntry: (request: StockEntryRequest) => void; 
   stores: Store[];
   pendingPoDakhila?: PurchaseOrderEntry | null; 
@@ -64,7 +66,6 @@ const initialReceiptSourceOptions: Option[] = [
   { id: 'other', value: 'Other', label: 'अन्य (Other)' },
 ];
 
-// --- HELPER: ITEM DETAILS MODAL ---
 interface ItemDetailsModalProps {
     item: InventoryItem;
     storeName: string;
@@ -126,8 +127,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ item, storeName, on
                                 <p className="font-bold text-orange-700">{item.batchNo || '-'}</p>
                              </div>
                              <div className="text-right">
-                                <label className="text-[10px] font-bold text-orange-400 uppercase">Expiry Date (BS)</label>
-                                <p className="font-bold text-orange-700 font-nepali">{item.expiryDateBs || '-'}</p>
+                                <label className="text-[10px] font-bold text-orange-400 uppercase">Expiry Date (AD)</label>
+                                <p className="font-bold text-orange-700">{item.expiryDateAd || '-'}</p>
                              </div>
                         </div>
                         <div className="col-span-2">
@@ -681,7 +682,6 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
                         <Input label="आर्थिक वर्ष" value={currentFiscalYear} readOnly disabled icon={<Calendar size={16} />} tabIndex={-1} />
                         <Select label="गोदाम/स्टोर *" options={storeOptions} value={commonDetails.storeId} onChange={e => handleCommonDetailsChange('storeId', e.target.value)} required icon={<StoreIcon size={16} />} />
                         <Select label="प्राप्तिको स्रोत" options={mode === 'opening' ? [{ id: 'opening', value: 'Opening', label: 'ओपनिङ्ग' }] : receiptSourceOptions} value={commonDetails.receiptSource} onChange={e => handleCommonDetailsChange('receiptSource', e.target.value)} required icon={<ArrowUpCircle size={16} />} disabled={mode === 'opening'} />
-                        {/* Fix: changed minDate and maxDate from todayBS to todayBs to match the defined constant */}
                         <NepaliDatePicker label="मिति (BS)" value={commonDetails.dateBs} onChange={val => handleCommonDetailsChange('dateBs', val)} required minDate={todayBs} maxDate={todayBs} />
                         <div className="col-span-2"><Input label="आपूर्तिकर्ता / स्रोत" value={commonDetails.supplier} onChange={(e) => handleCommonDetailsChange('supplier', e.target.value)} placeholder="Supplier Name" icon={<User size={16} />} /></div>
                         <div className="col-span-1"><Input label="खरिद आदेश / हस्तान्तरण नं" value={commonDetails.refNo} onChange={(e) => handleCommonDetailsChange('refNo', e.target.value)} placeholder="PO / Hafa No" icon={<FileText size={16} />} /></div>
@@ -705,7 +705,7 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
                                     <th className="px-3 py-2 w-16">कर %</th>
                                     <th className="px-3 py-2 w-24">जम्मा रकम</th>
                                     <th className="px-3 py-2 w-24">ब्याच नं</th>
-                                    <th className="px-3 py-2 w-28">म्याद</th> 
+                                    <th className="px-3 py-2 w-28">म्याद (AD)</th> 
                                     <th className="px-3 py-2 w-24">विशिष्टता</th> 
                                     <th className="px-3 py-2 w-12"></th>
                                 </tr>
@@ -753,6 +753,7 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
   inventoryItems, 
   onAddInventoryItem, 
   onUpdateInventoryItem,
+  onDeleteInventoryItem,
   onRequestStockEntry,
   stores,
   pendingPoDakhila,
@@ -760,13 +761,17 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStore, setFilterStore] = useState('');
-  const [filterType, setFilterType] = useState(''); // Empty string = 'All'
+  const [filterType, setFilterType] = useState(''); 
   const [filterClass, setFilterClass] = useState('');
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedItemForEdit, setSelectedItemForEdit] = useState<InventoryItem | null>(null);
   const [selectedItemForView, setSelectedItemForView] = useState<InventoryItem | null>(null);
   const [bulkMode, setBulkMode] = useState<'opening' | 'add'>('add');
+
+  // Pagination for performance (700+ items)
+  const [displayLimit, setDisplayLimit] = useState(50);
+  const PAGE_SIZE = 50;
 
   const [itemClassificationOptions, setItemClassificationOptions] = useState<Option[]>(initialItemClassificationOptions);
   const [receiptSourceOptions, setReceiptSourceOptions] = useState<Option[]>(initialReceiptSourceOptions);
@@ -780,21 +785,32 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
 
   const storeOptions: Option[] = useMemo(() => stores.map(s => ({ id: s.id, value: s.id, label: s.name })), [stores]);
 
-  // Counts for summary
   const expendableCount = useMemo(() => inventoryItems.filter(i => i.itemType === 'Expendable').length, [inventoryItems]);
   const nonExpendableCount = useMemo(() => inventoryItems.filter(i => i.itemType === 'Non-Expendable').length, [inventoryItems]);
 
-  const filteredItems = inventoryItems.filter(item => {
-    const matchesSearch = item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) || (item.uniqueCode && item.uniqueCode.toLowerCase().includes(searchTerm.toLowerCase())) || (item.sanketNo && item.sanketNo.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesStore = filterStore ? item.storeId === filterStore : true;
-    const matchesType = filterType ? item.itemType === filterType : true;
-    const matchesClass = filterClass ? item.itemClassification === filterClass : true;
-    return matchesSearch && matchesStore && matchesType && matchesClass;
-  });
+  const filteredItems = useMemo(() => {
+    return inventoryItems.filter(item => {
+        const matchesSearch = item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                             (item.uniqueCode && item.uniqueCode.toLowerCase().includes(searchTerm.toLowerCase())) || 
+                             (item.sanketNo && item.sanketNo.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesStore = filterStore ? item.storeId === filterStore : true;
+        const matchesType = filterType ? item.itemType === filterType : true;
+        const matchesClass = filterClass ? item.itemClassification === filterClass : true;
+        return matchesSearch && matchesStore && matchesType && matchesClass;
+    });
+  }, [inventoryItems, searchTerm, filterStore, filterType, filterClass]);
+
+  const paginatedItems = useMemo(() => filteredItems.slice(0, displayLimit), [filteredItems, displayLimit]);
 
   const handleEditClick = (item: InventoryItem) => { setSelectedItemForEdit(item); setShowEditModal(true); };
   const handleViewClick = (item: InventoryItem) => { setSelectedItemForView(item); };
   const handleUpdateItem = (updatedItem: InventoryItem) => { onUpdateInventoryItem(updatedItem); setShowEditModal(false); setSelectedItemForEdit(null); };
+
+  const handleDeleteClick = (item: InventoryItem) => {
+    if (window.confirm(`के तपाईं निश्चित हुनुहुन्छ कि तपाईं सामान "${item.itemName}" हटाउन चाहनुहुन्छ?`)) {
+      onDeleteInventoryItem(item.id);
+    }
+  };
 
   const handleBulkSave = (items: InventoryItem[], source: string, dateBs: string, dateAd: string, storeId: string, supplier: string, refNo: string, dakhilaNo: string, mode: 'opening' | 'add') => {
       const request: StockEntryRequest = {
@@ -822,6 +838,8 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
   const handleAddReceiptSource = (newSource: string) => { setReceiptSourceOptions(prev => [...prev, { id: newSource.toLowerCase(), value: newSource, label: newSource }]); };
   const handleOpenBulkModal = (mode: 'opening' | 'add') => { setBulkMode(mode); setShowBulkModal(true); };
 
+  const isAdmin = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -829,7 +847,7 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
           <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600"><Warehouse size={24} /></div>
           <div>
             <h2 className="text-xl font-bold text-slate-800 font-nepali">जिन्सी मौज्दात (Inventory Stock)</h2>
-            <p className="text-sm text-slate-500">हालको मौज्दात र विस्तृत विवरणहरू</p>
+            <p className="text-sm text-slate-500">कुल {inventoryItems.length} सामानहरू प्रणालीमा उपलब्ध छन्।</p>
           </div>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
@@ -838,7 +856,6 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
         </div>
       </div>
 
-      {/* NEW: QUICK VIEW TABS (Expendable / Non-Expendable / All) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button 
               onClick={() => setFilterType('')}
@@ -902,17 +919,17 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
                           <th className="px-4 py-3 w-28">Store</th>
                           <th className="px-4 py-3 w-28">Classification</th>
                           <th className="px-4 py-3 w-20 text-center">Qty</th>
-                          <th className="px-4 py-3 w-28">Batch / Expiry</th>
+                          <th className="px-4 py-3 w-28">Batch / Expiry (AD)</th>
                           <th className="px-4 py-3 w-24 text-right">Rate</th>
                           <th className="px-4 py-3 w-24 text-right">Total</th>
                           <th className="px-4 py-3 text-center">Actions</th>
                       </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                      {filteredItems.length === 0 ? (
-                          <tr><td colSpan={11} className="px-6 py-12 text-center text-slate-400 italic font-nepali text-base">माथि छानिएको प्रकारमा कुनै सामान भेटिएन। (No items found in this category.)</td></tr>
+                      {paginatedItems.length === 0 ? (
+                          <tr><td colSpan={11} className="px-6 py-12 text-center text-slate-400 italic font-nepali text-base">माथि छानिएको प्रकारमा कुनै सामान भेटिएन। (No items found.)</td></tr>
                       ) : (
-                          filteredItems.map((item, index) => {
+                          paginatedItems.map((item, index) => {
                               const storeName = storeOptions.find(s => s.value === item.storeId)?.label || 'Unknown';
                               return (
                                   <tr key={item.id} className="hover:bg-slate-50 transition-colors">
@@ -938,7 +955,7 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
                                       </td>
                                       <td className="px-4 py-3">
                                           <div className="text-[10px] font-bold text-orange-600">{item.batchNo || '-'}</div>
-                                          <div className="text-[9px] text-slate-400 font-nepali">{item.expiryDateBs || '-'}</div>
+                                          <div className="text-[9px] text-slate-400">{item.expiryDateAd || '-'}</div>
                                       </td>
                                       <td className="px-4 py-3 text-right text-slate-600">{item.rate?.toFixed(2) || '-'}</td>
                                       <td className="px-4 py-3 text-right font-bold text-slate-800">{item.totalAmount?.toFixed(2) || '-'}</td>
@@ -946,6 +963,11 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
                                           <div className="flex items-center justify-center gap-1">
                                               <button onClick={() => handleViewClick(item)} className="text-slate-400 hover:text-indigo-600 p-1.5 hover:bg-indigo-50 rounded-full transition-all" title="Full Details"><Info size={16}/></button>
                                               <button onClick={() => handleEditClick(item)} className="text-slate-400 hover:text-indigo-600 p-1.5 hover:bg-indigo-50 rounded-full transition-all" title="Edit"><Edit size={16} /></button>
+                                              {isAdmin && (
+                                                <button onClick={() => handleDeleteClick(item)} className="text-red-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded-full transition-all" title="Delete">
+                                                  <Trash2 size={16} />
+                                                </button>
+                                              )}
                                           </div>
                                       </td>
                                   </tr>
@@ -955,6 +977,16 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
                   </tbody>
               </table>
           </div>
+          {filteredItems.length > displayLimit && (
+              <div className="p-4 bg-slate-50 border-t flex justify-center">
+                  <button 
+                    onClick={() => setDisplayLimit(prev => prev + PAGE_SIZE)}
+                    className="flex items-center gap-2 px-6 py-2 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors shadow-sm"
+                  >
+                      थप लोड गर्नुहोस् (Load More {filteredItems.length - displayLimit} items)
+                  </button>
+              </div>
+          )}
       </div>
 
       {showEditModal && selectedItemForEdit && (<EditInventoryItemModal isOpen={showEditModal} item={selectedItemForEdit} onClose={() => { setShowEditModal(false); setSelectedItemForEdit(null); }} onSave={handleUpdateItem} storeOptions={storeOptions} itemClassificationOptions={itemClassificationOptions} />)}

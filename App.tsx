@@ -7,6 +7,8 @@ import { Landmark, ShieldCheck } from 'lucide-react';
 import { User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, DakhilaItem } from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe } from "firebase/database";
+// @ts-ignore
+import NepaliDate from 'nepali-date-converter';
 
 const INITIAL_SETTINGS: OrganizationSettings = {
     orgNameNepali: 'Smart Inventory System',
@@ -147,66 +149,126 @@ const App: React.FC = () => {
       return ref(db, `orgData/${safeOrgName}/${subPath}`);
   };
 
+  const handleUploadDatabase = async (sectionId: string, data: any[], extraMeta?: any) => {
+      if (!currentUser) return;
+      try {
+          const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
+          const orgPath = `orgData/${safeOrgName}`;
+          const updates: Record<string, any> = {};
+
+          if (sectionId === 'inventory') {
+              // PRECISE MAPPING: From Excel Headers to InventoryItem fields
+              data.forEach((row, idx) => {
+                  const itemId = `ITEM-UPLOAD-${Date.now()}-${idx}`;
+                  
+                  // Helper: Convert AD Expiry to BS Expiry for consistency
+                  let expiryBs = '';
+                  const expiryAd = row['Expiry (AD)'];
+                  if (expiryAd && expiryAd !== '-') {
+                      try {
+                          const adDate = new Date(expiryAd);
+                          if (!isNaN(adDate.getTime())) {
+                              expiryBs = new NepaliDate(adDate).format('YYYY-MM-DD');
+                          }
+                      } catch(e) {
+                          console.warn("Expiry date conversion failed for row", idx);
+                      }
+                  }
+
+                  const qty = Number(row['Qty']) || 0;
+                  const rate = Number(row['Rate']) || 0;
+                  const tax = Number(row['Tax %']) || 0;
+                  const total = qty * rate * (1 + tax / 100);
+
+                  const newItem: InventoryItem = {
+                      id: itemId,
+                      itemName: String(row['Item Name'] || 'Unnamed Item'),
+                      itemClassification: String(row['Item Classification'] || 'Other'),
+                      uniqueCode: String(row['Unique Code'] || ''),
+                      sanketNo: String(row['Sanket No'] || ''),
+                      ledgerPageNo: String(row['Ledger Page'] || ''),
+                      unit: String(row['Unit'] || 'Nos'),
+                      currentQuantity: qty,
+                      rate: rate,
+                      tax: tax,
+                      totalAmount: total,
+                      batchNo: String(row['Batch No'] || ''),
+                      expiryDateAd: expiryAd || '',
+                      expiryDateBs: expiryBs,
+                      specification: String(row['Specification'] || ''),
+                      remarks: String(row['Remarks'] || ''),
+                      itemType: extraMeta?.itemType || 'Expendable',
+                      storeId: extraMeta?.storeId || '',
+                      fiscalYear: currentFiscalYear,
+                      lastUpdateDateBs: new NepaliDate().format('YYYY-MM-DD'),
+                      lastUpdateDateAd: new Date().toISOString().split('T')[0],
+                      receiptSource: 'Database Bulk Import'
+                  };
+                  updates[`${orgPath}/inventory/${itemId}`] = newItem;
+              });
+          } else {
+              // Generic save for other sections (Firms, Users, etc)
+              data.forEach((row, idx) => {
+                  const entryId = `${sectionId.toUpperCase()}-${Date.now()}-${idx}`;
+                  updates[`${orgPath}/${sectionId}/${entryId}`] = row;
+              });
+          }
+
+          await update(ref(db), updates);
+      } catch (error) {
+          console.error("Critical Upload Error:", error);
+          throw error;
+      }
+  };
+
   const filteredUsersForDashboard = allUsers.filter(u => {
       if (currentUser?.role === 'SUPER_ADMIN') return true;
       return u.organizationName === currentUser?.organizationName;
   });
 
-  // Wrapped Mag Form Handler to create PO if market purchase is checked
   const handleSaveMagForm = async (f: MagFormEntry) => {
       if (!currentUser) return;
       try {
           const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
           const orgPath = `orgData/${safeOrgName}`;
-          
           const updates: Record<string, any> = {};
           updates[`${orgPath}/magForms/${f.id}`] = f;
-
-          // Logic: If the form is Approved AND it was marked as "Market Purchase Required"
           if (f.status === 'Approved' && f.storeKeeper?.status === 'market') {
               const poId = `PO-${f.id}`;
-              const poPath = `${orgPath}/purchaseOrders/${poId}`;
-              
-              // Only create if not already exists to avoid overwriting processed POs
-              const poSnap = await get(ref(db, poPath));
+              const poSnap = await get(ref(db, `${orgPath}/purchaseOrders/${poId}`));
               if (!poSnap.exists()) {
-                  const newPO: PurchaseOrderEntry = {
-                      id: poId,
-                      magFormId: f.id,
-                      magFormNo: f.formNo,
-                      requestDate: f.date,
-                      items: f.items,
-                      status: 'Pending',
-                      fiscalYear: f.fiscalYear,
+                  updates[`${orgPath}/purchaseOrders/${poId}`] = {
+                      id: poId, magFormId: f.id, magFormNo: f.formNo, requestDate: f.date, items: f.items,
+                      status: 'Pending', fiscalYear: f.fiscalYear,
                       preparedBy: { name: '', designation: '', date: '' },
                       recommendedBy: { name: '', designation: '', date: '' },
                       financeBy: { name: '', designation: '', date: '' },
                       approvedBy: { name: '', designation: '', date: '' }
                   };
-                  updates[poPath] = newPO;
               }
           }
-          
           await update(ref(db), updates);
       } catch (error) {
-          console.error("Error saving Mag Form / Creating PO:", error);
           alert("माग फारम सुरक्षित गर्दा समस्या आयो।");
       }
   };
 
-  // Specific delete for Mag Form
   const handleDeleteMagForm = async (formId: string) => {
     if (!currentUser) return;
     try {
-        const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
-        const orgPath = `orgData/${safeOrgName}/magForms/${formId}`;
-        await remove(ref(db, orgPath));
-        // Also check if there's an associated PO and ask to remove? Or keep PO for tracking?
-        // Simple implementation: just remove the form.
+        await remove(ref(db, `orgData/${currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_")}/magForms/${formId}`));
     } catch (error) {
-        console.error("Error deleting Mag Form:", error);
         alert("माग फारम हटाउन सकिएन।");
     }
+  };
+
+  const handleDeleteInventoryItem = async (itemId: string) => {
+      if (!currentUser) return;
+      try {
+          await remove(getOrgRef(`inventory/${itemId}`));
+      } catch (error) {
+          alert("सामान हटाउन सकिएन।");
+      }
   };
 
   const handleApproveStockEntry = async (requestId: string, approverName: string, approverDesignation: string) => {
@@ -214,96 +276,51 @@ const App: React.FC = () => {
       try {
           const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
           const orgPath = `orgData/${safeOrgName}`;
-          
-          const requestRef = ref(db, `${orgPath}/stockRequests/${requestId}`);
-          const requestSnap = await get(requestRef);
+          const requestSnap = await get(ref(db, `${orgPath}/stockRequests/${requestId}`));
           if (!requestSnap.exists()) return;
           const request: StockEntryRequest = requestSnap.val();
-          
           const invAllSnap = await get(ref(db, `${orgPath}/inventory`));
           const currentInvData = invAllSnap.val() || {};
           const currentInvList: InventoryItem[] = Object.keys(currentInvData).map(k => ({ ...currentInvData[k], id: k }));
-
           const updates: Record<string, any> = {};
           const dakhilaItems: DakhilaItem[] = [];
 
           for (const item of request.items) {
               const existingItem = currentInvList.find(i => 
                   i.itemName.trim().toLowerCase() === item.itemName.trim().toLowerCase() && 
-                  i.storeId === request.storeId &&
-                  i.itemType === item.itemType
+                  i.storeId === request.storeId && i.itemType === item.itemType
               );
-
               const incomingQty = Number(item.currentQuantity) || 0;
               const incomingRate = Number(item.rate) || 0;
               const incomingTax = Number(item.tax) || 0;
               const incomingTotal = incomingQty * incomingRate * (1 + incomingTax / 100);
-
               dakhilaItems.push({
-                  id: Date.now() + Math.random(),
-                  name: item.itemName,
-                  codeNo: item.sanketNo || item.uniqueCode || '',
-                  specification: item.specification || '',
-                  source: request.receiptSource,
-                  unit: item.unit,
-                  quantity: incomingQty,
-                  rate: incomingRate,
-                  totalAmount: incomingQty * incomingRate,
-                  vatAmount: (incomingQty * incomingRate) * (incomingTax / 100),
-                  grandTotal: incomingTotal,
-                  otherExpenses: 0,
-                  finalTotal: incomingTotal,
-                  remarks: item.remarks || ''
+                  id: Date.now() + Math.random(), name: item.itemName, codeNo: item.sanketNo || item.uniqueCode || '',
+                  specification: item.specification || '', source: request.receiptSource, unit: item.unit,
+                  quantity: incomingQty, rate: incomingRate, totalAmount: incomingQty * incomingRate,
+                  vatAmount: (incomingQty * incomingRate) * (incomingTax / 100), grandTotal: incomingTotal,
+                  otherExpenses: 0, finalTotal: incomingTotal, remarks: item.remarks || ''
               });
-
               if (existingItem) {
                   const newQty = (Number(existingItem.currentQuantity) || 0) + incomingQty;
-                  const newVal = (Number(existingItem.totalAmount) || 0) + incomingTotal;
-                  updates[`${orgPath}/inventory/${existingItem.id}`] = {
-                      ...existingItem,
-                      currentQuantity: newQty,
-                      totalAmount: newVal,
-                      lastUpdateDateBs: request.requestDateBs,
-                      lastUpdateDateAd: request.requestDateAd,
-                      dakhilaNo: request.dakhilaNo || item.dakhilaNo || existingItem.dakhilaNo
-                  };
+                  updates[`${orgPath}/inventory/${existingItem.id}`] = { ...existingItem, currentQuantity: newQty, totalAmount: (Number(existingItem.totalAmount) || 0) + incomingTotal, lastUpdateDateBs: request.requestDateBs, lastUpdateDateAd: request.requestDateAd, dakhilaNo: request.dakhilaNo || item.dakhilaNo || existingItem.dakhilaNo };
               } else {
                   const newId = item.id.startsWith('TEMP') ? `ITEM-${Date.now()}-${Math.random().toString(36).substring(7)}` : item.id;
-                  updates[`${orgPath}/inventory/${newId}`] = {
-                      ...item,
-                      id: newId,
-                      currentQuantity: incomingQty,
-                      totalAmount: incomingTotal,
-                      lastUpdateDateBs: request.requestDateBs,
-                      lastUpdateDateAd: request.requestDateAd,
-                      storeId: request.storeId,
-                      fiscalYear: request.fiscalYear,
-                      dakhilaNo: request.dakhilaNo || item.dakhilaNo
-                  };
+                  updates[`${orgPath}/inventory/${newId}`] = { ...item, id: newId, currentQuantity: incomingQty, totalAmount: incomingTotal, lastUpdateDateBs: request.requestDateBs, lastUpdateDateAd: request.requestDateAd, storeId: request.storeId, fiscalYear: request.fiscalYear, dakhilaNo: request.dakhilaNo || item.dakhilaNo };
               }
           }
-
           updates[`${orgPath}/stockRequests/${requestId}/status`] = 'Approved';
           updates[`${orgPath}/stockRequests/${requestId}/approvedBy`] = approverName;
-
           const formalDakhilaId = `DA-${Date.now()}`;
-          const formalReport: DakhilaPratibedanEntry = {
-              id: formalDakhilaId,
-              fiscalYear: request.fiscalYear,
-              dakhilaNo: request.dakhilaNo || (request.items[0]?.dakhilaNo) || formalDakhilaId,
-              date: request.requestDateBs,
-              orderNo: request.refNo || 'BULK-ENTRY',
-              items: dakhilaItems,
-              status: 'Final',
+          updates[`${orgPath}/dakhilaReports/${formalDakhilaId}`] = {
+              id: formalDakhilaId, fiscalYear: request.fiscalYear, dakhilaNo: request.dakhilaNo || formalDakhilaId,
+              date: request.requestDateBs, orderNo: request.refNo || 'BULK-ENTRY', items: dakhilaItems, status: 'Final',
               preparedBy: { name: request.requesterName || request.requestedBy, designation: request.requesterDesignation || 'Staff', date: request.requestDateBs },
               approvedBy: { name: approverName, designation: approverDesignation, date: request.requestDateBs }
           };
-          updates[`${orgPath}/dakhilaReports/${formalDakhilaId}`] = formalReport;
-
           await update(ref(db), updates);
       } catch (error) {
-          console.error("Critical Error during stock approval:", error);
-          alert("सिस्टममा समस्या आयो। स्टक अपडेट हुन सकेन।");
+          alert("सिस्टममा समस्या आयो।");
       }
   };
 
@@ -339,6 +356,7 @@ const App: React.FC = () => {
           inventoryItems={inventoryItems}
           onAddInventoryItem={(i) => set(getOrgRef(`inventory/${i.id}`), i)}
           onUpdateInventoryItem={(i) => set(getOrgRef(`inventory/${i.id}`), i)}
+          onDeleteInventoryItem={handleDeleteInventoryItem}
           stockEntryRequests={stockEntryRequests}
           onRequestStockEntry={(r) => set(getOrgRef(`stockRequests/${r.id}`), r)}
           onApproveStockEntry={handleApproveStockEntry}
@@ -358,6 +376,7 @@ const App: React.FC = () => {
           logBookEntries={logBookEntries}
           onSaveLogBookEntry={(e) => set(getOrgRef(`logBook/${e.id}`), e)}
           onClearData={(p) => remove(getOrgRef(p))}
+          onUploadData={handleUploadDatabase}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
