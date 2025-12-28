@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Printer, Calendar, Save, Calculator, Filter, Package } from 'lucide-react';
+import { Printer, Calendar, Save, Calculator, Filter, Package, Plus, Minus, Info } from 'lucide-react';
 import { Select } from './Select';
 import { Input } from './Input';
 import { FISCAL_YEARS } from '../constants';
@@ -15,6 +15,7 @@ interface RabiesReportProps {
 export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, currentUser, patients }) => {
   const [selectedMonth, setSelectedMonth] = useState('08');
   const [selectedFiscalYear, setSelectedFiscalYear] = useState(currentFiscalYear);
+  const [stockData, setStockData] = useState({ opening: 0, received: 0, expenditure: 0 });
 
   const nepaliMonthOptions = [
     { id: '01', value: '01', label: 'बैशाख (Baishakh)' },
@@ -79,11 +80,15 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
     return mat;
   }, [patients, selectedFiscalYear, selectedMonth]);
 
-  const [stockData, setStockData] = useState({ opening: 0, received: 0, expenditure: 0 });
   const getRowTotal = (rowIndex: number) => generatedMatrix[rowIndex].reduce((a, b) => a + b, 0);
   const getColTotal = (colIndex: number) => generatedMatrix.reduce((sum, row) => sum + row[colIndex], 0);
   const grandTotalCases = generatedMatrix.flat().reduce((a, b) => a + b, 0);
   const balanceDose = stockData.opening + stockData.received - stockData.expenditure;
+
+  const handleStockChange = (field: keyof typeof stockData, value: string) => {
+      const num = parseInt(value) || 0;
+      setStockData(prev => ({ ...prev, [field]: num }));
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
@@ -92,19 +97,64 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
         @media print {
           @page { size: landscape; margin: 1cm; }
           .print-container { width: 100% !important; max-width: none !important; border: none !important; padding: 0 !important; }
+          .no-print { display: none !important; }
         }
       ` }} />
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
-         <div className="flex items-end gap-4 w-full md:w-auto">
-             <div className="w-48">
-                <Select label="आर्थिक वर्ष" options={FISCAL_YEARS} value={selectedFiscalYear} onChange={(e) => setSelectedFiscalYear(e.target.value)} icon={<Calendar size={18} />} />
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm no-print space-y-6">
+         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div className="flex items-end gap-4 w-full md:w-auto">
+                <div className="w-48">
+                    <Select label="आर्थिक वर्ष" options={FISCAL_YEARS} value={selectedFiscalYear} onChange={(e) => setSelectedFiscalYear(e.target.value)} icon={<Calendar size={18} />} />
+                </div>
+                <div className="w-48">
+                    <Select label="महिना" options={nepaliMonthOptions} value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} icon={<Filter size={18} />} />
+                </div>
             </div>
-            <div className="w-48">
-                <Select label="महिना" options={nepaliMonthOptions} value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} icon={<Filter size={18} />} />
-            </div>
+            <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-bold shadow-md transition-all active:scale-95">
+                <Printer size={18} /> रिपोर्ट प्रिन्ट गर्नुहोस्
+            </button>
          </div>
-         <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-bold shadow-md transition-all active:scale-95"><Printer size={18} /> रिपोर्ट प्रिन्ट गर्नुहोस्</button>
+
+         {/* Editable Stock Data Section */}
+         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+            <div className="flex items-center gap-2 text-indigo-700 font-bold mb-2">
+                <Package size={20} />
+                <h3 className="font-nepali">खोप मौज्दात विवरण (Vaccine Stock Management)</h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Input 
+                    label="अघिल्लो बाँकी (Prev Balance)" 
+                    type="number" 
+                    value={stockData.opening || ''} 
+                    onChange={(e) => handleStockChange('opening', e.target.value)}
+                    placeholder="0"
+                />
+                <Input 
+                    label="प्राप्त परिमाण (Received)" 
+                    type="number" 
+                    value={stockData.received || ''} 
+                    onChange={(e) => handleStockChange('received', e.target.value)}
+                    placeholder="0"
+                />
+                <Input 
+                    label="खपत परिमाण (Doses Used)" 
+                    type="number" 
+                    value={stockData.expenditure || ''} 
+                    onChange={(e) => handleStockChange('expenditure', e.target.value)}
+                    placeholder="0"
+                />
+                <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-slate-700">बाँकी मौज्दात (Remaining)</label>
+                    <div className={`h-[42px] flex items-center px-4 rounded-lg border font-bold text-lg ${balanceDose < 0 ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                        {balanceDose}
+                    </div>
+                </div>
+            </div>
+            <p className="text-[10px] text-slate-400 flex items-center gap-1">
+                <Info size={12} /> यो विवरण रिपोर्टको अन्तिम लहर (Total Row) मा देखिनेछ।
+            </p>
+         </div>
       </div>
 
       <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-lg overflow-x-auto print-container">
@@ -154,10 +204,10 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
                     <td className="border border-slate-800 p-2 text-left uppercase">TOTAL CASES</td>
                     {animals.map((_, i) => <td key={i} className="border border-slate-800 p-1">{getColTotal(i)}</td>)}
                     <td className="border border-slate-800 p-1 text-lg">{grandTotalCases}</td>
-                    <td className="border border-slate-800 p-1">{stockData.opening}</td>
-                    <td className="border border-slate-800 p-1">{stockData.received}</td>
-                    <td className="border border-slate-800 p-1">{stockData.expenditure}</td>
-                    <td className="border border-slate-800 p-1 text-lg">{balanceDose}</td>
+                    <td className="border border-slate-800 p-1 text-base">{stockData.opening || '-'}</td>
+                    <td className="border border-slate-800 p-1 text-base">{stockData.received || '-'}</td>
+                    <td className="border border-slate-800 p-1 text-base">{stockData.expenditure || '-'}</td>
+                    <td className={`border border-slate-800 p-1 text-base ${balanceDose < 0 ? 'text-red-600' : 'text-indigo-700'}`}>{balanceDose}</td>
                 </tr>
             </tbody>
         </table>
