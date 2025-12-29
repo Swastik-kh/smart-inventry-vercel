@@ -60,6 +60,7 @@ export interface OrganizationSettings {
 export interface VaccinationDose {
   day: number;
   date: string; 
+  dateBs?: string; // Added: Scheduled date in BS format
   status: 'Pending' | 'Given' | 'Missed';
   givenDate?: string;
 }
@@ -81,7 +82,7 @@ export interface RabiesPatient {
   phone: string;
   animalType: string;
   exposureCategory: string; 
-  bodyPart: string;
+  bodyPart: string; // New: Added bodyPart field
   exposureDateBs: string; 
   regimen: 'Intradermal' | 'Intramuscular';
   schedule: VaccinationDose[];

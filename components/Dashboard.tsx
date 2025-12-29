@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   LogOut, Menu, Calendar, Stethoscope, Package, FileText, Settings, LayoutDashboard, 
   ChevronDown, ChevronRight, Syringe, Activity, 
@@ -110,6 +110,35 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   }, []);
 
+  const todayBs = useMemo(() => {
+    try {
+        return new NepaliDate().format('YYYY-MM-DD');
+    } catch (e) {
+        return '';
+    }
+  }, []);
+
+  // Helper to convert BS date string (YYYY-MM-DD) to AD date string (YYYY-MM-DD)
+  const convertBsToAdFull = useCallback((bsDateStr: string): string => {
+    if (!bsDateStr) return '';
+    try {
+        const parts = bsDateStr.split(/[-/]/);
+        if (parts.length === 3) {
+            const [y, m, d] = parts.map(Number);
+            // NepaliDate constructor expects 1-indexed month
+            const nd = new NepaliDate(y, m, d);
+            const adDate = nd.toJsDate();
+            const adYear = adDate.getFullYear();
+            const adMonth = String(adDate.getMonth() + 1).padStart(2, '0');
+            const adDay = String(adDate.getDate()).padStart(2, '0');
+            return `${adYear}-${adMonth}-${adDay}`;
+        }
+    } catch (e) {
+        console.error("BS to AD conversion error in Dashboard:", e);
+    }
+    return '';
+  }, []);
+
   const expiredItems = useMemo(() => {
       const now = new Date();
       return inventoryItems.filter(item => 
@@ -129,21 +158,54 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   }, [inventoryItems]);
 
   const rabiesTodayNew = useMemo(() => rabiesPatients.filter(p => p.regDateAd === todayAd).length, [rabiesPatients, todayAd]);
-  const rabiesTotalScheduledToday = useMemo(() => rabiesPatients.filter(p => p.schedule.some(dose => dose.date === todayAd)).length, [rabiesPatients, todayAd]);
-  const rabiesReceivedToday = useMemo(() => rabiesPatients.filter(p => p.schedule.some(dose => dose.date === todayAd && dose.status === 'Given')).length, [rabiesPatients, todayAd]);
-  const rabiesRemainingToday = useMemo(() => rabiesPatients.filter(p => p.schedule.some(dose => dose.date === todayAd && dose.status === 'Pending')).length, [rabiesPatients, todayAd]);
+  
+  // UPDATED: Detailed Rabies Dose Stats for D0, D3, D7 for today, considering actual given date (BS)
+  const rabiesDoseStats = useMemo(() => {
+    const stats = {
+        d0Scheduled: 0,
+        d0Received: 0,
+        d3Scheduled: 0,
+        d3Received: 0,
+        d7Scheduled: 0,
+        d7Received: 0,
+    };
 
-  const vaccineForecast = useMemo(() => {
-      const mlPerDose = 0.2;
-      const todayCount = rabiesRemainingToday;
-      const todayMl = todayCount * mlPerDose;
-      const totalPendingDosesCount = rabiesPatients.reduce((acc, p) => acc + p.schedule.filter(d => d.status === 'Pending').length, 0);
-      const totalMl = totalPendingDosesCount * mlPerDose;
-      return {
-          today: { ml: todayMl.toFixed(1), vials05: Math.ceil(todayMl / 0.5), vials10: Math.ceil(todayMl / 1.0) },
-          overall: { patients: totalPendingDosesCount, ml: totalMl.toFixed(1), vials05: Math.ceil(totalMl / 0.5), vials10: Math.ceil(totalMl / 1.0) }
-      };
-  }, [rabiesRemainingToday, rabiesPatients]);
+    rabiesPatients.forEach(p => {
+        p.schedule.forEach(dose => {
+            // Scheduled counts: Compare BS scheduled date with today's BS date
+            if (dose.dateBs === todayBs) {
+                if (dose.day === 0) {
+                    stats.d0Scheduled++;
+                } else if (dose.day === 3) {
+                    stats.d3Scheduled++;
+                } else if (dose.day === 7) {
+                    stats.d7Scheduled++;
+                }
+            }
+
+            // Received counts: Compare BS given date with today's BS date
+            if (dose.status === 'Given' && dose.givenDate === todayBs) {
+                if (dose.day === 0) stats.d0Received++;
+                else if (dose.day === 3) stats.d3Received++;
+                else if (dose.day === 7) stats.d7Received++;
+            }
+        });
+    });
+    return stats;
+  }, [rabiesPatients, todayBs]);
+
+  // Updated: rabiesRemainingToday now sums specific doses pending today (BS)
+  const rabiesRemainingToday = useMemo(() => {
+      let count = 0;
+      rabiesPatients.forEach(p => {
+          p.schedule.forEach(dose => {
+              if (dose.dateBs === todayBs && dose.status === 'Pending' && (dose.day === 0 || dose.day === 3 || dose.day === 7)) {
+                  count++;
+              }
+          });
+      });
+      return count;
+  }, [rabiesPatients, todayBs]);
 
   const inventoryTotalCount = useMemo(() => inventoryItems.filter(i => i.currentQuantity > 0).length, [inventoryItems]);
   const magFormsPendingCount = useMemo(() => magForms.filter(f => f.status === 'Pending').length, [magForms]);
@@ -152,10 +214,20 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       return approved.length > 0 ? approved.sort((a, b) => parseInt(b.id) - parseInt(a.id))[0] : null;
   }, [stockEntryRequests]);
 
+  const vaccineForecast = useMemo(() => {
+      const mlPerDose = 0.2;
+      const todayCount = rabiesDoseStats.d0Scheduled + rabiesDoseStats.d3Scheduled + rabiesDoseStats.d7Scheduled;
+      const todayMl = todayCount * mlPerDose;
+      const totalPendingDosesCount = rabiesPatients.reduce((acc, p) => acc + p.schedule.filter(d => d.status === 'Pending').length, 0); 
+      const totalMl = totalPendingDosesCount * mlPerDose;
+      return {
+          today: { ml: todayMl.toFixed(1), vials05: Math.ceil(todayMl / 0.5), vials10: Math.ceil(todayMl / 1.0) },
+          overall: { patients: totalPendingDosesCount, ml: totalMl.toFixed(1), vials05: Math.ceil(totalMl / 0.5), vials10: Math.ceil(totalMl / 1.0) }
+      };
+  }, [rabiesDoseStats, rabiesPatients]);
+
   const hasAccess = (menuId: string) => {
-      // SUPER_ADMIN always has access to everything
       if (currentUser.role === 'SUPER_ADMIN') return true;
-      // All other roles (including ADMIN) are governed by allowedMenus
       return currentUser.allowedMenus?.includes(menuId);
   };
 
@@ -191,7 +263,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       return 0;
   }, [magForms, currentUser.role]);
 
-  // Calculate badge count for Purchase Orders
   const kharidAdeshBadgeCount = useMemo(() => {
       if (!purchaseOrders) return 0;
       const isStoreKeeper = currentUser.role === 'STOREKEEPER';
@@ -206,24 +277,20 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       }).length;
   }, [purchaseOrders, currentUser.role]);
 
-  // Calculate badge count for Nikasha Pratibedan (Issue Reports)
   const nikashaPratibedanBadgeCount = useMemo(() => {
     if (!issueReports) return 0;
-    // Storekeeper prepares, sends to approval. Admin/Approval approves.
     const isStoreKeeper = currentUser.role === 'STOREKEEPER';
     const isAdminOrApproval = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
 
     return issueReports.filter(report => {
-        if (isStoreKeeper) return report.status === 'Pending'; // Storekeeper needs to prepare
-        if (isAdminOrApproval) return report.status === 'Pending Approval'; // Admin/Approver needs to approve
+        if (isStoreKeeper) return report.status === 'Pending'; 
+        if (isAdminOrApproval) return report.status === 'Pending Approval'; 
         return false;
     }).length;
   }, [issueReports, currentUser.role]);
 
-  // Calculate badge count for Dakhila Pratibedan (Stock Entry Requests pending approval)
   const dakhilaPratibedanBadgeCount = useMemo(() => {
     if (!stockEntryRequests) return 0;
-    // Only approvers care about pending stock entry requests from this menu
     const isApproverRole = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
     if (isApproverRole) {
         return stockEntryRequests.filter(req => req.status === 'Pending').length;
@@ -231,10 +298,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     return 0;
   }, [stockEntryRequests, currentUser.role]);
 
-  // NEW: Calculate badge count for Jinshi Firta Khata (Return Entries)
   const jinshiFirtaBadgeCount = useMemo(() => {
       if (!returnEntries) return 0;
-      // Storekeeper, Admin, Super Admin, Approval can all verify/approve return entries
       const isApproverRole = ['STOREKEEPER', 'ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
       if (isApproverRole) {
           return returnEntries.filter(entry => entry.status === 'Pending').length;
@@ -242,10 +307,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       return 0;
   }, [returnEntries, currentUser.role]);
 
-  // NEW: Calculate badge count for Marmat Adesh (Maintenance Entries)
   const marmatAdeshBadgeCount = useMemo(() => {
       if (!marmatEntries) return 0;
-      // Admin, Super Admin, Approval can approve maintenance requests
       const isApproverRole = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
       if (isApproverRole) {
           return marmatEntries.filter(entry => entry.status === 'Pending').length;
@@ -253,10 +316,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       return 0;
   }, [marmatEntries, currentUser.role]);
 
-  // NEW: Calculate badge count for Dhuliyauna Faram (Disposal Entries)
   const dhuliyaunaFaramBadgeCount = useMemo(() => {
       if (!dhuliyaunaEntries) return 0;
-      // Admin, Super Admin, Approval can approve disposal requests
       const isApproverRole = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
       if (isApproverRole) {
           return dhuliyaunaEntries.filter(entry => entry.status === 'Pending').length;
@@ -270,42 +331,31 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     { id: 'services', label: 'सेवा (Services)', icon: <Stethoscope size={20} />, subItems: [{ id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग (TB/Leprosy)', icon: <Activity size={16} /> }, { id: 'rabies', label: 'रेबिज़ खोप क्लिनिक (Rabies Vaccine)', icon: <Syringe size={16} /> }] },
     { id: 'inventory', label: 'जिन्सी व्यवस्थापन (Inventory)', icon: <Package size={20} />, subItems: [{ id: 'stock_entry_approval', label: 'स्टक प्रविष्टि अनुरोध', icon: <ClipboardCheck size={16} />, badgeCount: pendingStockRequestsCount }, { id: 'jinshi_maujdat', label: 'जिन्सी मौज्दात (Stock)', icon: <Warehouse size={16} /> }, { id: 'form_suchikaran', label: 'फर्म सुचीकरण (Firms)', icon: <ClipboardList size={16} /> }, { id: 'quotation', label: 'कोटेशन (Quotation)', icon: <FileSpreadsheet size={16} /> }, { id: 'mag_faram', label: 'माग फारम (Demand)', icon: <FilePlus size={16} />, badgeCount: magFaramBadgeCount }, { id: 'kharid_adesh', label: 'खरिद आदेश (PO)', icon: <ShoppingCart size={16} />, badgeCount: kharidAdeshBadgeCount }, { id: 'nikasha_pratibedan', label: 'निकासा प्रतिवेदन (Issue)', icon: <FileOutput size={16} />, badgeCount: nikashaPratibedanBadgeCount }, { id: 'sahayak_jinshi_khata', label: 'सहायक जिन्सी खाता', icon: <BookOpen size={16} /> }, { id: 'jinshi_khata', label: 'जिन्सी खाता (Ledger)', icon: <Book size={16} /> }, { id: 'dakhila_pratibedan', label: 'दाखिला प्रतिवेदन', icon: <Archive size={16} />, badgeCount: dakhilaPratibedanBadgeCount }, { id: 'jinshi_firta_khata', label: 'जिन्सी फिर्ता खाता', icon: <RotateCcw size={16} />, badgeCount: jinshiFirtaBadgeCount }, { id: 'marmat_adesh', label: 'मर्मत आवेदन/आदेश', icon: <Wrench size={16} />, badgeCount: marmatAdeshBadgeCount }, { id: 'dhuliyauna_faram', label: 'लिलाम / धुल्याउने', icon: <Trash2 size={16} />, badgeCount: dhuliyaunaFaramBadgeCount }, { id: 'log_book', label: 'लग बुक (Log Book)', icon: <Scroll size={16} /> }] },
     { id: 'report', label: 'रिपोर्ट (Report)', icon: <FileText size={20} />, subItems: [{ id: 'report_tb_leprosy', label: 'क्षयरोग/कुष्ठरोग रिपोर्ट (TB/Leprosy)', icon: <Activity size={16} /> }, { id: 'report_rabies', label: 'रेबिज़ रिपोर्ट', icon: <Syringe size={16} /> }, { id: 'report_inventory_monthly', label: 'जिन्सी मासिक प्रतिवेदन (Monthly Report)', icon: <BarChart3 size={16} /> }] },
-    { id: 'settings', label: 'सेटिङ (Settings)', icon: <Settings size={20} />, subItems: [{ id: 'general_setting', label: 'सामान्य सेटिङ', icon: <Sliders size={16} /> }, { id: 'store_setup', label: 'स्टोर सेटअप', icon: <Store size={16} /> }, { id: 'user_management', label: 'प्रयोगकर्ता सेटअप', icon: <Users size={16} /> }, { id: 'change_password', label: 'पासवर्ड परिवर्तन', icon: <KeyRound size={16} /> }, { id: 'database_management', label: 'डाटाबेस व्यवस्थापन', icon: <Database size={16} /> }] },
+    { id: 'settings', label: 'सेटिङ (Settings)', icon: <Settings size={20} />, subItems: [{ id: 'general_setting', label: 'सामान्य सेटिङ', icon: <Sliders size={16} /> }, { id: 'store_setup', label: 'स्टोर सेटअप', icon: <Store size={16} /> }, { id: 'database_management', label: 'डाटाबेस व्यवस्थापन', icon: <Database size={16} /> }, { id: 'user_management', label: 'प्रयोगकर्ता सेटअप', icon: <Users size={16} /> }, { id: 'change_password', label: 'पासवर्ड परिवर्तन', icon: <KeyRound size={16} /> }] },
   ];
 
   const menuItems = useMemo(() => {
     const isCurrentUserSuperAdmin = currentUser.role === 'SUPER_ADMIN';
-    const allowedMenus = new Set(currentUser.allowedMenus || []); // Use a Set for O(1) lookup
+    const allowedMenus = new Set(currentUser.allowedMenus || []); 
 
     return allMenuItems.reduce<MenuItem[]>((acc, item) => {
-        // SUPER_ADMIN always gets all menus and sub-menus
         if (isCurrentUserSuperAdmin) {
             acc.push(item);
             return acc;
         }
 
-        // For all other roles (including ADMINs):
-
-        // 1. Always include Dashboard
         if (item.id === 'dashboard') {
             acc.push(item);
             return acc;
         }
 
-        // 2. Filter sub-items first.
-        // Special rule: 'change_password' is always allowed for any user if 'settings' is visible/accessible.
         const filteredSubItems = item.subItems?.filter(subItem => {
             return subItem.id === 'change_password' || allowedMenus.has(subItem.id);
         }) || [];
 
-        // 3. Decide if the parent menu item should be included
-        // A parent is included if:
-        //    a) its ID is explicitly in allowedMenus, OR
-        //    b) it has any filtered (allowed) sub-items.
         const shouldIncludeParent = allowedMenus.has(item.id) || filteredSubItems.length > 0;
 
         if (shouldIncludeParent) {
-            // Push the parent item with only its allowed sub-items
             acc.push({ ...item, subItems: filteredSubItems });
         }
         
@@ -334,7 +384,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Rabies Clinic */}
             <div className={`bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group overflow-hidden relative ${!hasAccess('rabies') ? 'opacity-75 grayscale-[0.5]' : ''}`}>
               <div className="absolute -right-4 -top-4 bg-red-50 w-24 h-24 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
               <div className="relative z-10 flex flex-col h-full">
@@ -347,16 +396,35 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                         <span className="text-xs font-bold text-slate-600 font-nepali">आजको नयाँ दर्ता</span>
                         <span className="text-xl font-black text-slate-800">{rabiesTodayNew}</span>
                     </div>
-                    <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
-                        <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-orange-800 font-nepali">आजको खोप</span><span className="text-xl font-black text-orange-600">{rabiesReceivedToday} / {rabiesTotalScheduledToday}</span></div>
-                        <div className="w-full bg-orange-200 h-1.5 rounded-full overflow-hidden"><div className="bg-orange-600 h-full transition-all" style={{ width: `${rabiesTotalScheduledToday > 0 ? (rabiesReceivedToday / rabiesTotalScheduledToday) * 100 : 0}%` }} /></div>
+                    <div className="space-y-2 bg-orange-50 p-3 rounded-xl border border-orange-100">
+                        <p className="text-xs font-bold text-orange-800 font-nepali mb-1">आजको खोप (Doses)</p>
+                        <div className="flex items-center justify-between text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
+                            <span className="font-bold text-orange-700 font-nepali">D0 खोप:</span>
+                            <span className="font-black text-orange-600">
+                                <span className="text-base font-black text-orange-800">{rabiesDoseStats.d0Received}</span>
+                                <span className="text-xs text-orange-600"> / {rabiesDoseStats.d0Scheduled}</span>
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
+                            <span className="font-bold text-orange-700 font-nepali">D3 खोप:</span>
+                            <span className="font-black text-orange-600">
+                                <span className="text-base font-black text-orange-800">{rabiesDoseStats.d3Received}</span>
+                                <span className="text-xs text-orange-600"> / {rabiesDoseStats.d3Scheduled}</span>
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
+                            <span className="font-bold text-orange-700 font-nepali">D7 खोप:</span>
+                            <span className="font-black text-orange-600">
+                                <span className="text-base font-black text-orange-800">{rabiesDoseStats.d7Received}</span>
+                                <span className="text-xs text-orange-600"> / {rabiesDoseStats.d7Scheduled}</span>
+                            </span>
+                        </div>
                     </div>
                 </div>
                 <button onClick={() => handleDashboardAction('rabies')} className="mt-6 w-full py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-colors">Manage Patients</button>
               </div>
             </div>
             
-            {/* Inventory */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-8"><div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Inventory</p><h3 className="text-sm font-bold text-slate-700 font-nepali">कुल जिन्सी सामानहरू</h3></div><div className="bg-blue-100 p-3 rounded-xl text-blue-600 shadow-inner"><Warehouse size={24} /></div></div>
@@ -365,7 +433,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
               </div>
             </div>
 
-            {/* Khop Purbanuman (Vaccine Forecast) - UPDATED WITH VIAL COUNT */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
                 <div className="flex items-center justify-between mb-4">
                     <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Vaccine Logistics</p><h3 className="text-sm font-bold text-slate-700 font-nepali">खोप पूर्वानुमान</h3></div>
@@ -374,7 +441,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                 <div className="space-y-4">
                     <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <div className="flex justify-between items-center mb-2">
-                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Today's Load</span>
+                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">आजको निर्धारित खोप</span>
                              <span className="text-xs font-black text-cyan-600">{vaccineForecast.today.ml} ml</span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-center">
@@ -408,11 +475,10 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                 </div>
             </div>
 
-            {/* Demands */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
                 <div className="flex items-center justify-between mb-8"><div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Requests</p><h3 className="text-sm font-bold text-slate-700 font-nepali">बाँकी माग फारम</h3></div><div className="bg-orange-100 p-3 rounded-xl text-orange-600 shadow-inner"><FilePlus size={24} /></div></div>
                 <div className="flex items-baseline gap-2 flex-1"><span className="text-5xl font-black text-orange-600 leading-none">{magFormsPendingCount}</span><span className="text-xs text-slate-400 font-bold font-nepali">Pending</span></div>
-                <button onClick={() => handleDashboardAction('mag_faram')} className="mt-6 w-full py-2 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold border">Review Demands</button>
+                <button onClick={() => handleDashboardAction('mag_faram')} className="mt-6 w-full py-2 bg-slate-50 text-slate-600 hover:bg-blue-50 border border-slate-100 rounded-xl text-xs font-bold transition-all">Review Demands</button>
             </div>
           </div>
 
@@ -475,7 +541,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                 <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm no-print" onClick={() => setShowExpiryModal(false)}></div>
                 <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-full md:h-[85vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 print:shadow-none print:border-none print:h-auto print:static">
                     
-                    {/* Modal UI Header: Hidden on Print */}
                     <div className={`px-6 py-4 border-b flex justify-between items-center no-print ${expiryModalType === 'expired' ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-800'}`}>
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${expiryModalType === 'expired' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
@@ -494,7 +559,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-4 md:p-10 bg-white print:p-0 print:overflow-visible" id="expiry-print-area">
-                        {/* 1. PROFESSIONAL HEADER (Style matched with Mag Faram) */}
                         <div className="hidden print:block mb-8">
                              <div className="flex items-start justify-between">
                                  <div className="w-24 flex justify-start pt-1">
@@ -526,7 +590,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                              </div>
                         </div>
 
-                        {/* 2. DATA TABLE */}
                         <div className="border border-slate-300 rounded-xl overflow-hidden print:border-slate-800 print:rounded-none">
                             <table className="w-full text-xs text-left border-collapse">
                                 <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-300 print:bg-slate-100 print:text-black print:border-slate-800">
@@ -550,7 +613,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                                             </td>
                                             <td className="px-3 py-3 border-r print:border-slate-800 print:text-black">{stores.find(s => s.id === item.storeId)?.name || 'Unknown'}</td>
                                             <td className="px-3 py-3 font-mono border-r print:border-slate-800 print:text-black">{item.batchNo || '-'}</td>
-                                            <td className={`px-3 py-3 font-bold border-r print:border-slate-800 ${expiryModalType === 'expired' ? 'text-red-600 print:text-black' : 'text-amber-600 print:text-black'}`}>
+                                            <td className="px-3 py-3 font-bold border-r print:border-slate-800 ${expiryModalType === 'expired' ? 'text-red-600 print:text-black' : 'text-amber-600 print:text-black'}">
                                                 {item.expiryDateAd}
                                                 <div className="text-[9px] font-normal text-slate-400 print:text-slate-600">{item.expiryDateBs} (BS)</div>
                                             </td>
@@ -564,7 +627,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                             </table>
                         </div>
 
-                        {/* 3. SIGNATURE SECTION (Only visible on Print) */}
                         <div className="hidden print:grid grid-cols-3 gap-10 mt-20 text-center text-xs print:page-break-inside-avoid">
                             <div className="border-t border-slate-800 pt-3 font-bold">तयार गर्ने (Prepared By)</div>
                             <div className="border-t border-slate-800 pt-3 font-bold">जिन्सी शाखा (Store Section)</div>
@@ -572,7 +634,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                         </div>
                     </div>
 
-                    {/* Modal Bottom UI: Hidden on Print */}
                     <div className="p-4 bg-slate-50 border-t no-print flex justify-between items-center">
                         <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
                             Total: {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).length} Items with Stock

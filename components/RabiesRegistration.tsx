@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 /* Added AlertTriangle to the imports */
-import { Save, RotateCcw, Syringe, Calendar, FileDigit, User, Phone, MapPin, CalendarRange, Clock, CheckCircle2, Search, X, AlertCircle, Trash2, Pencil, Check, Info, AlertTriangle } from 'lucide-react';
+import { Save, RotateCcw, Syringe, Calendar, FileDigit, User, Phone, MapPin, CalendarRange, Clock, CheckCircle2, Search, X, AlertCircle, Trash2, Pencil, Check, Info, AlertTriangle, Bone } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
@@ -131,7 +131,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
     phone: '',
     animalType: '',
     exposureCategory: '', 
-    bodyPart: '',
+    bodyPart: '', // Initialized new field
     exposureDateBs: '',
     regimen: 'Intradermal',
     schedule: []
@@ -184,7 +184,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
             vaccineStartDateAd: prev.vaccineStartDateAd || adDateStr
         };
         if (!editingPatientId) {
-            updated.schedule = calculateSchedule(updated.vaccineStartDateAd || adDateStr, prev.regimen);
+            updated.schedule = calculateSchedule(updated.vaccineStartDateAd || adDateStr, updated.vaccineStartDateBs || val, prev.regimen);
         }
         return updated;
     });
@@ -207,60 +207,80 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
               vaccineStartDateAd: adDateStr
           };
           if (!editingPatientId) {
-              updated.schedule = calculateSchedule(adDateStr, prev.regimen);
+              updated.schedule = calculateSchedule(adDateStr, val, prev.regimen);
           }
           return updated;
       });
   };
 
   // MODIFIED: Calculate schedule logic for D7 to be 4 days after D3
-  const calculateSchedule = (startDateAd: string, regimen: string): VaccinationDose[] => {
-      if (!startDateAd) return [];
-      const start = new Date(startDateAd);
+  const calculateSchedule = (startDateAd: string, startDateBs: string, regimen: string): VaccinationDose[] => {
+      if (!startDateAd || !startDateBs) return [];
+      const startAd = new Date(startDateAd);
       const schedule: VaccinationDose[] = [];
 
+      // Helper to convert AD Date object to BS date string
+      const adDateToBsString = (adDate: Date) => {
+          try {
+              return new NepaliDate(adDate).format('YYYY-MM-DD');
+          } catch (e) {
+              console.error("Error converting AD Date object to BS string:", e);
+              return ''; // Fallback
+          }
+      };
+
       // Day 0
+      const d0DateAd = formatDateLocal(startAd);
       schedule.push({
           day: 0,
-          date: formatDateLocal(start),
+          date: d0DateAd,
+          dateBs: adDateToBsString(startAd), // <-- ADDED dateBs
           status: 'Pending'
       });
 
       // Day 3
-      const d3Date = new Date(start);
-      d3Date.setDate(start.getDate() + 3);
+      const d3DateAdObj = new Date(startAd);
+      d3DateAdObj.setDate(startAd.getDate() + 3);
+      const d3DateAd = formatDateLocal(d3DateAdObj);
       schedule.push({
           day: 3,
-          date: formatDateLocal(d3Date),
+          date: d3DateAd,
+          dateBs: adDateToBsString(d3DateAdObj), // <-- ADDED dateBs
           status: 'Pending'
       });
 
       // Day 7 (4 days after D3)
-      const d7Date = new Date(d3Date); // IMPORTANT: Base D7 on D3 date
-      d7Date.setDate(d3Date.getDate() + 4); // Add 4 days to D3 date
+      const d7DateAdObj = new Date(d3DateAdObj); // IMPORTANT: Base D7 on D3 date
+      d7DateAdObj.setDate(d3DateAdObj.getDate() + 4); // Add 4 days to D3 date
+      const d7DateAd = formatDateLocal(d7DateAdObj);
       schedule.push({
           day: 7,
-          date: formatDateLocal(d7Date),
+          date: d7DateAd,
+          dateBs: adDateToBsString(d7DateAdObj), // <-- ADDED dateBs
           status: 'Pending'
       });
 
       // For Intramuscular, add D14 and D28 (based on D0 start as per previous logic)
       if (regimen === 'Intramuscular') {
           // Day 14
-          const d14Date = new Date(start);
-          d14Date.setDate(start.getDate() + 14);
+          const d14DateAdObj = new Date(startAd);
+          d14DateAdObj.setDate(startAd.getDate() + 14);
+          const d14DateAd = formatDateLocal(d14DateAdObj);
           schedule.push({
               day: 14,
-              date: formatDateLocal(d14Date),
+              date: d14DateAd,
+              dateBs: adDateToBsString(d14DateAdObj), // <-- ADDED dateBs
               status: 'Pending'
           });
 
           // Day 28
-          const d28Date = new Date(start);
-          d28Date.setDate(start.getDate() + 28);
+          const d28DateAdObj = new Date(startAd);
+          d28DateAdObj.setDate(startAd.getDate() + 28);
+          const d28DateAd = formatDateLocal(d28DateAdObj);
           schedule.push({
               day: 28,
-              date: formatDateLocal(d28Date),
+              date: d28DateAd,
+              dateBs: adDateToBsString(d28DateAdObj), // <-- ADDED dateBs
               status: 'Pending'
           });
       }
@@ -286,7 +306,8 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
           const newPatient = {
               ...formData,
               id: Date.now().toString(),
-              schedule: calculateSchedule(formData.vaccineStartDateAd || formData.regDateAd, formData.regimen)
+              // Ensure that when newPatient is created, the schedule is also calculated with BS dates
+              schedule: calculateSchedule(formData.vaccineStartDateAd || formData.regDateAd, formData.vaccineStartDateBs || formData.regDateBs, formData.regimen)
           };
           onAddPatient(newPatient);
           handleReset();
@@ -314,7 +335,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
         vaccineStartDateBs: today.format('YYYY-MM-DD'),
         vaccineStartDateAd: todayAd,
         name: '', age: '', sex: '', address: '', phone: '',
-        animalType: '', exposureCategory: '', bodyPart: '',
+        animalType: '', exposureCategory: '', bodyPart: '', // Reset new field
         exposureDateBs: today.format('YYYY-MM-DD'),
         regimen: 'Intradermal',
         schedule: []
@@ -466,6 +487,8 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
 
               <Select label="टोक्ने जनावर" value={formData.animalType} onChange={e => setFormData({...formData, animalType: e.target.value})} options={animalTypeOptions} required />
               <Select label="WHO Category (Exposure)" value={formData.exposureCategory} onChange={e => setFormData({...formData, exposureCategory: e.target.value})} options={whoCategoryOptions} required icon={<AlertTriangle size={16} />} />
+              {/* NEW FIELD: Body Part */}
+              <Input label="टोकेको भाग / ठाउँ (Body Part)" value={formData.bodyPart} onChange={e => setFormData({...formData, bodyPart: e.target.value})} placeholder="e.g. हात, खुट्टा, अनुहार" icon={<Bone size={16} />} />
 
               <div className="md:col-span-3 pt-4 border-t border-slate-100 flex justify-end gap-3">
                   <button type="button" className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg flex items-center gap-2" onClick={handleReset}><RotateCcw size={18} /> {editingPatientId ? 'रद्द गर्नुहोस्' : 'रिसेट'}</button>
@@ -511,6 +534,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                                         p.exposureCategory === 'Category II' ? 'bg-orange-50 text-orange-700 border-orange-200' :
                                         'bg-blue-50 text-blue-700 border-blue-100'
                                     }`}>{p.exposureCategory}</span>
+                                    {p.bodyPart && <span className="text-[10px] bg-slate-100 px-1 rounded">({p.bodyPart})</span>}
                                   </div>
                               </td>
                               <td className="px-6 py-4">

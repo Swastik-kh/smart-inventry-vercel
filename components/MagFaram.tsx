@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, Trash2, Printer, Save, Calendar, CheckCircle2, Send, Clock, FileText, Eye, Search, X, AlertCircle, ChevronRight, ArrowLeft, Check, Square, Warehouse, Layers, ShieldCheck } from 'lucide-react';
+import { Plus, Trash2, Printer, Save, Calendar, CheckCircle2, Send, Clock, FileText, Eye, Search, X, AlertCircle, ChevronRight, ArrowLeft, Check, Square, Warehouse, Layers, ShieldCheck, Info } from 'lucide-react';
 import { User, MagItem, MagFormEntry, InventoryItem, Option, Store, OrganizationSettings } from '../types';
 import { SearchableSelect } from './SearchableSelect';
 import { Select } from './Select';
@@ -66,7 +66,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
     }
   }, []);
 
-  const [items, setItems] = useState<LocalMagItem[]>([{ id: Date.now(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }]);
+  const [items, setItems] = useState<LocalMagItem[]>([{ id: Date.now() + Math.random(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }]);
   
   const [formDetails, setFormDetails] = useState<MagFormEntry>({
     id: '',
@@ -155,18 +155,23 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
 
   const handleAddItem = () => {
     if (items.length < 14) {
-      setItems([...items, { id: Date.now(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }]);
+      setItems([...items, { id: Date.now() + Math.random(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }]);
     } else {
       alert("अधिकतम १४ वटा सामान मात्र माग गर्न सकिन्छ।");
     }
   };
 
   const handleRemoveItem = (id: number) => {
-    if (items.length > 1) {
-      setItems(items.filter(i => i.id !== id));
-    } else {
-      setItems([{ id: Date.now(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }]);
-    }
+    if (isViewOnly) return;
+
+    setItems(prevItems => {
+        const filtered = prevItems.filter(i => i.id !== id);
+        // Ensure at least one empty row remains if everything is deleted
+        if (filtered.length === 0) {
+            return [{ id: Date.now() + Math.random(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }];
+        }
+        return filtered;
+    });
   };
   
   const updateItem = useCallback((id: number, field: keyof LocalMagItem, value: any) => {
@@ -209,9 +214,10 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
   const handleLoadForm = (form: MagFormEntry, viewOnly: boolean = false) => {
       setEditingId(form.id);
       setIsViewOnly(viewOnly);
-      setItems(form.items.map(item => {
+      // When loading, ensure items have a random ID for key stability if they came from DB without one
+      setItems(form.items.map((item, idx) => {
           const matched = inventoryItems.some(i => i.itemName === item.name);
-          return { ...item, isFromInventory: matched };
+          return { ...item, id: item.id || (Date.now() + idx + Math.random()), isFromInventory: matched };
       }));
       
       if (viewOnly && form.isViewedByRequester === false && form.demandBy?.name === currentUser.fullName) {
@@ -332,7 +338,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
     setShowRejectModal(false);
     setRejectReason('');
     setVerificationData({ storeId: '', itemType: '' });
-    setItems([{ id: Date.now(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }]);
+    setItems([{ id: Date.now() + Math.random(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }]);
     setFormDetails({
         id: '', items: [], fiscalYear: currentFiscalYear, 
         formNo: generateMagFormNo(existingForms, currentFiscalYear),
@@ -587,9 +593,9 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               </thead>
               <tbody>
                   {items.map((item, idx) => (
-                      <tr key={item.id} className="min-h-[30px]">
-                          <td className="border border-slate-800 p-1">{idx + 1}</td>
-                          <td className="border border-slate-800 p-0 text-left">
+                      <tr key={item.id} className="min-h-[30px] transition-all duration-300">
+                          <td className="border border-slate-800 p-1 font-bold bg-slate-50/30">{idx + 1}</td>
+                          <td className="border border-slate-800 p-0 text-left relative group/stock">
                               {!isViewOnly && isNewForm ? (
                                 <SearchableSelect 
                                     options={itemOptions} value={item.name} 
@@ -597,7 +603,45 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                                     onSelect={opt => handleItemSelect(item.id, opt)} 
                                     className="!border-none !bg-transparent !p-1 !text-xs" placeholder="सामान छान्नुहोस्..."
                                 />
-                              ) : <span className="px-2 font-medium">{item.name}</span>}
+                              ) : (
+                                <div className="px-2 py-1 flex items-center justify-between cursor-help">
+                                    <span className="font-medium">{item.name}</span>
+                                    
+                                    {/* LIVE STOCK TOOLTIP */}
+                                    <div className="invisible group-hover/stock:visible absolute left-full top-0 ml-2 z-[100] w-64 bg-slate-800 text-white text-[10px] p-3 rounded-lg shadow-2xl border border-slate-700 pointer-events-none no-print">
+                                        <div className="flex items-center gap-2 mb-2 border-b border-slate-600 pb-1">
+                                            <Warehouse size={12} className="text-primary-400" />
+                                            <span className="font-bold uppercase tracking-wider">Stock Availability</span>
+                                        </div>
+                                        {(() => {
+                                            const matches = inventoryItems.filter(i => i.itemName.trim().toLowerCase() === item.name.trim().toLowerCase());
+                                            if (matches.length === 0) {
+                                                return <div className="text-red-400 flex items-center gap-1"><AlertCircle size={10}/> No record found in inventory.</div>;
+                                            }
+                                            
+                                            const total = matches.reduce((sum, i) => sum + (Number(i.currentQuantity) || 0), 0);
+                                            const unit = matches[0].unit;
+                                            
+                                            return (
+                                                <div className="space-y-1.5">
+                                                    <div className="flex justify-between font-bold text-primary-300">
+                                                        <span>Total Global Stock:</span>
+                                                        <span className={total > 0 ? "text-green-400" : "text-red-400"}>{total} {unit}</span>
+                                                    </div>
+                                                    <div className="space-y-1 pt-1 border-t border-slate-700 max-h-32 overflow-y-auto">
+                                                        {matches.map(m => (
+                                                            <div key={m.id} className="flex justify-between items-center gap-2">
+                                                                <span className="text-slate-400 truncate flex-1">{stores.find(s => s.id === m.storeId)?.name || 'Godam'}</span>
+                                                                <span className="font-bold bg-slate-700 px-1.5 rounded">{m.currentQuantity}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                              )}
                           </td>
                           <td className="border border-slate-800 p-1">
                               <input 
@@ -616,15 +660,25 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                               />
                           </td>
                           <td className="border border-slate-800 p-1 font-bold">
-                              <input disabled={isViewOnly || !isNewForm} value={item.quantity} onChange={e => updateItem(item.id, 'quantity', e.target.value)} className="w-full text-center outline-none bg-transparent" />
+                              <input 
+                                disabled={isViewOnly || !(isNewForm || isVerifying || isApproving)} 
+                                value={item.quantity} 
+                                onChange={e => updateItem(item.id, 'quantity', e.target.value)} 
+                                className={`w-full text-center outline-none bg-transparent ${(isVerifying || isApproving) ? 'bg-yellow-50 focus:bg-yellow-100 ring-1 ring-inset ring-yellow-200 rounded-sm' : ''}`} 
+                              />
                           </td>
                           <td className="border border-slate-800 p-1">
-                              <input disabled={isViewOnly || !isNewForm} value={item.remarks} onChange={e => updateItem(item.id, 'remarks', e.target.value)} className="w-full text-left outline-none bg-transparent px-1" />
+                              <input 
+                                disabled={isViewOnly || !(isNewForm || isVerifying || isApproving)} 
+                                value={item.remarks} 
+                                onChange={e => updateItem(item.id, 'remarks', e.target.value)} 
+                                className={`w-full text-left outline-none bg-transparent px-1 ${(isVerifying || isApproving) ? 'bg-yellow-50 focus:bg-yellow-100 ring-1 ring-inset ring-yellow-200 rounded-sm' : ''}`} 
+                              />
                           </td>
                           <td className="border border-slate-800 p-1 no-print">
-                              {!isViewOnly && isNewForm && (
-                                <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-700 p-1 flex items-center justify-center w-full transition-all">
-                                    <Trash2 size={14} />
+                              {!isViewOnly && (isNewForm || isVerifying || isApproving) && (
+                                <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-700 p-1 flex items-center justify-center w-full transition-all group" title="Delete Row">
+                                    <Trash2 size={14} className="group-hover:scale-110 transition-transform" />
                                 </button>
                               )}
                           </td>
