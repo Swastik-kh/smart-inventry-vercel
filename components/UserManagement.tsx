@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react'; // Added useMemo
 import { User, UserManagementProps, UserRole, Option } from '../types';
 import { Plus, Trash2, Shield, User as UserIcon, Building2, Save, X, Phone, Briefcase, IdCard, Users, Pencil, CheckSquare, Square, ChevronDown, ChevronRight, CornerDownRight, Store } from 'lucide-react';
 import { Input } from './Input';
@@ -67,6 +67,27 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedPermissions, setExpandedPermissions] = useState<string[]>(['services', 'inventory', 'report', 'settings']);
 
+  // All possible roles, excluding SUPER_ADMIN for creation purposes
+  const allCreatableRoles: Option[] = [
+    { id: 'admin', value: 'ADMIN', label: 'एडमिन (Admin)' },
+    { id: 'staff', value: 'STAFF', label: 'कर्मचारी (Staff)' },
+    { id: 'storekeeper', value: 'STOREKEEPER', label: 'जिन्सी शाखा (Storekeeper)' },
+    { id: 'account', value: 'ACCOUNT', label: 'लेखा शाखा (Account)' },
+    { id: 'approval', value: 'APPROVAL', label: 'स्वीकृत गर्ने (Approval/Head)' },
+  ];
+
+  // Dynamically filter available roles for the dropdown based on currentUser's role
+  const rolesForDropdown = useMemo(() => {
+    if (currentUser.role === 'SUPER_ADMIN') {
+      // SUPER_ADMIN can create ADMIN and lower roles
+      return allCreatableRoles;
+    } else if (currentUser.role === 'ADMIN') {
+      // ADMIN can only create STAFF, STOREKEEPER, ACCOUNT, APPROVAL
+      return allCreatableRoles.filter(opt => opt.value !== 'ADMIN');
+    }
+    return []; // Other roles should not be here
+  }, [currentUser.role]);
+
   const [formData, setFormData] = useState<{
     username: string;
     password: string;
@@ -84,16 +105,9 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     phoneNumber: '',
     // Modified: Automatically set organizationName for ADMIN when creating new user
     organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '',
-    role: 'STAFF',
+    role: (rolesForDropdown.length > 0 ? (rolesForDropdown[0].value as UserRole) : 'STAFF'), // Set initial role from available options
     allowedMenus: ['dashboard']
   });
-
-  const availableRoles: Option[] = [
-    { id: 'staff', value: 'STAFF', label: 'कर्मचारी (Staff)' },
-    { id: 'storekeeper', value: 'STOREKEEPER', label: 'जिन्सी शाखा (Storekeeper)' },
-    { id: 'account', value: 'ACCOUNT', label: 'लेखा शाखा (Account)' },
-    { id: 'approval', value: 'APPROVAL', label: 'स्वीकृत गर्ने (Approval/Head)' },
-  ];
 
   const canManageUsers = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN';
 
@@ -107,7 +121,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       setFormData({ 
         username: '', password: '', fullName: '', designation: '', phoneNumber: '',
         organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '', // This ensures correct default on reset
-        role: 'STAFF', allowedMenus: ['dashboard']
+        role: (rolesForDropdown.length > 0 ? (rolesForDropdown[0].value as UserRole) : 'STAFF'),
+        allowedMenus: ['dashboard']
       });
       setEditingId(null);
   };
@@ -155,7 +170,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     const userToSave: User = {
         id: editingId || Date.now().toString(),
         username: formData.username, password: formData.password,
-        role: currentUser.role === 'SUPER_ADMIN' ? 'ADMIN' : formData.role, // SUPER_ADMIN can only create ADMINs
+        role: formData.role, // Now directly use formData.role as the dropdown is filtered
         fullName: formData.fullName, designation: formData.designation,
         phoneNumber: formData.phoneNumber, organizationName: formData.organizationName,
         allowedMenus: finalMenus
@@ -193,7 +208,16 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 className={currentUser.role === 'ADMIN' ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''} 
                 icon={<Building2 size={16} />} 
             />
-            {currentUser.role === 'ADMIN' && <Select label="भूमिका" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as UserRole})} options={availableRoles} icon={<Users size={16} />} />}
+            {/* Show role selection for SUPER_ADMIN and ADMIN (when creating lower roles) */}
+            {(canManageUsers) && (
+              <Select 
+                  label="भूमिका" 
+                  value={formData.role} 
+                  onChange={e => setFormData({...formData, role: e.target.value as UserRole})} 
+                  options={rolesForDropdown} // Use dynamically filtered roles
+                  icon={<Users size={16} />} 
+              />
+            )}
             <Input label="प्रयोगकर्ता नाम" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} required icon={<UserIcon size={16} />} />
             <Input label="पासवर्ड" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required type="password" />
 

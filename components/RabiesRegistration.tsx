@@ -213,21 +213,59 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
       });
   };
 
+  // MODIFIED: Calculate schedule logic for D7 to be 4 days after D3
   const calculateSchedule = (startDateAd: string, regimen: string): VaccinationDose[] => {
       if (!startDateAd) return [];
       const start = new Date(startDateAd);
       const schedule: VaccinationDose[] = [];
-      const days = regimen === 'Intradermal' ? [0, 3, 7] : [0, 3, 7, 14, 28];
-      days.forEach(dayOffset => {
-          const doseDate = new Date(start);
-          doseDate.setDate(start.getDate() + dayOffset);
+
+      // Day 0
+      schedule.push({
+          day: 0,
+          date: formatDateLocal(start),
+          status: 'Pending'
+      });
+
+      // Day 3
+      const d3Date = new Date(start);
+      d3Date.setDate(start.getDate() + 3);
+      schedule.push({
+          day: 3,
+          date: formatDateLocal(d3Date),
+          status: 'Pending'
+      });
+
+      // Day 7 (4 days after D3)
+      const d7Date = new Date(d3Date); // IMPORTANT: Base D7 on D3 date
+      d7Date.setDate(d3Date.getDate() + 4); // Add 4 days to D3 date
+      schedule.push({
+          day: 7,
+          date: formatDateLocal(d7Date),
+          status: 'Pending'
+      });
+
+      // For Intramuscular, add D14 and D28 (based on D0 start as per previous logic)
+      if (regimen === 'Intramuscular') {
+          // Day 14
+          const d14Date = new Date(start);
+          d14Date.setDate(start.getDate() + 14);
           schedule.push({
-              day: dayOffset,
-              date: formatDateLocal(doseDate),
+              day: 14,
+              date: formatDateLocal(d14Date),
               status: 'Pending'
           });
-      });
-      return schedule;
+
+          // Day 28
+          const d28Date = new Date(start);
+          d28Date.setDate(start.getDate() + 28);
+          schedule.push({
+              day: 28,
+              date: formatDateLocal(d28Date),
+              status: 'Pending'
+          });
+      }
+
+      return schedule.sort((a, b) => a.day - b.day); // Ensure schedule is ordered by day
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -431,9 +469,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
 
               <div className="md:col-span-3 pt-4 border-t border-slate-100 flex justify-end gap-3">
                   <button type="button" className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg flex items-center gap-2" onClick={handleReset}><RotateCcw size={18} /> {editingPatientId ? 'रद्द गर्नुहोस्' : 'रिसेट'}</button>
-                  <button type="submit" className="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg shadow-sm flex items-center gap-2 font-medium font-nepali">
-                      <Save size={18} /> {editingPatientId ? 'अपडेट गर्नुहोस्' : 'दर्ता गर्नुहोस्'}
-                  </button>
+                  <button type="submit" className="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg shadow-lg shadow-indigo-100 transition-all font-bold text-sm"><Save size={16}/> {editingPatientId ? 'अपडेट गर्नुहोस्' : 'दर्ता गर्नुहोस्'}</button>
               </div>
           </form>
       </div>

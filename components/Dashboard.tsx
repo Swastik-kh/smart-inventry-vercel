@@ -153,7 +153,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   }, [stockEntryRequests]);
 
   const hasAccess = (menuId: string) => {
-      if (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN') return true;
+      // SUPER_ADMIN always has access to everything
+      if (currentUser.role === 'SUPER_ADMIN') return true;
+      // All other roles (including ADMIN) are governed by allowedMenus
       return currentUser.allowedMenus?.includes(menuId);
   };
 
@@ -189,27 +191,124 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       return 0;
   }, [magForms, currentUser.role]);
 
+  // Calculate badge count for Purchase Orders
+  const kharidAdeshBadgeCount = useMemo(() => {
+      if (!purchaseOrders) return 0;
+      const isStoreKeeper = currentUser.role === 'STOREKEEPER';
+      const isAccount = currentUser.role === 'ACCOUNT';
+      const isAdminOrApproval = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
+
+      return purchaseOrders.filter(order => {
+          if (isStoreKeeper) return order.status === 'Pending';
+          if (isAccount) return order.status === 'Pending Account';
+          if (isAdminOrApproval) return order.status === 'Account Verified';
+          return false;
+      }).length;
+  }, [purchaseOrders, currentUser.role]);
+
+  // Calculate badge count for Nikasha Pratibedan (Issue Reports)
+  const nikashaPratibedanBadgeCount = useMemo(() => {
+    if (!issueReports) return 0;
+    // Storekeeper prepares, sends to approval. Admin/Approval approves.
+    const isStoreKeeper = currentUser.role === 'STOREKEEPER';
+    const isAdminOrApproval = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
+
+    return issueReports.filter(report => {
+        if (isStoreKeeper) return report.status === 'Pending'; // Storekeeper needs to prepare
+        if (isAdminOrApproval) return report.status === 'Pending Approval'; // Admin/Approver needs to approve
+        return false;
+    }).length;
+  }, [issueReports, currentUser.role]);
+
+  // Calculate badge count for Dakhila Pratibedan (Stock Entry Requests pending approval)
+  const dakhilaPratibedanBadgeCount = useMemo(() => {
+    if (!stockEntryRequests) return 0;
+    // Only approvers care about pending stock entry requests from this menu
+    const isApproverRole = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
+    if (isApproverRole) {
+        return stockEntryRequests.filter(req => req.status === 'Pending').length;
+    }
+    return 0;
+  }, [stockEntryRequests, currentUser.role]);
+
+  // NEW: Calculate badge count for Jinshi Firta Khata (Return Entries)
+  const jinshiFirtaBadgeCount = useMemo(() => {
+      if (!returnEntries) return 0;
+      // Storekeeper, Admin, Super Admin, Approval can all verify/approve return entries
+      const isApproverRole = ['STOREKEEPER', 'ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
+      if (isApproverRole) {
+          return returnEntries.filter(entry => entry.status === 'Pending').length;
+      }
+      return 0;
+  }, [returnEntries, currentUser.role]);
+
+  // NEW: Calculate badge count for Marmat Adesh (Maintenance Entries)
+  const marmatAdeshBadgeCount = useMemo(() => {
+      if (!marmatEntries) return 0;
+      // Admin, Super Admin, Approval can approve maintenance requests
+      const isApproverRole = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
+      if (isApproverRole) {
+          return marmatEntries.filter(entry => entry.status === 'Pending').length;
+      }
+      return 0;
+  }, [marmatEntries, currentUser.role]);
+
+  // NEW: Calculate badge count for Dhuliyauna Faram (Disposal Entries)
+  const dhuliyaunaFaramBadgeCount = useMemo(() => {
+      if (!dhuliyaunaEntries) return 0;
+      // Admin, Super Admin, Approval can approve disposal requests
+      const isApproverRole = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
+      if (isApproverRole) {
+          return dhuliyaunaEntries.filter(entry => entry.status === 'Pending').length;
+      }
+      return 0;
+  }, [dhuliyaunaEntries, currentUser.role]);
+
+
   const allMenuItems: MenuItem[] = [
     { id: 'dashboard', label: 'ड्यासबोर्ड (Dashboard)', icon: <LayoutDashboard size={20} /> },
     { id: 'services', label: 'सेवा (Services)', icon: <Stethoscope size={20} />, subItems: [{ id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग (TB/Leprosy)', icon: <Activity size={16} /> }, { id: 'rabies', label: 'रेबिज़ खोप क्लिनिक (Rabies Vaccine)', icon: <Syringe size={16} /> }] },
-    { id: 'inventory', label: 'जिन्सी व्यवस्थापन (Inventory)', icon: <Package size={20} />, subItems: [{ id: 'stock_entry_approval', label: 'स्टक प्रविष्टि अनुरोध', icon: <ClipboardCheck size={16} />, badgeCount: pendingStockRequestsCount }, { id: 'jinshi_maujdat', label: 'जिन्सी मौज्दात (Stock)', icon: <Warehouse size={16} /> }, { id: 'form_suchikaran', label: 'फर्म सुचीकरण (Firms)', icon: <ClipboardList size={16} /> }, { id: 'quotation', label: 'कोटेशन (Quotation)', icon: <FileSpreadsheet size={16} /> }, { id: 'mag_faram', label: 'माग फारम (Demand)', icon: <FilePlus size={16} />, badgeCount: magFaramBadgeCount }, { id: 'kharid_adesh', label: 'खरिद आदेश (PO)', icon: <ShoppingCart size={16} /> }, { id: 'nikasha_pratibedan', label: 'निकासा प्रतिवेदन (Issue)', icon: <FileOutput size={16} /> }, { id: 'sahayak_jinshi_khata', label: 'सहायक जिन्सी खाता', icon: <BookOpen size={16} /> }, { id: 'jinshi_khata', label: 'जिन्सी खाता (Ledger)', icon: <Book size={16} /> }, { id: 'dakhila_pratibedan', label: 'दाखिला प्रतिवेदन', icon: <Archive size={16} /> }, { id: 'jinshi_firta_khata', label: 'जिन्सी फिर्ता खाता', icon: <RotateCcw size={16} /> }, { id: 'marmat_adesh', label: 'मर्मत आवेदन/आदेश', icon: <Wrench size={16} /> }, { id: 'dhuliyauna_faram', label: 'लिलाम / धुल्याउने', icon: <Trash2 size={16} /> }, { id: 'log_book', label: 'लग बुक (Log Book)', icon: <Scroll size={16} /> }] },
-    { id: 'report', label: 'रिपोर्ट (Report)', icon: <FileText size={20} />, subItems: [{ id: 'report_tb_leprosy', label: 'क्षयरोग/कुष्ठरोग रिपोर्ट', icon: <Activity size={16} /> }, { id: 'report_rabies', label: 'रेबिज़ रिपोर्ट', icon: <Syringe size={16} /> }, { id: 'report_inventory_monthly', label: 'जिन्सी मासिक प्रतिवेदन', icon: <BarChart3 size={16} /> }] },
+    { id: 'inventory', label: 'जिन्सी व्यवस्थापन (Inventory)', icon: <Package size={20} />, subItems: [{ id: 'stock_entry_approval', label: 'स्टक प्रविष्टि अनुरोध', icon: <ClipboardCheck size={16} />, badgeCount: pendingStockRequestsCount }, { id: 'jinshi_maujdat', label: 'जिन्सी मौज्दात (Stock)', icon: <Warehouse size={16} /> }, { id: 'form_suchikaran', label: 'फर्म सुचीकरण (Firms)', icon: <ClipboardList size={16} /> }, { id: 'quotation', label: 'कोटेशन (Quotation)', icon: <FileSpreadsheet size={16} /> }, { id: 'mag_faram', label: 'माग फारम (Demand)', icon: <FilePlus size={16} />, badgeCount: magFaramBadgeCount }, { id: 'kharid_adesh', label: 'खरिद आदेश (PO)', icon: <ShoppingCart size={16} />, badgeCount: kharidAdeshBadgeCount }, { id: 'nikasha_pratibedan', label: 'निकासा प्रतिवेदन (Issue)', icon: <FileOutput size={16} />, badgeCount: nikashaPratibedanBadgeCount }, { id: 'sahayak_jinshi_khata', label: 'सहायक जिन्सी खाता', icon: <BookOpen size={16} /> }, { id: 'jinshi_khata', label: 'जिन्सी खाता (Ledger)', icon: <Book size={16} /> }, { id: 'dakhila_pratibedan', label: 'दाखिला प्रतिवेदन', icon: <Archive size={16} />, badgeCount: dakhilaPratibedanBadgeCount }, { id: 'jinshi_firta_khata', label: 'जिन्सी फिर्ता खाता', icon: <RotateCcw size={16} />, badgeCount: jinshiFirtaBadgeCount }, { id: 'marmat_adesh', label: 'मर्मत आवेदन/आदेश', icon: <Wrench size={16} />, badgeCount: marmatAdeshBadgeCount }, { id: 'dhuliyauna_faram', label: 'लिलाम / धुल्याउने', icon: <Trash2 size={16} />, badgeCount: dhuliyaunaFaramBadgeCount }, { id: 'log_book', label: 'लग बुक (Log Book)', icon: <Scroll size={16} /> }] },
+    { id: 'report', label: 'रिपोर्ट (Report)', icon: <FileText size={20} />, subItems: [{ id: 'report_tb_leprosy', label: 'क्षयरोग/कुष्ठरोग रिपोर्ट (TB/Leprosy)', icon: <Activity size={16} /> }, { id: 'report_rabies', label: 'रेबिज़ रिपोर्ट', icon: <Syringe size={16} /> }, { id: 'report_inventory_monthly', label: 'जिन्सी मासिक प्रतिवेदन (Monthly Report)', icon: <BarChart3 size={16} /> }] },
     { id: 'settings', label: 'सेटिङ (Settings)', icon: <Settings size={20} />, subItems: [{ id: 'general_setting', label: 'सामान्य सेटिङ', icon: <Sliders size={16} /> }, { id: 'store_setup', label: 'स्टोर सेटअप', icon: <Store size={16} /> }, { id: 'user_management', label: 'प्रयोगकर्ता सेटअप', icon: <Users size={16} /> }, { id: 'change_password', label: 'पासवर्ड परिवर्तन', icon: <KeyRound size={16} /> }, { id: 'database_management', label: 'डाटाबेस व्यवस्थापन', icon: <Database size={16} /> }] },
   ];
 
   const menuItems = useMemo(() => {
-    const isSuperOrAdmin = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN';
+    const isCurrentUserSuperAdmin = currentUser.role === 'SUPER_ADMIN';
+    const allowedMenus = new Set(currentUser.allowedMenus || []); // Use a Set for O(1) lookup
+
     return allMenuItems.reduce<MenuItem[]>((acc, item) => {
-        if (item.id === 'dashboard') { acc.push(item); return acc; }
-        if (item.id === 'settings') {
-            const filteredSubs = item.subItems?.filter(sub => (sub.id === 'change_password' || isSuperOrAdmin)) || [];
-            if (filteredSubs.length > 0) acc.push({ ...item, subItems: filteredSubs });
+        // SUPER_ADMIN always gets all menus and sub-menus
+        if (isCurrentUserSuperAdmin) {
+            acc.push(item);
             return acc;
         }
-        if (isSuperOrAdmin) { acc.push(item); return acc; }
-        const allowedMenus = currentUser.allowedMenus || [];
-        const filteredSubs = item.subItems?.filter(sub => allowedMenus.includes(sub.id)) || [];
-        if (allowedMenus.includes(item.id) || filteredSubs.length > 0) acc.push({ ...item, subItems: filteredSubs.length > 0 ? filteredSubs : item.subItems });
+
+        // For all other roles (including ADMINs):
+
+        // 1. Always include Dashboard
+        if (item.id === 'dashboard') {
+            acc.push(item);
+            return acc;
+        }
+
+        // 2. Filter sub-items first.
+        // Special rule: 'change_password' is always allowed for any user if 'settings' is visible/accessible.
+        const filteredSubItems = item.subItems?.filter(subItem => {
+            return subItem.id === 'change_password' || allowedMenus.has(subItem.id);
+        }) || [];
+
+        // 3. Decide if the parent menu item should be included
+        // A parent is included if:
+        //    a) its ID is explicitly in allowedMenus, OR
+        //    b) it has any filtered (allowed) sub-items.
+        const shouldIncludeParent = allowedMenus.has(item.id) || filteredSubItems.length > 0;
+
+        if (shouldIncludeParent) {
+            // Push the parent item with only its allowed sub-items
+            acc.push({ ...item, subItems: filteredSubItems });
+        }
+        
         return acc;
     }, []);
   }, [currentUser, allMenuItems]);
