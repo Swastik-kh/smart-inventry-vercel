@@ -82,7 +82,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     fullName: '',
     designation: '',
     phoneNumber: '',
-    organizationName: '',
+    // Modified: Automatically set organizationName for ADMIN when creating new user
+    organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '',
     role: 'STAFF',
     allowedMenus: ['dashboard']
   });
@@ -105,7 +106,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   const resetForm = () => {
       setFormData({ 
         username: '', password: '', fullName: '', designation: '', phoneNumber: '',
-        organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '',
+        organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '', // This ensures correct default on reset
         role: 'STAFF', allowedMenus: ['dashboard']
       });
       setEditingId(null);
@@ -116,7 +117,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       setFormData({
           username: user.username, password: user.password, fullName: user.fullName,
           designation: user.designation, phoneNumber: user.phoneNumber,
-          organizationName: user.organizationName, role: user.role,
+          organizationName: user.organizationName,
+          role: user.role,
           allowedMenus: user.allowedMenus || ['dashboard']
       });
       setShowForm(true);
@@ -153,7 +155,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     const userToSave: User = {
         id: editingId || Date.now().toString(),
         username: formData.username, password: formData.password,
-        role: currentUser.role === 'SUPER_ADMIN' ? 'ADMIN' : formData.role,
+        role: currentUser.role === 'SUPER_ADMIN' ? 'ADMIN' : formData.role, // SUPER_ADMIN can only create ADMINs
         fullName: formData.fullName, designation: formData.designation,
         phoneNumber: formData.phoneNumber, organizationName: formData.organizationName,
         allowedMenus: finalMenus
@@ -182,7 +184,15 @@ export const UserManagement: React.FC<UserManagementProps> = ({
             <Input label="पूरा नाम" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} required icon={<IdCard size={16} />} />
             <Input label="पद" value={formData.designation} onChange={e => setFormData({...formData, designation: e.target.value})} required icon={<Briefcase size={16} />} />
             <Input label="फोन नं." value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} required icon={<Phone size={16} />} />
-            <Input label="संस्था" value={formData.organizationName} onChange={e => setFormData({...formData, organizationName: e.target.value})} required readOnly={currentUser.role === 'ADMIN'} className={currentUser.role === 'ADMIN' ? 'bg-slate-50' : ''} icon={<Building2 size={16} />} />
+            <Input 
+                label="संस्था" 
+                value={formData.organizationName} 
+                onChange={e => setFormData({...formData, organizationName: e.target.value})} 
+                required 
+                readOnly={currentUser.role === 'ADMIN'} // ADMIN can't change their org when creating
+                className={currentUser.role === 'ADMIN' ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''} 
+                icon={<Building2 size={16} />} 
+            />
             {currentUser.role === 'ADMIN' && <Select label="भूमिका" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as UserRole})} options={availableRoles} icon={<Users size={16} />} />}
             <Input label="प्रयोगकर्ता नाम" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} required icon={<UserIcon size={16} />} />
             <Input label="पासवर्ड" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required type="password" />

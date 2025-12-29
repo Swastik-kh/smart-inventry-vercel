@@ -356,10 +356,17 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
       }
   };
 
-  const filteredPatients = patients.filter(p => 
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      p.regNo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPatients = useMemo(() => {
+    return patients
+      .filter(p => 
+          p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+          p.regNo.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => {
+        // Sort by ID (which is timestamp-based) in descending order to show newest first
+        return parseInt(b.id) - parseInt(a.id);
+      });
+  }, [patients, searchTerm]);
 
   const todayAd = getTodayDateAd();
 
