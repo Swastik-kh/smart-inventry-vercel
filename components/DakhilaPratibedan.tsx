@@ -509,7 +509,7 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
 
                          {/* Middle Spacer - Image shows empty space but I'll add a section matching the previous commit's "जिन्सी शाखा" */}
                          <div className="text-center">
-                            <div className="border-t border-slate-800 pt-3 max-w-[180px] mx-auto font-bold">जिन्सी शाखा</div>
+                            <div className="border-t border-slate-800 pt-3 max-w-[180px] mx-auto font-bold">सिफारीस गर्ने</div>
                             {/* Placeholder for signature if needed for Store Section role */}
                          </div>
 
