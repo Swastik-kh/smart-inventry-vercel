@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Archive, Printer, ArrowLeft, Eye, X, FileText, ClipboardCheck, ShieldCheck, Warehouse, User as UserIcon, CheckCircle2, Search, Clock } from 'lucide-react';
-import { DakhilaPratibedanEntry, User, StockEntryRequest, OrganizationSettings, Store } from '../types';
+import { DakhilaPratibedanEntry, User, StockEntryRequest, OrganizationSettings, Store, DakhilaItem, InventoryItem } from '../types';
+// @ts-ignore
+import NepaliDate from 'nepali-date-converter';
 
 interface DakhilaPratibedanProps {
     dakhilaReports: DakhilaPratibedanEntry[];
@@ -13,6 +15,24 @@ interface DakhilaPratibedanProps {
     stores?: Store[];
     initialSelectedReportId?: string | null; // New prop for direct loading
     onInitialReportLoaded?: () => void; // New callback for clearing initial load state
+}
+
+// Helper interface to normalize item data for display in the table
+interface DisplayDakhilaItem {
+    id: string | number;
+    orderOrRefNo: string; // Col 2: खरिद आदेश / हस्तान्तरण फाराम नं/अन्य
+    sanketNo: string; // Col 3: सङ्केत नं.
+    name: string; // Col 4: नाम
+    specification: string; // Col 5: स्पेसिफिकेसन
+    source: string; // Col 6: प्राप्तिको स्रोत
+    unit: string; // Col 7: एकाई
+    quantity: number; // Col 8: परिमाण
+    rate: number; // Col 9: दर
+    totalAmountPreVat: number; // Col 10: जम्मा मूल्य (म.अ.क) - assuming this is (qty * rate)
+    vatAmount: number; // Col 11: मू.अ.कर
+    grandTotalPostVat: number; // Col 12: जम्मा मूल्य - assuming this is (totalAmountPreVat + vatAmount)
+    otherExpenses: number; // Col 13: अन्य खर्च समेत जम्मा रकम
+    remarks: string; // Col 14: कैफियत
 }
 
 export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({ 
@@ -81,7 +101,6 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
         if (!selectedRequest) return;
         // This component no longer directly calls onApproveStockEntry or onRejectStockEntry
         // The actions are now handled upstream by the StockEntryApproval component
-        // This button now only indicates that approval is managed externally
         alert("यो दाखिला अनुरोध स्वीकृत गर्न कृपया 'स्टक प्रविष्टि अनुरोध' मेनुमा जानुहोस्।");
     };
 
@@ -114,7 +133,7 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
                         {isApproverRole && (
                             <button 
                                 onClick={() => setActiveTab('Requests')}
-                                className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'Requests' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'Requests' ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-indigo-200' : 'text-slate-500 hover:text-slate-700'}`}
                             >
                                 <ClipboardCheck size={16} />
                                 <span className="font-nepali">अनुरोधहरू</span> 
@@ -123,7 +142,7 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
                         )}
                         <button 
                             onClick={() => setActiveTab('History')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'History' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'History' ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-indigo-200' : 'text-slate-500 hover:text-slate-700'}`}
                         >
                             <FileText size={16} />
                             <span className="font-nepali">स्वीकृत दाखिला (History)</span>
@@ -243,14 +262,64 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
         if (!data) return null;
 
         const isReq = !!selectedRequest;
-        // Fix: Explicitly narrowing the data source to resolve Property 'dakhilaNo' does not exist on type 'InventoryItem | DakhilaItem'
-        const dNo = isReq
-            ? (selectedRequest.items[0]?.dakhilaNo || (selectedRequest.dakhilaNo ? selectedRequest.dakhilaNo : 'N/A'))
-            : (selectedReport as DakhilaPratibedanEntry).dakhilaNo;
-            
-        const dDate = isReq ? (data as StockEntryRequest).requestDateBs : (data as DakhilaPratibedanEntry).date;
-        const items = data.items || [];
-        const storeName = isReq ? getStoreName((data as StockEntryRequest).storeId) : '-';
+        
+        // Dynamic values for header based on whether it's a request or final report
+        const dakhilaReportNo = isReq ? (selectedRequest.dakhilaNo || 'N/A') : selectedReport!.dakhilaNo;
+        const dakhilaDate = isReq ? selectedRequest!.requestDateBs : selectedReport!.date;
+        const orderRefNo = isReq ? (selectedRequest.refNo || 'N/A') : (selectedReport!.orderNo || 'N/A');
+        const storeName = isReq ? getStoreName(selectedRequest!.storeId) : '-';
+
+        // Normalize items for display
+        const displayItems: DisplayDakhilaItem[] = (isReq ? (selectedRequest!.items as InventoryItem[]) : (selectedReport!.items as DakhilaItem[])).map((item: any, idx) => {
+            if (isReq) { // Data from StockEntryRequest (InventoryItem)
+                const invItem: InventoryItem = item;
+                const totalAmountPreVat = invItem.currentQuantity * (invItem.rate || 0);
+                const vatAmount = totalAmountPreVat * ((invItem.tax || 0) / 100);
+                // Fix: `otherExpenses` property does not exist on type `InventoryItem`. Default to 0.
+                const grandTotalPostVat = totalAmountPreVat + vatAmount + 0; 
+
+                return {
+                    id: invItem.id,
+                    orderOrRefNo: selectedRequest!.refNo || invItem.dakhilaNo || 'N/A', // From request or item
+                    sanketNo: invItem.sanketNo || invItem.uniqueCode || '-',
+                    name: invItem.itemName,
+                    specification: invItem.specification || '-',
+                    source: selectedRequest!.receiptSource,
+                    unit: invItem.unit,
+                    quantity: invItem.currentQuantity,
+                    rate: invItem.rate || 0,
+                    totalAmountPreVat: totalAmountPreVat,
+                    vatAmount: vatAmount,
+                    grandTotalPostVat: grandTotalPostVat,
+                    otherExpenses: 0, // Not explicitly from InventoryItem
+                    remarks: invItem.remarks || '-',
+                };
+            } else { // Data from DakhilaPratibedanEntry (DakhilaItem)
+                const dakhItem: DakhilaItem = item;
+                return {
+                    id: dakhItem.id,
+                    orderOrRefNo: selectedReport!.orderNo || 'N/A', // From report
+                    sanketNo: dakhItem.codeNo || '-',
+                    name: dakhItem.name,
+                    specification: dakhItem.specification || '-',
+                    source: dakhItem.source || '-',
+                    unit: dakhItem.unit,
+                    quantity: dakhItem.quantity,
+                    rate: dakhItem.rate || 0,
+                    totalAmountPreVat: dakhItem.quantity * dakhItem.rate,
+                    vatAmount: dakhItem.vatAmount,
+                    grandTotalPostVat: dakhItem.grandTotal,
+                    otherExpenses: dakhItem.otherExpenses,
+                    remarks: dakhItem.remarks || '-',
+                };
+            }
+        });
+
+        // Calculate totals for footer
+        const totalAmountCol10 = displayItems.reduce((sum, item) => sum + item.totalAmountPreVat, 0);
+        const totalAmountCol11 = displayItems.reduce((sum, item) => sum + item.vatAmount, 0);
+        const totalAmountCol12 = displayItems.reduce((sum, item) => sum + item.grandTotalPostVat, 0);
+        const totalAmountCol13 = displayItems.reduce((sum, item) => sum + item.otherExpenses, 0);
 
         return (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
@@ -302,7 +371,7 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
                 </div>
 
                 {/* FORM 403 LAYOUT */}
-                <div className="bg-white p-10 rounded-xl shadow-lg max-w-[210mm] mx-auto min-h-[297mm] text-slate-900 font-nepali text-sm print:shadow-none print:p-0 print:max-w-none print-full-width dakhila-report-print">
+                <div className="bg-white p-10 rounded-xl shadow-lg max-w-[297mm] mx-auto min-h-[210mm] text-slate-900 font-nepali text-sm print:shadow-none print:p-0 print:max-w-none print-full-width dakhila-report-print">
                     <div className="text-right font-bold text-[10px] mb-4">म.ले.प.फारम नं: ४०३</div>
 
                     <div className="mb-10">
@@ -336,53 +405,87 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
                             <div>स्टोर/गोदाम: <span className="font-bold border-b border-dotted border-slate-800 px-2">{storeName}</span></div>
                         </div>
                         <div className="space-y-1 text-right">
-                            <div>दाखिला नं.: <span className="font-bold text-red-600 border-b border-dotted border-slate-800 px-2">#{dNo}</span></div>
-                            <div>मिति: <span className="font-bold border-b border-dotted border-slate-800 px-2">{dDate}</span></div>
+                            <div>दाखिला प्रतिवेदन नं.: <span className="font-bold text-red-600 border-b border-dotted border-slate-800 px-2">#{dakhilaReportNo}</span></div>
+                            <div>मिति: <span className="font-bold border-b border-dotted border-slate-800 px-2">{dakhilaDate}</span></div>
                         </div>
                     </div>
 
-                    <table className="w-full border-collapse border border-slate-900 text-center text-[11px]">
+                    <table className="w-full border-collapse border border-slate-900 text-center text-[10px]">
                         <thead>
                             <tr className="bg-slate-50">
-                                <th className="border border-slate-900 p-2 w-10">क्र.सं.</th>
-                                <th className="border border-slate-900 p-2">विवरण (सामानको नाम)</th>
-                                <th className="border border-slate-900 p-2 w-24">सङ्केत नं.</th>
-                                <th className="border border-slate-900 p-2 w-28">स्पेसिफिकेसन</th>
-                                <th className="border border-slate-900 p-2 w-16">एकाई</th>
-                                <th className="border border-slate-900 p-2 w-16">परिमाण</th>
-                                <th className="border border-slate-900 p-2 w-24">दर (रु.)</th>
-                                <th className="border border-slate-900 p-2 w-28">जम्मा मूल्य</th>
-                                <th className="border border-slate-900 p-2 w-32">कैफियत</th>
+                                <th className="border border-slate-900 p-2" rowSpan={2} style={{width: '30px'}}>क्र.सं.</th>
+                                <th className="border border-slate-900 p-2" colSpan={5}>सम्पत्ति वा जिन्सी मालसामानको</th>
+                                <th className="border border-slate-900 p-2" rowSpan={2} style={{width: '45px'}}>एकाई</th>
+                                <th className="border border-slate-900 p-2" rowSpan={2} style={{width: '45px'}}>परिमाण</th>
+                                <th className="border border-slate-900 p-2" colSpan={4}>मूल्य (बिल बिजक अनुसार)</th>
+                                <th className="border border-slate-900 p-2" rowSpan={2} style={{width: '65px'}}>अन्य खर्च समेत जम्मा रकम</th>
+                                <th className="border border-slate-900 p-2" rowSpan={2} style={{width: '70px'}}>कैफियत</th>
+                            </tr>
+                            <tr className="bg-slate-50">
+                                <th className="border border-slate-900 p-1" style={{width: '55px'}}>खरिद आदेश / हस्तान्तरण फाराम नं/अन्य</th>
+                                <th className="border border-slate-900 p-1" style={{width: '55px'}}>सङ्केत नं.</th>
+                                <th className="border border-slate-900 p-1" style={{width: '70px'}}>नाम</th>
+                                <th className="border border-slate-900 p-1" style={{width: '70px'}}>स्पेसिफिकेसन</th>
+                                <th className="border border-slate-900 p-1" style={{width: '55px'}}>प्राप्तिको स्रोत</th>
+                                <th className="border border-slate-900 p-1" style={{width: '50px'}}>दर</th>
+                                <th className="border border-slate-900 p-1" style={{width: '65px'}}>जम्मा मूल्य (म.अ.क)</th>
+                                <th className="border border-slate-900 p-1" style={{width: '50px'}}>मू.अ.कर</th>
+                                <th className="border border-slate-900 p-1" style={{width: '65px'}}>जम्मा मूल्य</th>
+                            </tr>
+                            <tr className="bg-slate-100 font-bold">
+                                <th className="border border-slate-900 p-1">१</th>
+                                <th className="border border-slate-900 p-1">२</th>
+                                <th className="border border-slate-900 p-1">३</th>
+                                <th className="border border-slate-900 p-1">४</th>
+                                <th className="border border-slate-900 p-1">५</th>
+                                <th className="border border-slate-900 p-1">६</th>
+                                <th className="border border-slate-900 p-1">७</th>
+                                <th className="border border-slate-900 p-1">८</th>
+                                <th className="border border-slate-900 p-1">९</th>
+                                <th className="border border-slate-900 p-1">१०</th>
+                                <th className="border border-slate-900 p-1">११</th>
+                                <th className="border border-slate-900 p-1">१२</th>
+                                <th className="border border-slate-900 p-1">१३</th>
+                                <th className="border border-slate-900 p-1">१४</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {items.map((item: any, idx: number) => {
-                                const itemName = isReq ? item.itemName : item.name;
-                                const codeNo = isReq ? (item.sanketNo || item.uniqueCode) : item.codeNo;
-                                const rate = item.rate || 0;
-                                const qty = isReq ? item.currentQuantity : item.quantity;
-                                const total = isReq ? item.totalAmount : item.finalTotal;
+                            {displayItems.map((item, idx: number) => {
                                 
                                 return (
-                                    <tr key={idx}>
-                                        <td className="border border-slate-900 p-2">{idx + 1}</td>
-                                        <td className="border border-slate-900 p-1 text-left px-2 font-medium">{itemName}</td>
-                                        <td className="border border-slate-900 p-1 font-mono">{codeNo || '-'}</td>
-                                        <td className="border border-slate-900 p-1 text-left px-2">{item.specification || '-'}</td>
+                                    <tr key={item.id}>
+                                        <td className="border border-slate-900 p-1">{idx + 1}</td>
+                                        <td className="border border-slate-900 p-1 text-left px-1">{item.orderOrRefNo || '-'}</td>
+                                        <td className="border border-slate-900 p-1 font-mono">{item.sanketNo || '-'}</td>
+                                        <td className="border border-slate-900 p-1 text-left px-1 font-medium">{item.name}</td>
+                                        <td className="border border-slate-900 p-1 text-left px-1">{item.specification || '-'}</td>
+                                        <td className="border border-slate-900 p-1 text-left px-1">{item.source}</td>
                                         <td className="border border-slate-900 p-1">{item.unit}</td>
-                                        <td className="border border-slate-900 p-1 font-bold">{qty}</td>
-                                        <td className="border border-slate-900 p-1 text-right px-2">{rate.toFixed(2)}</td>
-                                        <td className="border border-slate-900 p-1 text-right px-2 font-bold">{total.toFixed(2)}</td>
-                                        <td className="border border-slate-900 p-1 text-[10px] text-left px-1 italic">{item.remarks || '-'}</td>
+                                        <td className="border border-slate-900 p-1 font-bold">{item.quantity}</td>
+                                        <td className="border border-slate-900 p-1 text-right px-1">{item.rate.toFixed(2)}</td>
+                                        <td className="border border-slate-900 p-1 text-right px-1">{item.totalAmountPreVat.toFixed(2)}</td>
+                                        <td className="border border-slate-900 p-1 text-right px-1">{item.vatAmount.toFixed(2)}</td>
+                                        <td className="border border-slate-900 p-1 text-right px-1 font-bold">{item.grandTotalPostVat.toFixed(2)}</td>
+                                        <td className="border border-slate-900 p-1 text-right px-1">{item.otherExpenses.toFixed(2)}</td>
+                                        <td className="border border-slate-900 p-1 text-[9px] text-left px-1 italic">{item.remarks || '-'}</td>
                                     </tr>
                                 );
                             })}
                         </tbody>
                         <tfoot>
                             <tr className="bg-slate-50 font-bold">
-                                <td colSpan={7} className="border border-slate-900 p-2 text-right px-4 uppercase">कुल जम्मा (Total)</td>
-                                <td className="border border-slate-900 p-2 text-right px-2 font-black">
-                                    {items.reduce((sum: number, i: any) => sum + (isReq ? i.totalAmount : i.finalTotal), 0).toFixed(2)}
+                                <td colSpan={9} className="border border-slate-900 p-2 text-right px-4 uppercase">कुल जम्मा (Total)</td>
+                                <td className="border border-slate-900 p-2 text-right px-1 font-black">
+                                    {totalAmountCol10.toFixed(2)}
+                                </td>
+                                <td className="border border-slate-900 p-2 text-right px-1 font-black">
+                                    {totalAmountCol11.toFixed(2)}
+                                </td>
+                                <td className="border border-slate-900 p-2 text-right px-1 font-black">
+                                    {totalAmountCol12.toFixed(2)}
+                                </td>
+                                <td className="border border-slate-900 p-2 text-right px-1 font-black">
+                                    {totalAmountCol13.toFixed(2)}
                                 </td>
                                 <td className="border border-slate-900 p-2"></td>
                             </tr>
@@ -390,27 +493,35 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
                     </table>
 
                     {/* DYNAMIC FOOTER FOR STOREKEEPER AND APPROVAL */}
-                    <div className="grid grid-cols-2 gap-20 mt-16 text-sm">
+                    <div className="grid grid-cols-3 gap-8 mt-16 text-sm print:grid-cols-3 print:gap-10">
                         {/* Prepared By Footer */}
                         <div className="text-center">
                             <div className="border-t border-slate-800 pt-3 max-w-[180px] mx-auto">
-                                <p className="font-bold">तयार गर्ने (जिन्सी शाखा)</p>
+                                <p className="font-bold">तयार गर्ने (Prepared By)</p>
+                                <p className="font-bold">जिन्सी शाखा (Store Section)</p>
                                 <div className="mt-4 space-y-0.5">
                                     <p className="font-bold text-slate-800">{isReq ? (data as StockEntryRequest).requesterName : (data as DakhilaPratibedanEntry).preparedBy?.name || '................................'}</p>
                                     <p className="text-[10px] text-slate-500 uppercase font-bold">{isReq ? (data as StockEntryRequest).requesterDesignation : (data as DakhilaPratibedanEntry).preparedBy?.designation || 'Storekeeper'}</p>
-                                    <p className="text-[10px] mt-1 italic">मिति: {isReq ? (data as StockEntryRequest).requestDateBs : (data as DakhilaPratibedanEntry).preparedBy?.date || dDate}</p>
+                                    <p className="text-[10px] mt-1 italic">मिति: {isReq ? (data as StockEntryRequest).requestDateBs : (data as DakhilaPratibedanEntry).preparedBy?.date || dakhilaDate}</p>
                                 </div>
                             </div>
                         </div>
 
+                         {/* Middle Spacer - Image shows empty space but I'll add a section matching the previous commit's "जिन्सी शाखा" */}
+                         <div className="text-center">
+                            <div className="border-t border-slate-800 pt-3 max-w-[180px] mx-auto font-bold">जिन्सी शाखा</div>
+                            {/* Placeholder for signature if needed for Store Section role */}
+                         </div>
+
                         {/* Approved By Footer */}
                         <div className="text-center">
                             <div className="border-t border-slate-800 pt-3 max-w-[180px] mx-auto">
-                                <p className="font-bold">स्वीकृत गर्ने (कार्यालय प्रमुख)</p>
+                                <p className="font-bold">स्वीकृत गर्ने (Approved By)</p>
+                                <p className="font-bold">कार्यालय प्रमुख (Office Head)</p>
                                 <div className="mt-4 space-y-0.5">
                                     <p className="font-bold text-slate-800">{isReq ? '................................' : (data as DakhilaPratibedanEntry).approvedBy?.name || '................................'}</p>
                                     <p className="text-[10px] text-slate-500 uppercase font-bold">{isReq ? 'Head of Office' : (data as DakhilaPratibedanEntry).approvedBy?.designation || 'Admin'}</p>
-                                    {!isReq && <p className="text-[10px] mt-1 italic">मिति: {(data as DakhilaPratibedanEntry).approvedBy?.date || dDate}</p>}
+                                    {!isReq && <p className="text-[10px] mt-1 italic">मिति: {(data as DakhilaPratibedanEntry).approvedBy?.date || dakhilaDate}</p>}
                                 </div>
                             </div>
                         </div>
