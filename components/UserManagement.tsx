@@ -11,6 +11,7 @@ const PERMISSION_STRUCTURE = [
         label: 'सेवा (Services)',
         children: [
             { id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग (TB/Leprosy)' },
+            { id: 'khop_sewa', label: 'खोप सेवा (Vaccination Service)' }, // ADDED KHOP SEWA
             { id: 'rabies', label: 'रेबिज खोप क्लिनिक (Rabies Vaccine)' }
         ]
     },

@@ -34,7 +34,7 @@ const DEFAULT_ADMIN: User = {
     fullName: 'Administrator',
     designation: 'System Manager',
     phoneNumber: '98XXXXXXXX',
-    allowedMenus: ['dashboard', 'inventory', 'settings']
+    allowedMenus: ['dashboard', 'inventory', 'settings', 'services', 'khop_sewa'] // Added 'services' and 'khop_sewa'
 };
 
 const App: React.FC = () => {
@@ -303,7 +303,8 @@ const App: React.FC = () => {
                   specification: item.specification || '', source: request.receiptSource, unit: item.unit,
                   quantity: incomingQty, rate: incomingRate, totalAmount: incomingQty * incomingRate,
                   vatAmount: (incomingQty * incomingRate) * (incomingTax / 100), grandTotal: incomingTotal,
-                  otherExpenses: 0, finalTotal: incomingTotal, remarks: item.remarks || ''
+                  otherExpenses: 0, finalTotal: incomingTotal, remarks: item.remarks || '',
+                  itemType: item.itemType // Add itemType here
               });
               if (existingItem) {
                   const newQty = (Number(existingItem.currentQuantity) || 0) + incomingQty;
@@ -320,7 +321,8 @@ const App: React.FC = () => {
               id: formalDakhilaId, fiscalYear: request.fiscalYear, dakhilaNo: request.dakhilaNo || formalDakhilaId,
               date: request.requestDateBs, orderNo: request.refNo || 'BULK-ENTRY', items: dakhilaItems, status: 'Final',
               preparedBy: { name: request.requesterName || request.requestedBy, designation: request.requesterDesignation || 'Staff', date: request.requestDateBs },
-              approvedBy: { name: approverName, designation: approverDesignation, date: request.requestDateBs }
+              approvedBy: { name: approverName, designation: approverDesignation, date: request.requestDateBs },
+              storeId: request.storeId // Add storeId here
           };
           await update(ref(db), updates);
       } catch (error) {

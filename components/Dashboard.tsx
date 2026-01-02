@@ -43,7 +43,7 @@ const LAST_SEEN_NOTIFICATION_KEY = 'lastSeenDakhilaNotificationId';
 export const Dashboard: React.FC<ExtendedDashboardProps> = ({ 
   onLogout, 
   currentUser, 
-  currentFiscalYear,
+  currentFiscalYear, 
   users,
   onAddUser,
   onUpdateUser,
@@ -450,7 +450,16 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   const allMenuItems: MenuItem[] = [
     { id: 'dashboard', label: 'ड्यासबोर्ड (Dashboard)', icon: <LayoutDashboard size={20} /> },
-    { id: 'services', label: 'सेवा (Services)', icon: <Stethoscope size={20} />, subItems: [{ id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग (TB/Leprosy)', icon: <Activity size={16} /> }, { id: 'rabies', label: 'रेबिज़ खोप क्लिनिक (Rabies Vaccine)', icon: <Syringe size={16} /> }] },
+    { 
+      id: 'services', 
+      label: 'सेवा (Services)', 
+      icon: <Stethoscope size={20} />, 
+      subItems: [
+        { id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग (TB/Leprosy)', icon: <Activity size={16} /> }, 
+        { id: 'khop_sewa', label: 'खोप सेवा (Vaccination Service)', icon: <Pill size={16} /> }, // NEW SUB-MENU
+        { id: 'rabies', label: 'रेबिज़ खोप क्लिनिक (Rabies Vaccine)', icon: <Syringe size={16} /> }
+      ] 
+    },
     { id: 'inventory', label: 'जिन्सी व्यवस्थापन (Inventory)', icon: <Package size={20} />, subItems: [{ id: 'stock_entry_approval', label: 'स्टक प्रविष्टि अनुरोध', icon: <ClipboardCheck size={16} />, badgeCount: pendingStockRequestsCount }, { id: 'jinshi_maujdat', label: 'जिन्सी मौज्दात (Stock)', icon: <Warehouse size={16} /> }, { id: 'form_suchikaran', label: 'फर्म सुचीकरण (Firms)', icon: <ClipboardList size={16} /> }, { id: 'quotation', label: 'कोटेशन (Quotation)', icon: <FileSpreadsheet size={16} /> }, { id: 'mag_faram', label: 'माग फारम (Demand)', icon: <FilePlus size={16} />, badgeCount: magFaramBadgeCount }, { id: 'kharid_adesh', label: 'खरिद आदेश (PO)', icon: <ShoppingCart size={16} />, badgeCount: kharidAdeshBadgeCount }, { id: 'nikasha_pratibedan', label: 'निकासा प्रतिवेदन (Issue)', icon: <FileOutput size={16} />, badgeCount: nikashaPratibedanBadgeCount }, { id: 'sahayak_jinshi_khata', label: 'सहायक जिन्सी खाता', icon: <BookOpen size={16} /> }, { id: 'jinshi_khata', label: 'जिन्सी खाता (Ledger)', icon: <Book size={16} /> }, { id: 'dakhila_pratibedan', label: 'दाखिला प्रतिवेदन', icon: <Archive size={16} />, badgeCount: dakhilaPratibedanBadgeCount }, { id: 'jinshi_firta_khata', label: 'जिन्सी फिर्ता खाता', icon: <RotateCcw size={16} />, badgeCount: jinshiFirtaBadgeCount }, { id: 'marmat_adesh', label: 'मर्मत आवेदन/आदेश', icon: <Wrench size={16} />, badgeCount: marmatAdeshBadgeCount }, { id: 'dhuliyauna_faram', label: 'लिलाम / धुल्याउने', icon: <Trash2 size={16} />, badgeCount: dhuliyaunaFaramBadgeCount }, { id: 'log_book', label: 'लग बुक (Log Book)', icon: <Scroll size={16} /> }] },
     { id: 'report', label: 'रिपोर्ट (Report)', icon: <FileText size={20} />, subItems: [{ id: 'report_tb_leprosy', label: 'क्षयरोग/कुष्ठरोग रिपोर्ट (TB/Leprosy)', icon: <Activity size={16} /> }, { id: 'report_rabies', label: 'रेबिज रिपोर्ट (Rabies Report)', icon: <Syringe size={16} /> }, { id: 'report_inventory_monthly', label: 'जिन्सी मासिक प्रतिवेदन (Monthly Report)', icon: <BarChart3 size={16} /> }] },
     { id: 'settings', label: 'सेटिङ (Settings)', icon: <Settings size={20} />, subItems: [{ id: 'general_setting', label: 'सामान्य सेटिङ', icon: <Sliders size={16} /> }, { id: 'store_setup', label: 'स्टोर सेटअप', icon: <Store size={16} /> }, { id: 'database_management', label: 'डाटाबेस व्यवस्थापन', icon: <Database size={16} /> }, { id: 'user_management', label: 'प्रयोगकर्ता सेटअप', icon: <Users size={16} /> }, { id: 'change_password', label: 'पासवर्ड परिवर्तन', icon: <KeyRound size={16} /> }] },
@@ -681,6 +690,13 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       ); 
 
       // All other cases return a component and are already correctly self-closing.
+      case 'khop_sewa': return (
+        <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500 animate-in fade-in zoom-in-95">
+          <Pill size={48} className="text-primary-400 mb-4" />
+          <h3 className="text-xl font-bold text-slate-700 font-nepali mb-2">खोप सेवा (Vaccination Service)</h3>
+          <p className="text-sm text-slate-500">यस खण्डमा अन्य खोप सेवाहरू थपिनेछन्।</p>
+        </div>
+      );
       case 'user_management': return <UserManagement currentUser={currentUser} users={users} onAddUser={onAddUser} onUpdateUser={onUpdateUser} onDeleteUser={onDeleteUser} />;
       case 'change_password': return <ChangePassword currentUser={currentUser} users={users} onChangePassword={onChangePassword} />;
       case 'store_setup': return <StoreSetup currentUser={currentUser} currentFiscalYear={currentFiscalYear} stores={stores} onAddStore={onAddStore} onUpdateStore={onUpdateStore} onDeleteStore={onDeleteStore} inventoryItems={inventoryItems} onUpdateInventoryItem={onUpdateInventoryItem} />;
@@ -880,7 +896,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                             </h3>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-900 transition-colors shadow-md">
+                            <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-bold hover:bg-slate-900 transition-colors shadow-md">
                                 <Printer size={16} /> रिपोर्ट प्रिन्ट गर्नुहोस्
                             </button>
                             <button onClick={() => setShowExpiryModal(false)} className="p-1.5 hover:bg-black/10 rounded-full transition-colors"><X size={24} /></button>
@@ -935,7 +951,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                                 <tbody className="divide-y divide-slate-100 print:divide-slate-800">
                                     {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).map((item, idx) => (
                                         <tr key={item.id} className="hover:bg-slate-50/50 print:page-break-inside-avoid">
-                                            <td className="px-3 py-3 text-center text-slate-400 border-r print:border-slate-800 print:text-black">{idx + 1}</td>
+                                            <td className="px-3 py-3 text-center text-slate-400 print:text-black border-r print:border-slate-800">{idx + 1}</td>
                                             <td className="px-3 py-3 border-r print:border-slate-800">
                                                 <div className="font-bold text-slate-800 print:text-black">{item.itemName}</div>
                                                 <div className="text-[9px] text-slate-400 print:text-slate-600 font-mono">{item.uniqueCode || item.sanketNo}</div>

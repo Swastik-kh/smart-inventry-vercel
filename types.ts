@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 
 export interface FiscalYear {
@@ -304,6 +303,8 @@ export interface DakhilaItem {
   otherExpenses: number; 
   finalTotal: number; 
   remarks: string;
+  // Added: itemType is passed from InventoryItem to DakhilaItem
+  itemType: 'Expendable' | 'Non-Expendable'; 
 }
 
 export interface DakhilaPratibedanEntry {
@@ -317,6 +318,7 @@ export interface DakhilaPratibedanEntry {
   preparedBy?: Signature;
   recommendedBy?: Signature;
   approvedBy?: Signature;
+  storeId?: string; // Added storeId to DakhilaPratibedanEntry
 }
 
 export interface ReturnItem {
