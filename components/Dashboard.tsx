@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
   LogOut, Menu, Calendar, Stethoscope, Package, FileText, Settings, LayoutDashboard, 
   ChevronDown, ChevronRight, Syringe, Activity, 
@@ -37,6 +37,8 @@ import NepaliDate from 'nepali-date-converter';
 interface ExtendedDashboardProps extends DashboardProps {
   onUploadData: (sectionId: string, data: any[], extraMeta?: any) => Promise<void>;
 }
+
+const LAST_SEEN_NOTIFICATION_KEY = 'lastSeenDakhilaNotificationId';
 
 export const Dashboard: React.FC<ExtendedDashboardProps> = ({ 
   onLogout, 
@@ -101,7 +103,29 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   const [pendingPoDakhila, setPendingPoDakhila] = useState<PurchaseOrderEntry | null>(null);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
-  const [lastSeenNotificationId, setLastSeenNotificationId] = useState<string | null>(null);
+  
+  // Initialize lastSeenNotificationId from localStorage
+  const [lastSeenNotificationId, setLastSeenNotificationId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(LAST_SEEN_NOTIFICATION_KEY);
+    } catch (error) {
+      console.error("Failed to read lastSeenNotificationId from localStorage", error);
+      return null;
+    }
+  });
+
+  // Effect to persist lastSeenNotificationId to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      if (lastSeenNotificationId !== null) {
+        localStorage.setItem(LAST_SEEN_NOTIFICATION_KEY, lastSeenNotificationId);
+      } else {
+        localStorage.removeItem(LAST_SEEN_NOTIFICATION_KEY);
+      }
+    } catch (error) {
+      console.error("Failed to write lastSeenNotificationId to localStorage", error);
+    }
+  }, [lastSeenNotificationId]);
   
   // New state to hold the ID of the Dakhila Report to view directly
   const [initialDakhilaReportIdToView, setInitialDakhilaReportIdToView] = useState<string | null>(null);
@@ -289,7 +313,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   const handleNotificationClick = () => {
       if (latestDakhilaReport) {
-          setLastSeenNotificationId(latestDakhilaReport.id);
+          setLastSeenNotificationId(latestDakhilaReport.id); // This now persists
           setShowNotificationModal(true);
       }
   };

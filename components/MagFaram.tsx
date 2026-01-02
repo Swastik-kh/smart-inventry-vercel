@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Printer, Save, Calendar, CheckCircle2, Send, Clock, FileText, Eye, Search, X, AlertCircle, ChevronRight, ArrowLeft, Check, Square, Warehouse, Layers, ShieldCheck, Info } from 'lucide-react';
 import { User, MagItem, MagFormEntry, InventoryItem, Option, Store, OrganizationSettings } from '../types';
@@ -79,8 +78,8 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
     recommendedBy: { name: '', designation: '', date: '' },
     storeKeeper: { status: 'stock', name: '' },
     receiver: { name: '', designation: '', date: '' }, 
-    ledgerEntry: { name: '', date: '' },
-    approvedBy: { name: '', designation: '', date: '' },
+    ledgerEntry: { name: '', date: '', },
+    approvedBy: { name: '', designation: '', date: '', },
     isViewedByRequester: true
   });
 
@@ -178,14 +177,52 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
     setItems(prevItems => prevItems.map(item => {
         if (item.id === id) {
             const updated = { ...item, [field]: value };
-            if (field === 'name') updated.isFromInventory = false;
+            // if (field === 'name') updated.isFromInventory = false; // Moved to handleItemNameChange
             return updated;
         }
         return item;
     }));
   }, []);
 
-  const handleItemSelect = (id: number, option: Option) => {
+  const handleItemNameChange = useCallback((id: number, newName: string) => {
+    setItems(prevItems => prevItems.map(item => {
+        if (item.id === id) {
+            let updatedItem = { ...item, name: newName };
+            const otherDraftItems = prevItems.filter(i => i.id !== id);
+
+            // Find an existing inventory item matching the new name, in any store
+            let existing = inventoryItems.find(i => 
+                i.itemName.trim().toLowerCase() === newName.trim().toLowerCase()
+            );
+
+            if (existing) {
+                // If a matching item is found, pre-fill from it
+                updatedItem.isFromInventory = true;
+                updatedItem.codeNo = existing.uniqueCode || existing.sanketNo || '';
+                updatedItem.unit = existing.unit;
+                updatedItem.specification = existing.specification || '';
+                // Do NOT auto-fill quantity or rate here, as this is for demand
+            } else if (newName.trim() !== '') {
+                // If no match found and name is not empty, it's a custom item
+                updatedItem.isFromInventory = false;
+                updatedItem.codeNo = ''; // Clear codeNo if no match
+                // Keep existing unit/specification if they were manually set, otherwise clear
+                updatedItem.unit = item.unit || ''; 
+                updatedItem.specification = item.specification || '';
+            } else {
+                // Name is empty, reset to initial empty state
+                updatedItem = { 
+                    id: item.id, // Keep the original temporary ID
+                    name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false 
+                };
+            }
+            return updatedItem;
+        }
+        return item;
+    }));
+  }, [inventoryItems]);
+
+  const handleItemSelect = useCallback((id: number, option: Option) => {
     const invItem = option.itemData as InventoryItem;
     if (invItem) {
         setItems(prevItems => prevItems.map(item => {
@@ -194,14 +231,15 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                     ...item,
                     name: invItem.itemName,
                     unit: invItem.unit,
-                    specification: invItem.specification || item.specification,
+                    specification: invItem.specification || '', // Use from inventory, or keep empty if not present
+                    codeNo: invItem.uniqueCode || invItem.sanketNo || '',
                     isFromInventory: true
                 };
             }
             return item;
         }));
     }
-  };
+  }, []);
 
   const updateStoreKeeperStatus = (status: string) => {
       if (isViewOnly || !isVerifying) return;
@@ -260,7 +298,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
 
   const handleReject = () => {
       if (!rejectReason.trim()) {
-          alert("कृपया अस्वीकार गर्नुको कारण खुलाउनुहोस्।");
+          alert(" कृपया अस्वीकार गर्नुको कारण खुलाउनुहोस्।");
           return;
       }
       
@@ -344,11 +382,11 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
         formNo: generateMagFormNo(existingForms, currentFiscalYear),
         date: todayBS, status: 'Pending',
         demandBy: { name: currentUser.fullName, designation: currentUser.designation, date: todayBS, purpose: '' },
-        recommendedBy: { name: '', designation: '', date: '' },
-        storeKeeper: { status: 'stock', name: '' },
-        receiver: { name: '', designation: '', date: '' }, 
-        ledgerEntry: { name: '', date: '' },
-        approvedBy: { name: '', designation: '', date: '' },
+        recommendedBy: { name: '', designation: '', date: '', },
+        storeKeeper: { status: 'stock', name: '', },
+        receiver: { name: '', designation: '', date: '', }, 
+        ledgerEntry: { name: '', date: '', },
+        approvedBy: { name: '', designation: '', date: '', },
         isViewedByRequester: true
     });
   };
@@ -375,7 +413,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                         <div className="flex items-center gap-2"><Clock size={18} /><h3 className="font-bold font-nepali">
                             {isStrictStoreKeeper ? 'प्रमाणिकरणको लागि बाँकी' : 'स्वीकृतिको लागि बाँकी'}
                         </h3></div>
-                        <span className="bg-orange-200 text-xs font-bold px-2 py-0.5 rounded-full">{actionableForms.length} Forms</span>
+                        <span className="bg-orange-200 text-orange-800 text-xs font-bold px-2 py-0.5 rounded-full">{actionableForms.length} Forms</span>
                     </div>
                     <table className="w-full text-sm text-left">
                         <thead className="bg-slate-50 text-slate-600 font-medium">
@@ -593,70 +631,87 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               </thead>
               <tbody>
                   {items.map((item, idx) => (
-                      <tr key={item.id} className="min-h-[30px] transition-all duration-300">
+                      <tr key={item.id} className="min-h-[30px] transition-all duration-300 relative group/stock cursor-help"> {/* Added relative group/stock and cursor-help here */}
                           <td className="border border-slate-800 p-1 font-bold bg-slate-50/30">{idx + 1}</td>
-                          <td className="border border-slate-800 p-0 text-left relative group/stock">
-                              {!isViewOnly && isNewForm ? (
+                          <td className="border border-slate-800 p-0 text-left">
+                              {!isViewOnly && (isNewForm || isVerifying) ? (
                                 <SearchableSelect 
                                     options={itemOptions} value={item.name} 
-                                    onChange={val => updateItem(item.id, 'name', val)} 
+                                    onChange={newName => handleItemNameChange(item.id, newName)} // Use updated handler
                                     onSelect={opt => handleItemSelect(item.id, opt)} 
-                                    className="!border-none !bg-transparent !p-1 !text-xs" placeholder="सामान छान्नुहोस्..."
+                                    className={`!border-none !bg-transparent !p-1 !text-xs ${(isVerifying && item.name) ? 'bg-yellow-50 focus:bg-yellow-100 ring-1 ring-inset ring-yellow-200 rounded-sm' : ''}`} 
+                                    placeholder="सामान छान्नुहोस्..."
+                                    label="" // Hide label for table cell context
                                 />
                               ) : (
-                                <div className="px-2 py-1 flex items-center justify-between cursor-help">
+                                <div className="px-2 py-1 flex items-center justify-between">
                                     <span className="font-medium">{item.name}</span>
-                                    
-                                    {/* LIVE STOCK TOOLTIP */}
-                                    <div className="invisible group-hover/stock:visible absolute left-full top-0 ml-2 z-[100] w-64 bg-slate-800 text-white text-[10px] p-3 rounded-lg shadow-2xl border border-slate-700 pointer-events-none no-print">
-                                        <div className="flex items-center gap-2 mb-2 border-b border-slate-600 pb-1">
-                                            <Warehouse size={12} className="text-primary-400" />
-                                            <span className="font-bold uppercase tracking-wider">Stock Availability</span>
-                                        </div>
-                                        {(() => {
-                                            const matches = inventoryItems.filter(i => i.itemName.trim().toLowerCase() === item.name.trim().toLowerCase());
-                                            if (matches.length === 0) {
-                                                return <div className="text-red-400 flex items-center gap-1"><AlertCircle size={10}/> No record found in inventory.</div>;
-                                            }
-                                            
-                                            const total = matches.reduce((sum, i) => sum + (Number(i.currentQuantity) || 0), 0);
-                                            const unit = matches[0].unit;
-                                            
-                                            return (
-                                                <div className="space-y-1.5">
-                                                    <div className="flex justify-between font-bold text-primary-300">
-                                                        <span>Total Global Stock:</span>
-                                                        <span className={total > 0 ? "text-green-400" : "text-red-400"}>{total} {unit}</span>
-                                                    </div>
-                                                    <div className="space-y-1 pt-1 border-t border-slate-700 max-h-32 overflow-y-auto">
-                                                        {matches.map(m => (
-                                                            <div key={m.id} className="flex justify-between items-center gap-2">
-                                                                <span className="text-slate-400 truncate flex-1">{stores.find(s => s.id === m.storeId)?.name || 'Godam'}</span>
-                                                                <span className="font-bold bg-slate-700 px-1.5 rounded">{m.currentQuantity}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
                                 </div>
                               )}
+                              {/* LIVE STOCK TOOLTIP - Now unconditionally inside the TD */}
+                              <div className="invisible group-hover/stock:visible absolute left-full top-0 ml-2 z-[100] w-64 bg-slate-800 text-white text-[10px] p-3 rounded-lg shadow-2xl border border-slate-700 pointer-events-none no-print">
+                                  <div className="flex items-center gap-2 mb-2 border-b border-slate-600 pb-1">
+                                      <Warehouse size={12} className="text-primary-400" />
+                                      <span className="font-bold uppercase tracking-wider">Stock Availability</span>
+                                  </div>
+                                  {(() => {
+                                      // Ensure item.name exists before trying to find matches
+                                      if (!item.name || item.name.trim() === '') {
+                                          return <div className="text-red-400 flex items-center gap-1"><AlertCircle size={10}/> No item name provided.</div>;
+                                      }
+                                      const matches = inventoryItems.filter(i => 
+                                          i.itemName.trim().toLowerCase() === item.name.trim().toLowerCase()
+                                      );
+                                      if (matches.length === 0) {
+                                          return <div className="text-red-400 flex items-center gap-1"><AlertCircle size={10}/> No record found in inventory.</div>;
+                                      }
+                                      
+                                      const total = matches.reduce((sum, i) => sum + (Number(i.currentQuantity) || 0), 0);
+                                      // Find a unit from any of the matching items
+                                      const unit = matches.length > 0 ? matches[0].unit : ''; 
+                                      
+                                      // Get requested quantity for comparison
+                                      const requestedQuantity = parseFloat(item.quantity as string) || 0;
+
+                                      return (
+                                          <div className="space-y-1.5">
+                                              <div className="flex justify-between font-bold text-primary-300">
+                                                  <span>Total Global Stock:</span>
+                                                  <span className={
+                                                    requestedQuantity > total 
+                                                      ? "text-red-400" 
+                                                      : (total > 0 ? "text-green-400" : "text-red-400")
+                                                  }>
+                                                    {total} {unit}
+                                                  </span>
+                                              </div>
+                                              <div className="space-y-1 pt-1 border-t border-slate-700 max-h-32 overflow-y-auto">
+                                                  {matches.map(m => (
+                                                      <div key={m.id} className="flex justify-between items-center gap-2">
+                                                          <span className="text-slate-400 truncate flex-1">{stores.find(s => s.id === m.storeId)?.name || 'Godam'}</span>
+                                                          <span className="font-bold bg-slate-700 px-1.5 rounded">{m.currentQuantity}</span>
+                                                      </div>
+                                                  ))}
+                                              </div>
+                                          </div>
+                                      );
+                                  })()}
+                              </div>
                           </td>
                           <td className="border border-slate-800 p-1">
                               <input 
-                                disabled={isViewOnly || !isNewForm || item.isFromInventory} 
+                                disabled={isViewOnly || !(isNewForm || isVerifying)} 
                                 value={item.specification} 
                                 onChange={e => updateItem(item.id, 'specification', e.target.value)} 
-                                className={`w-full text-left outline-none bg-transparent px-1 ${item.isFromInventory ? 'text-slate-400 italic cursor-not-allowed' : ''}`} 
+                                className={`w-full text-left outline-none bg-transparent px-1 ${(isVerifying) ? 'bg-yellow-50 focus:bg-yellow-100 ring-1 ring-inset ring-yellow-200 rounded-sm' : ''}`} 
                               />
                           </td>
                           <td className="border border-slate-800 p-1">
                               <input 
-                                disabled={isViewOnly || !isNewForm || item.isFromInventory} 
+                                disabled={isViewOnly || !(isNewForm || isVerifying)} 
                                 value={item.unit} 
                                 onChange={e => updateItem(item.id, 'unit', e.target.value)} 
-                                className={`w-full text-center outline-none bg-transparent ${item.isFromInventory ? 'text-slate-400 font-bold cursor-not-allowed italic' : ''}`} 
+                                className={`w-full text-center outline-none bg-transparent ${(isVerifying) ? 'bg-yellow-50 focus:bg-yellow-100 ring-1 ring-inset ring-yellow-200 rounded-sm' : ''}`} 
                               />
                           </td>
                           <td className="border border-slate-800 p-1 font-bold">
