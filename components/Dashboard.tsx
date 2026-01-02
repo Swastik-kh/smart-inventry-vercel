@@ -630,9 +630,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                 <div className="flex items-baseline gap-3"><span className="text-4xl font-black text-amber-600">{nearExpiryItems.length}</span><span className="text-xs font-bold text-slate-400 font-nepali uppercase flex items-center gap-1">Near Expiry <ChevronRight size={14}/></span></div>
                 <p className="text-[11px] text-slate-500 mt-2 font-nepali italic">आगामी ९० दिनमा म्याद सकिने सामानहरू।</p>
              </div>
-          </div> {/* Closes the "grid grid-cols-1 md:grid-cols-2 gap-6" div */}
-        </div> /* Closes the "space-y-8 animate-in fade-in slide-in-from-bottom-4 no-print" div that wraps the dashboard content */
-      ); // Closes the return for the 'dashboard' case
+          </div> 
+        </div> 
+      ); 
 
       // All other cases return a component and are already correctly self-closing.
       case 'user_management': return <UserManagement currentUser={currentUser} users={users} onAddUser={onAddUser} onUpdateUser={onUpdateUser} onDeleteUser={onDeleteUser} />;
@@ -675,8 +675,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'database_management': return <DatabaseManagement currentUser={currentUser} users={users} inventoryItems={inventoryItems} magForms={magForms} purchaseOrders={purchaseOrders} issueReports={issueReports} rabiesPatients={rabiesPatients} tbPatients={tbPatients} firms={firms} stores={stores} dakhilaReports={dakhilaReports} returnEntries={returnEntries} marmatEntries={marmatEntries} dhuliyaunaEntries={dhuliyaunaEntries} logBookEntries={logBookEntries} onClearData={onClearData} onUploadData={onUploadData} />;
       default: return null;
     }
-  }; // Closes the switch statement
-  // Closes the renderContent function
+  };
 
   const canViewDakhilaDetailsFromNotification = currentUser && ['STOREKEEPER', 'ADMIN', 'SUPER_ADMIN'].includes(currentUser.role);
 
