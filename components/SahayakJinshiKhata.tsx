@@ -9,8 +9,6 @@ interface SahayakJinshiKhataProps {
   inventoryItems: InventoryItem[];
   issueReports: IssueReportEntry[];
   dakhilaReports: DakhilaPratibedanEntry[];
-  // Removed stockEntryRequests as it's not directly used in this report's logic
-  // stockEntryRequests: StockEntryRequest[]; 
   users: User[];
   returnEntries: ReturnEntry[];
   generalSettings: OrganizationSettings;
@@ -19,22 +17,22 @@ interface SahayakJinshiKhataProps {
 interface PropertyUseRow {
     id: string;
     date: string;
-    magFormNo: string; // This is actually the issue report form no
+    magFormNo: string;
     sanketNo: string;
     name: string;
     model: string;
     specification: string;
-    idNo: string; // Unique/Sanket code
-    estLife: string; // Not directly available in current data, but kept for form consistency
-    makeCountry: string; // Not directly available
-    source: string; // Acquisition source
+    idNo: string;
+    estLife: string;
+    makeCountry: string;
+    source: string;
     unit: string;
-    quantity: number; // Issued quantity
+    quantity: number;
     totalCost: number;
-    receiverDate: string; // Date received by person
-    returnedQuantity: number; // Sum of returned quantity for this item by this person
-    returnDates: string[]; // Dates of return
-    returnReceivers: string[]; // Names of receivers for return
+    receiverDate: string;
+    returnedQuantity: number;
+    returnDates: string[];
+    returnReceivers: string[];
     isCleared: boolean;
 }
 
@@ -44,7 +42,6 @@ export const SahayakJinshiKhata: React.FC<SahayakJinshiKhataProps> = ({
   inventoryItems,
   issueReports,
   dakhilaReports,
-  // Removed stockEntryRequests from destructuring
   users,
   returnEntries,
   generalSettings
@@ -64,16 +61,13 @@ export const SahayakJinshiKhata: React.FC<SahayakJinshiKhataProps> = ({
       }));
   }, [users, issueReports]);
 
-  // Derive Table Data based on Selected Person
   const tableData = useMemo(() => {
     const rows: PropertyUseRow[] = [];
-    
     if (!selectedPersonName) return [];
 
     const safeSelectedName = selectedPersonName.trim().toLowerCase();
-
-    // Group returns by the original issued item (name + codeNo)
     const returnedItemsMap = new Map<string, { qty: number; dates: string[]; receivers: string[]; }>();
+    
     returnEntries.forEach(r => {
         if (r.status === 'Approved' && r.returnedBy?.name?.trim().toLowerCase() === safeSelectedName) {
             r.items.forEach(retItem => {
@@ -87,7 +81,6 @@ export const SahayakJinshiKhata: React.FC<SahayakJinshiKhataProps> = ({
         }
     });
 
-    // Process Issue Reports for Non-Expendable items
     issueReports.forEach(report => {
         if (!report.status || report.status.trim() !== 'Issued') return;
         const reportDemandName = report.demandBy?.name?.trim().toLowerCase() || '';
@@ -99,24 +92,23 @@ export const SahayakJinshiKhata: React.FC<SahayakJinshiKhataProps> = ({
                 );
                 
                 const rate = item.rate || invItem?.rate || 0;
-                const issuedQty = parseFloat(item.quantity) || 0;
+                const issuedQty = parseFloat(item.quantity.toString()) || 0;
                 const total = rate * issuedQty;
                 const itemCode = item.codeNo || invItem?.uniqueCode || invItem?.sanketNo || '';
-
                 const returnKey = `${item.name.trim().toLowerCase()}-${itemCode.trim().toLowerCase()}`;
                 const itemReturnData = returnedItemsMap.get(returnKey) || { qty: 0, dates: [], receivers: [] };
                 
-                const row: PropertyUseRow = {
+                rows.push({
                     id: `ISSUE-${report.id}-${item.id}`,
                     date: report.issueDate || report.requestDate || '',
                     magFormNo: report.magFormNo.toString(),
                     sanketNo: itemCode, 
                     name: item.name,
-                    model: '', // Not directly in issue report, use from invItem if available
+                    model: '',
                     specification: item.specification || invItem?.specification || '',
                     idNo: itemCode, 
-                    estLife: '', // Not available
-                    makeCountry: '', // Not available
+                    estLife: '',
+                    makeCountry: '',
                     source: invItem?.receiptSource || 'खरिद',
                     unit: item.unit,
                     quantity: issuedQty,
@@ -126,73 +118,98 @@ export const SahayakJinshiKhata: React.FC<SahayakJinshiKhataProps> = ({
                     returnDates: itemReturnData.dates.sort(),
                     returnReceivers: itemReturnData.receivers,
                     isCleared: issuedQty <= itemReturnData.qty
-                };
-                rows.push(row);
+                });
             });
         }
     });
 
-    // Sort by date then by name
-    return rows.sort((a, b) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
-        if (dateA !== dateB) return dateA - dateB;
-        return a.name.localeCompare(b.name);
-    });
+    return rows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [selectedPersonName, issueReports, inventoryItems, returnEntries]);
 
   const isCompletelyCleared = useMemo(() => {
       if (!selectedPersonName) return false;
-      if (tableData.length === 0) return true; // No assets were issued, so effectively cleared
-      return tableData.every(row => row.isCleared);
+      return tableData.length === 0 || tableData.every(row => row.isCleared);
   }, [tableData, selectedPersonName]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-        {/* Controls */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
             <div className="flex flex-col gap-4 w-full md:w-auto">
                 <div className="flex items-center gap-2 text-slate-700 font-bold font-nepali text-lg">
                     <BookOpen size={24} className="text-primary-600"/>
                     सहायक जिन्सी खाता (व्यक्तिगत जिम्मेवारी)
                 </div>
-                
                 <div className="w-full md:w-80">
                     <SearchableSelect 
                         label="कर्मचारी/व्यक्ति छान्नुहोस्"
                         options={personOptions}
                         value={selectedPersonName}
-                        onChange={setSelectedPersonName}
+                        onSelect={(opt) => setSelectedPersonName(opt.value)}
                         placeholder="नाम खोज्नुहोस्..."
-                        icon={<UserIcon size={18} />}
                     />
                 </div>
             </div>
-
             <button 
                 onClick={() => window.print()}
                 disabled={!selectedPersonName}
-                className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-medium shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-medium shadow-sm transition-colors disabled:opacity-50"
             >
                 <Printer size={18} /> प्रिन्ट (Print)
             </button>
         </div>
 
-        {/* Clearance Status Messages */}
         {selectedPersonName && (
-            <div className={`p-4 rounded-xl border flex items-center gap-4 mb-6 shadow-sm animate-in fade-in slide-in-from-top-2 ${
+            <div className={`p-4 rounded-xl border flex items-center gap-4 mb-6 shadow-sm ${
                 isCompletelyCleared ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
             }`}>
-                <div className="relative shrink-0">
-                    <div className={`w-4 h-4 rounded-full shadow-lg animate-pulse ${
-                        isCompletelyCleared ? 'bg-green-500 shadow-green-500/50' : 'bg-red-500 shadow-red-500/50'
-                    }`}></div>
-                </div>
+                <div className={`w-3 h-3 rounded-full ${isCompletelyCleared ? 'bg-green-500' : 'bg-red-500'}`} />
                 <div>
-                    <h4 className={`font-bold font-nepali text-lg ${isCompletelyCleared ? 'text-green-800' : 'text-red-800'}`}>
-                        {isCompletelyCleared ? 'जिन्सी क्लियरेन्स (Jinshi Clearance)' : 'जिन्सी क्लियरेन्स गर्न सकिदैन (Clearance Pending)'}
+                    <h4 className={`font-bold font-nepali ${isCompletelyCleared ? 'text-green-800' : 'text-red-800'}`}>
+                        {isCompletelyCleared ? 'जिन्सी क्लियरेन्स (Cleared)' : 'जिम्मामा सामान बाँकी (Pending)'}
                     </h4>
-                    <p className={`text-sm font-medium ${isCompletelyCleared ? 'text-green-700' : 'text-red-700'}`}>
-                        {isCompletelyCleared 
-                            ? 'यस कर्मचारी/व्यक्तिको जिम्मामा कुनै पनि बाँकी सामान देखिएन।' 
-                            : 'जिम्मामा बाँकी सामान देखियो। तपाईंले जिन्सी क्लियरेन्स गर्न सक्नुहुन्न।'}
+                    <p className="text-sm opacity-80">
+                        {isCompletelyCleared ? 'यस कर्मचारीको जिम्मामा कुनै सामान बाँकी छैन।' : 'सबै सामान फिर्ता नभएसम्म क्लियरेन्स हुँदैन।'}
+                    </p>
+                </div>
+            </div>
+        )}
+
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
+            <table className="w-full text-left text-sm border-collapse">
+                <thead className="bg-slate-50 text-slate-600 font-bold font-nepali uppercase text-[10px]">
+                    <tr>
+                        <th className="p-3 border">मिति</th>
+                        <th className="p-3 border">निकासा नं</th>
+                        <th className="p-3 border">विवरण</th>
+                        <th className="p-3 border">परिमाण</th>
+                        <th className="p-3 border">फिर्ता परिमाण</th>
+                        <th className="p-3 border">स्थिति</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                    {tableData.map((row) => (
+                        <tr key={row.id} className="hover:bg-slate-50">
+                            <td className="p-3 border font-nepali">{row.date}</td>
+                            <td className="p-3 border font-mono">{row.magFormNo}</td>
+                            <td className="p-3 border font-medium">{row.name}</td>
+                            <td className="p-3 border font-bold text-primary-600">{row.quantity}</td>
+                            <td className="p-3 border font-bold text-orange-600">{row.returnedQuantity}</td>
+                            <td className="p-3 border">
+                                {row.isCleared ? 
+                                    <span className="text-green-600 flex items-center gap-1 font-bold"><CheckCircle2 size={14}/> फिर्ता</span> : 
+                                    <span className="text-red-500 flex items-center gap-1 font-bold"><AlertCircle size={14}/> बाँकी</span>
+                                }
+                            </td>
+                        </tr>
+                    ))}
+                    {selectedPersonName && tableData.length === 0 && (
+                        <tr>
+                            <td colSpan={6} className="p-10 text-center text-slate-400 font-nepali">कुनै पनि रेकर्ड फेला परेन।</td>
+                        </tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+    </div>
+  );
+};
