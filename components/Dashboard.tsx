@@ -298,7 +298,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       const todayScheduledDoses = rabiesDoseStats.d0TotalScheduledToday + rabiesDoseStats.d3TotalScheduledToday + rabiesDoseStats.d7TotalScheduledToday;
       const todayMl = todayScheduledDoses * mlPerDose;
       
-      const totalPendingDosesCount = rabiesPatients.reduce((acc, p) => acc + (p.schedule ? p.schedule.filter(d => d.status === 'Pending').length : 0), 0); 
+      const totalPendingDosesCount = rabiesPatients.reduce((acc, p) => acc + (p.schedule ? p.schedule.filter(d => d.status === 'Pending').length : 0), 0), 0; 
       const totalMl = totalPendingDosesCount * mlPerDose;
       return {
           today: { ml: todayMl.toFixed(1), vials05: Math.ceil(todayMl / 0.5), vials10: Math.ceil(todayMl / 1.0) },
@@ -412,7 +412,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     { id: 'dashboard', label: 'ड्यासबोर्ड (Dashboard)', icon: <LayoutDashboard size={20} /> },
     { id: 'services', label: 'सेवा (Services)', icon: <Stethoscope size={20} />, subItems: [{ id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग (TB/Leprosy)', icon: <Activity size={16} /> }, { id: 'rabies', label: 'रेबिज़ खोप क्लिनिक (Rabies Vaccine)', icon: <Syringe size={16} /> }] },
     { id: 'inventory', label: 'जिन्सी व्यवस्थापन (Inventory)', icon: <Package size={20} />, subItems: [{ id: 'stock_entry_approval', label: 'स्टक प्रविष्टि अनुरोध', icon: <ClipboardCheck size={16} />, badgeCount: pendingStockRequestsCount }, { id: 'jinshi_maujdat', label: 'जिन्सी मौज्दात (Stock)', icon: <Warehouse size={16} /> }, { id: 'form_suchikaran', label: 'फर्म सुचीकरण (Firms)', icon: <ClipboardList size={16} /> }, { id: 'quotation', label: 'कोटेशन (Quotation)', icon: <FileSpreadsheet size={16} /> }, { id: 'mag_faram', label: 'माग फारम (Demand)', icon: <FilePlus size={16} />, badgeCount: magFaramBadgeCount }, { id: 'kharid_adesh', label: 'खरिद आदेश (PO)', icon: <ShoppingCart size={16} />, badgeCount: kharidAdeshBadgeCount }, { id: 'nikasha_pratibedan', label: 'निकासा प्रतिवेदन (Issue)', icon: <FileOutput size={16} />, badgeCount: nikashaPratibedanBadgeCount }, { id: 'sahayak_jinshi_khata', label: 'सहायक जिन्सी खाता', icon: <BookOpen size={16} /> }, { id: 'jinshi_khata', label: 'जिन्सी खाता (Ledger)', icon: <Book size={16} /> }, { id: 'dakhila_pratibedan', label: 'दाखिला प्रतिवेदन', icon: <Archive size={16} />, badgeCount: dakhilaPratibedanBadgeCount }, { id: 'jinshi_firta_khata', label: 'जिन्सी फिर्ता खाता', icon: <RotateCcw size={16} />, badgeCount: jinshiFirtaBadgeCount }, { id: 'marmat_adesh', label: 'मर्मत आवेदन/आदेश', icon: <Wrench size={16} />, badgeCount: marmatAdeshBadgeCount }, { id: 'dhuliyauna_faram', label: 'लिलाम / धुल्याउने', icon: <Trash2 size={16} />, badgeCount: dhuliyaunaFaramBadgeCount }, { id: 'log_book', label: 'लग बुक (Log Book)', icon: <Scroll size={16} /> }] },
-    { id: 'report', label: 'रिपोर्ट (Report)', icon: <FileText size={20} />, subItems: [{ id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग रिपोर्ट (TB/Leprosy)', icon: <Activity size={16} /> }, { id: 'report_rabies', label: 'रेबिज रिपोर्ट (Rabies Report)', icon: <Syringe size={16} /> }, { id: 'report_inventory_monthly', label: 'जिन्सी मासिक प्रतिवेदन (Monthly Report)', icon: <BarChart3 size={16} /> }] },
+    { id: 'report', label: 'रिपोर्ट (Report)', icon: <FileText size={20} />, subItems: [{ id: 'report_tb_leprosy', label: 'क्षयरोग/कुष्ठरोग रिपोर्ट (TB/Leprosy)', icon: <Activity size={16} /> }, { id: 'report_rabies', label: 'रेबिज रिपोर्ट (Rabies Report)', icon: <Syringe size={16} /> }, { id: 'report_inventory_monthly', label: 'जिन्सी मासिक प्रतिवेदन (Monthly Report)', icon: <BarChart3 size={16} /> }] },
     { id: 'settings', label: 'सेटिङ (Settings)', icon: <Settings size={20} />, subItems: [{ id: 'general_setting', label: 'सामान्य सेटिङ', icon: <Sliders size={16} /> }, { id: 'store_setup', label: 'स्टोर सेटअप', icon: <Store size={16} /> }, { id: 'database_management', label: 'डाटाबेस व्यवस्थापन', icon: <Database size={16} /> }, { id: 'user_management', label: 'प्रयोगकर्ता सेटअप', icon: <Users size={16} /> }, { id: 'change_password', label: 'पासवर्ड परिवर्तन', icon: <KeyRound size={16} /> }] },
   ];
 
@@ -542,7 +542,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                     
                     <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
                         <div className="flex justify-between items-center mb-2">
-                             <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Total Pending</span>
+                             <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Total Pending</span>
                              <span className="text-xs font-black text-indigo-600">{vaccineForecast.overall.ml} ml</span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-center">
@@ -681,7 +681,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                 <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in slide-in-from-right-8 duration-300">
                     <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50/50">
                         <div className="flex items-center gap-3">
-                            <Bell size={20} className="text-indigo-600" />
+                            <Bell size={20} className="text-indigo-600"/>
                             <h3 className="font-bold text-slate-800 text-lg font-nepali">नयाँ दाखिला सूचना (New Dakhila Notification)</h3>
                         </div>
                         <button onClick={() => setShowNotificationModal(false)} className="p-1.5 hover:bg-white/50 rounded-full"><X size={20} className="text-slate-400"/></button>
@@ -845,7 +845,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                         <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
                             Total: {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).length} Items with Stock
                         </div>
-                        <button onClick={() => setShowExpiryModal(false)} className="px-8 py-2 bg-slate-800 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-200 hover:bg-slate-900 transition-all">बन्द गर्नुहोस्</button>
+                        <button onClick={() => setShowExpiryModal(false)} className="px-6 py-2 bg-slate-800 text-white rounded-lg text-sm font-bold shadow-lg shadow-slate-200 hover:bg-slate-900 transition-all">बन्द गर्नुहोस्</button>
                     </div>
                 </div>
             )}
