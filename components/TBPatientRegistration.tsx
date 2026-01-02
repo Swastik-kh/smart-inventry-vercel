@@ -3,56 +3,41 @@ import {
   Save, RotateCcw, Activity, UserPlus, List, Phone, MapPin, 
   Calendar, FileDigit, User, Stethoscope, Users, TrendingUp, 
   FlaskConical, AlertCircle, X, ChevronRight, Microscope, 
-  CheckCircle2, Eye, Search, ClipboardList, History, Clock
+  CheckCircle2, Eye, Search, ClipboardList, History, Clock, Trash2, Pencil
 } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
-import { Option } from '../types';
+// Imported TBPatient and TBReport from types.ts
+import { Option, TBPatient, TBReport } from '../types'; 
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
+// Updated TBPatientRegistrationProps to receive data and handlers from App.tsx
 interface TBPatientRegistrationProps {
   currentFiscalYear: string;
+  patients: TBPatient[]; // Now comes from props
+  onAddPatient: (patient: TBPatient) => void;
+  onUpdatePatient: (patient: TBPatient) => void;
+  onDeletePatient: (patientId: string) => void;
 }
 
-interface TBReport {
-  month: number;
-  result: string;
-  labNo: string;
-  date: string;
-  dateNepali?: string;
-}
-
-interface TBPatient {
-  id: string;
-  patientId: string;
-  name: string;
-  age: string;
-  address: string;
-  phone: string;
-  regType: string;
-  classification: string;
-  registrationDate: string;
-  serviceType: 'TB' | 'Leprosy';
-  leprosyType?: 'MB' | 'PB';
-  labResultMonth2Positive?: boolean; 
-  completedSchedule: number[];
-  newReportAvailable?: boolean;
-  latestResult?: string;
-  latestReportMonth?: number;
-  reports: TBReport[];
-}
-
-export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ currentFiscalYear }) => {
+export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ 
+  currentFiscalYear, 
+  patients, // Use patients from props
+  onAddPatient, 
+  onUpdatePatient,
+  onDeletePatient
+}) => {
   const [activeTab, setActiveTab] = useState<'TB' | 'Leprosy'>('TB');
   const [showSputumModal, setShowSputumModal] = useState(false);
   const [showReportCenter, setShowReportCenter] = useState(false);
   const [reportCenterTab, setReportCenterTab] = useState<'Recent' | 'History'>('Recent');
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingPatientId, setEditingPatientId] = useState<string | null>(null); // For editing existing patients
   
   // State for Lab Report Entry
-  const [selectedPatient, setSelectedPatient] = useState<{patient: TBPatient, reason: string, scheduleMonth: number} | null>(null);
+  const [selectedPatientForLab, setSelectedPatientForLab] = useState<{patient: TBPatient, reason: string, scheduleMonth: number} | null>(null);
   const [labFormData, setLabFormData] = useState({
     testDate: new Date().toISOString().split('T')[0],
     testDateNepali: '',
@@ -61,53 +46,16 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ cu
     grading: ''
   });
 
-  // Mock list of registered patients
-  const [patients, setPatients] = useState<TBPatient[]>([
-    { 
-        id: '101', 
-        patientId: 'TB-081082-1001', 
-        name: 'Ram Bahadur', 
-        age: '45', 
-        address: 'Kathmandu-10', 
-        phone: '9841000000', 
-        regType: 'New', 
-        classification: 'PBC', 
-        registrationDate: '2024-08-15',
-        serviceType: 'TB',
-        completedSchedule: [0],
-        newReportAvailable: false,
-        latestResult: 'Negative',
-        latestReportMonth: 0,
-        reports: [
-            { month: 0, result: 'Negative', labNo: '101', date: '2024-08-15', dateNepali: '२०८१/०५/३०' }
-        ]
-    },
-    { 
-        id: 'L01', 
-        patientId: 'LP-081082-2001', 
-        name: 'Hari Maya', 
-        age: '52', 
-        address: 'Dhulikhel-02', 
-        phone: '9860112233', 
-        regType: 'New', 
-        classification: 'MB', 
-        leprosyType: 'MB',
-        registrationDate: '2024-09-10',
-        serviceType: 'Leprosy',
-        completedSchedule: [],
-        newReportAvailable: false,
-        reports: []
-    }
-  ]);
-  
   const generateId = (type: 'TB' | 'Leprosy') => {
     const fyClean = currentFiscalYear.replace('/', '');
     const prefix = type === 'TB' ? 'TB' : 'LP';
-    const random = Math.floor(1000 + Math.random() * 9000);
+    // Simple random for initial unique ID. For sequential, would need database query.
+    const random = Math.floor(1000 + Math.random() * 9000); 
     return `${prefix}-${fyClean}-${random}`;
   };
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<TBPatient>({
+    id: '', // Will be set on submit or edit load
     patientId: generateId('TB'),
     name: '',
     age: '',
@@ -115,12 +63,27 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ cu
     phone: '',
     regType: '',
     classification: '',
-    leprosyType: 'PB',
-    registrationDate: new Date().toISOString().split('T')[0]
+    leprosyType: undefined, 
+    registrationDate: new Date().toISOString().split('T')[0],
+    serviceType: 'TB', // Default to TB
+    completedSchedule: [],
+    newReportAvailable: false,
+    reports: [],
+    // Fix: Initialize fiscalYear property as it's required by TBPatient type
+    fiscalYear: currentFiscalYear, 
   });
 
+  // Effect to update patientId and reset leprosyType when activeTab or fiscal year changes
   useEffect(() => {
-    setFormData(prev => ({ ...prev, patientId: generateId(activeTab) }));
+    setFormData(prev => ({ 
+      ...prev, 
+      patientId: generateId(activeTab),
+      serviceType: activeTab, // Ensure serviceType matches active tab
+      leprosyType: activeTab === 'Leprosy' 
+                   ? (prev.leprosyType === 'MB' || prev.leprosyType === 'PB' ? prev.leprosyType : 'PB') 
+                   : undefined,
+      classification: activeTab === 'Leprosy' ? (prev.leprosyType || 'PB') : '' // Sync classification for Leprosy
+    }));
   }, [currentFiscalYear, activeTab]);
 
   const regTypes: Option[] = [
@@ -142,26 +105,38 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ cu
 
   const getSputumTestStatus = (p: TBPatient) => {
     if (p.serviceType !== 'TB') return { required: false, reason: '', scheduleMonth: -1 };
-    const regDate = new NepaliDate(new Date(p.registrationDate));
+    
+    // Convert registration date to NepaliDate for calculations
+    let regDateNepali;
+    try {
+        regDateNepali = new NepaliDate(new Date(p.registrationDate));
+    } catch (e) {
+        console.error("Invalid registration date for TB patient:", p.registrationDate);
+        return { required: false, reason: '', scheduleMonth: -1 };
+    }
+    
     const today = new NepaliDate();
-    const diffDays = Math.ceil(Math.abs(today.toJsDate().getTime() - regDate.toJsDate().getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Calculate difference in days (approximate)
+    const diffDays = Math.ceil(Math.abs(today.toJsDate().getTime() - regDateNepali.toJsDate().getTime()) / (1000 * 60 * 60 * 24));
     
     const isDone = (month: number) => p.completedSchedule.includes(month);
 
-    if (diffDays <= 30 && !isDone(0)) return { required: true, reason: 'सुरुवाती निदान (Month 0)', scheduleMonth: 0 };
+    if (diffDays >= 0 && diffDays <= 30 && !isDone(0)) return { required: true, reason: 'सुरुवाती निदान (Month 0)', scheduleMonth: 0 };
     if (diffDays >= 55 && diffDays <= 75 && !isDone(2)) return { required: true, reason: 'दोस्रो महिना (Month 2)', scheduleMonth: 2 };
     if (diffDays >= 145 && diffDays <= 165 && !isDone(5)) return { required: true, reason: 'पाँचौं महिना (Month 5)', scheduleMonth: 5 };
 
     return { required: false, reason: '', scheduleMonth: -1 };
   };
 
-  const patientsNeedingSputum = patients
+  // Fix: Ensure fiscalYear is recognized on patient objects for filtering
+  const patientsNeedingSputum = useMemo(() => patients
     .map(p => ({ ...p, ...getSputumTestStatus(p) }))
-    .filter(p => p.required);
+    .filter(p => p.required), [patients, currentFiscalYear]); // Re-evaluate when patients or FY changes
 
-  const patientsWithNewReports = patients.filter(p => p.newReportAvailable);
-  // Fix: Define newReportCount based on the length of patients with new reports
+  const patientsWithNewReports = useMemo(() => patients.filter(p => p.newReportAvailable), [patients]);
   const newReportCount = patientsWithNewReports.length;
+  
   const allReportsHistory = useMemo(() => {
       const history: {patient: TBPatient, report: TBReport}[] = [];
       patients.forEach(p => {
@@ -169,49 +144,112 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ cu
               history.push({ patient: p, report: r });
           });
       });
+      // FIX: Access .report.date for sorting
       return history.sort((a, b) => new Date(b.report.date).getTime() - new Date(a.report.date).getTime());
   }, [patients]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const newPatient: TBPatient = {
-      id: Date.now().toString(),
+    
+    // Basic validation
+    if (!formData.name.trim()) { alert("कृपया बिरामीको नाम भर्नुहोस्।"); return; }
+    if (!formData.age.trim()) { alert("कृपया बिरामीको उमेर भर्नुहोस्।"); return; }
+    if (!formData.address.trim()) { alert(" कृपया बिरामीको ठेगाना भर्नुहोस्।"); return; }
+    if (!formData.regType.trim()) { alert("कृपया दर्ता प्रकार छान्नुहोस्।"); return; }
+    if (!formData.registrationDate.trim()) { alert("कृपया दर्ता मिति भर्नुहोस्।"); return; }
+
+    if (activeTab === 'TB' && !formData.classification.trim()) {
+      alert("कृपया TB वर्गीकरण छान्नुहोस्।");
+      return;
+    }
+    if (activeTab === 'Leprosy' && formData.leprosyType === undefined) { 
+      alert(" कृपया कुष्ठरोग प्रकार छान्नुहोस्।");
+      return;
+    }
+
+    const patientToSave: TBPatient = {
       ...formData,
+      id: editingPatientId || Date.now().toString(), // Use existing ID if editing, otherwise new
+      // Fix: fiscalYear is already part of formData, no need to add it again
       serviceType: activeTab,
-      completedSchedule: [],
-      newReportAvailable: false,
-      reports: []
+      classification: activeTab === 'Leprosy' ? (formData.leprosyType || '') : formData.classification,
+      leprosyType: activeTab === 'Leprosy' ? formData.leprosyType : undefined,
     };
 
-    setPatients([newPatient, ...patients]);
-    setFormData({ ...formData, patientId: generateId(activeTab), name: '', age: '', phone: '', address: '' });
-    alert('बिरामी सफलतापूर्वक दर्ता भयो');
+    if (editingPatientId) {
+        onUpdatePatient(patientToSave);
+        alert('बिरामी विवरण सफलतापूर्वक अपडेट भयो!');
+    } else {
+        onAddPatient(patientToSave);
+        alert('बिरामी सफलतापूर्वक दर्ता भयो!');
+    }
+    
+    handleReset();
   };
+
+  const handleEditPatient = (patient: TBPatient) => {
+    setEditingPatientId(patient.id);
+    // Fix: patient object already contains fiscalYear, so spreading it is correct.
+    setFormData({ ...patient });
+    setActiveTab(patient.serviceType); // Ensure tab matches edited patient
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleReset = () => {
+    setEditingPatientId(null);
+    setFormData({
+        id: '',
+        patientId: generateId(activeTab), // Re-generate ID for new entry
+        name: '',
+        age: '',
+        address: '',
+        phone: '',
+        regType: '',
+        classification: '',
+        leprosyType: activeTab === 'Leprosy' ? 'PB' : undefined, // Reset based on activeTab
+        registrationDate: new Date().toISOString().split('T')[0],
+        serviceType: activeTab,
+        completedSchedule: [],
+        newReportAvailable: false,
+        reports: [],
+        fiscalYear: currentFiscalYear, // Ensure reset also sets fiscalYear
+    });
+  };
+
+  const handleDeletePatient = (patientId: string, patientName: string) => {
+    if (window.confirm(`के तपाईं निश्चित हुनुहुन्छ कि तपाईं ${patientName} को विवरण हटाउन चाहनुहुन्छ? यो कार्य पूर्ववत गर्न सकिँदैन।`)) {
+        onDeletePatient(patientId);
+        alert(`${patientName} को विवरण सफलतापूर्वक हटाइयो।`);
+    }
+  };
+
 
   const handleLabSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      if(!selectedPatient) return;
-      const { patient, scheduleMonth } = selectedPatient;
+      if(!selectedPatientForLab) return;
+      
+      const { patient, scheduleMonth } = selectedPatientForLab;
 
-      setPatients(prev => prev.map(p => {
-          if(p.id === patient.id) {
-              const updated = { ...p };
-              updated.completedSchedule = [...p.completedSchedule, scheduleMonth];
-              updated.newReportAvailable = true;
-              updated.latestResult = labFormData.result === 'Positive' ? `Pos (${labFormData.grading})` : 'Negative';
-              updated.latestReportMonth = scheduleMonth;
-              updated.reports = [{
-                  month: scheduleMonth,
-                  result: updated.latestResult,
-                  labNo: labFormData.labNo,
-                  date: labFormData.testDate,
-                  dateNepali: labFormData.testDateNepali
-              }, ...p.reports];
-              return updated;
-          }
-          return p;
-      }));
-      setSelectedPatient(null);
+      const newReport: TBReport = {
+          month: scheduleMonth,
+          result: labFormData.result === 'Positive' ? `${labFormData.result} (${labFormData.grading})` : labFormData.result,
+          labNo: labFormData.labNo,
+          date: labFormData.testDate,
+          dateNepali: labFormData.testDateNepali
+      };
+
+      const updatedPatient: TBPatient = {
+          ...patient,
+          completedSchedule: [...new Set([...patient.completedSchedule, scheduleMonth])], // Ensure unique months
+          newReportAvailable: true,
+          latestResult: newReport.result,
+          latestReportMonth: scheduleMonth,
+          reports: [newReport, ...patient.reports].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // Sort by latest date
+      };
+      
+      onUpdatePatient(updatedPatient); // Use the prop to update
+      setSelectedPatientForLab(null);
+      alert("ल्याब रिपोर्ट सफलतापूर्वक प्रविष्ट भयो!");
   };
 
   return (
@@ -235,7 +273,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ cu
       {/* Stats Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between">
-            <div><p className="text-slate-500 text-xs font-bold font-nepali mb-1">कुल दर्ता ({activeTab})</p><h3 className="text-2xl font-black text-slate-800">{patients.filter(p => p.serviceType === activeTab).length}</h3></div>
+            <div><p className="text-slate-500 text-xs font-bold font-nepali mb-1">कुल दर्ता ({activeTab})</p><h3 className="text-2xl font-black text-slate-800">{patients.filter(p => p.serviceType === activeTab && p.fiscalYear === currentFiscalYear).length}</h3></div>
             <div className="bg-blue-50 p-3 rounded-lg text-blue-600"><Users size={20} /></div>
         </div>
 
@@ -280,12 +318,24 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ cu
           {activeTab === 'TB' ? (
               <Select label="TB वर्गीकरण" options={tbClassification} value={formData.classification} onChange={e => setFormData({...formData, classification: e.target.value})} required icon={<Stethoscope size={18}/>} />
           ) : (
-              <Select label="कुष्ठरोग प्रकार (MB/PB)" options={leprosyTypes} value={formData.leprosyType} onChange={e => setFormData({...formData, leprosyType: e.target.value})} required icon={<ClipboardList size={18}/>} />
+              <Select 
+                label="कुष्ठरोग प्रकार (MB/PB)" 
+                options={leprosyTypes} 
+                value={formData.leprosyType || ''} 
+                onChange={e => setFormData({
+                    ...formData, 
+                    leprosyType: (e.target.value === '' ? undefined : e.target.value) as 'MB' | 'PB' | undefined
+                })} 
+                required 
+                icon={<ClipboardList size={18}/>} 
+                placeholder="-- प्रकार छान्नुहोस् --"
+              />
           )}
+          <NepaliDatePicker label="दर्ता मिति" value={formData.registrationDate} onChange={val => setFormData({...formData, registrationDate: val})} required />
 
           <div className="md:col-span-2 pt-4 border-t flex justify-end gap-3">
-              <button type="button" onClick={() => setFormData({...formData, name: '', age: '', phone: '', address: ''})} className="flex items-center gap-2 px-6 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all font-bold text-sm"><RotateCcw size={16}/> रिसेट</button>
-              <button type="submit" className="flex items-center gap-2 px-8 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-100 transition-all font-bold text-sm"><Save size={16}/> दर्ता गर्नुहोस्</button>
+              <button type="button" onClick={handleReset} className="flex items-center gap-2 px-6 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all font-bold text-sm"><RotateCcw size={16}/> {editingPatientId ? 'रद्द' : 'रिसेट'}</button>
+              <button type="submit" className="flex items-center gap-2 px-8 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-100 transition-all font-bold text-sm"><Save size={16}/> {editingPatientId ? 'अपडेट गर्नुहोस्' : 'दर्ता गर्नुहोस्'}</button>
           </div>
         </form>
       </div>
@@ -307,10 +357,11 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ cu
                       <th className="px-6 py-3">वर्गीकरण</th>
                       <th className="px-6 py-3">अन्तिम रिपोर्ट</th>
                       <th className="px-6 py-3">मिति</th>
+                      <th className="px-6 py-3 text-right">कार्य</th>
                   </tr>
               </thead>
               <tbody className="divide-y">
-                  {patients.filter(p => p.serviceType === activeTab && (p.name.includes(searchTerm) || p.address.includes(searchTerm))).map(p => (
+                  {patients.filter(p => p.fiscalYear === currentFiscalYear && p.serviceType === activeTab && (p.name.includes(searchTerm) || p.address.includes(searchTerm))).map(p => (
                       <tr key={p.id} className="hover:bg-slate-50">
                           <td className="px-6 py-4 font-mono font-bold text-indigo-600 text-xs">{p.patientId}</td>
                           <td className="px-6 py-4">
@@ -328,6 +379,12 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ cu
                               ) : '-'}
                           </td>
                           <td className="px-6 py-4 text-xs text-slate-500 font-nepali">{p.registrationDate}</td>
+                          <td className="px-6 py-4 text-right">
+                              <div className="flex justify-end gap-2">
+                                  <button onClick={() => handleEditPatient(p)} className="text-indigo-400 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors" title="Edit Patient"><Pencil size={18}/></button>
+                                  <button onClick={() => handleDeletePatient(p.id, p.name)} className="text-red-400 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors" title="Delete Patient"><Trash2 size={18}/></button>
+                              </div>
+                          </td>
                       </tr>
                   ))}
               </tbody>
@@ -368,10 +425,11 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ cu
                                           <td className="px-6 py-4 font-mono text-indigo-600 font-bold">{p.patientId}</td>
                                           <td className="px-6 py-4 font-bold">{p.name}</td>
                                           <td className="px-6 py-4 text-xs">Month {p.latestReportMonth}</td>
-                                          <td className="px-6 py-4"><span className={`px-2 py-0.5 rounded text-[10px] font-black ${p.latestResult?.includes('Pos') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{p.latestResult}</span></td>
+                                          <td className="px-6 py-4"><span className={`px-1.5 py-0.5 rounded text-[10px] font-black ${p.latestResult?.includes('Pos') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{p.latestResult}</span></td>
                                           <td className="px-6 py-4">
                                               <button onClick={() => {
-                                                  setPatients(prev => prev.map(pt => pt.id === p.id ? {...pt, newReportAvailable: false} : pt));
+                                                  // Mark report as viewed
+                                                  onUpdatePatient({...p, newReportAvailable: false});
                                                   alert("विवरण सुरक्षित गरियो");
                                               }} className="text-teal-600 hover:underline font-bold text-xs">Mark as Viewed</button>
                                           </td>
@@ -429,7 +487,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ cu
                                     <td className="px-6 py-4"><span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold">{p.reason}</span></td>
                                     <td className="px-6 py-4 text-right">
                                         <button onClick={() => {
-                                            setSelectedPatient({patient: p, reason: p.reason, scheduleMonth: p.scheduleMonth});
+                                            setSelectedPatientForLab({patient: p, reason: p.reason, scheduleMonth: p.scheduleMonth});
                                             setLabFormData({testDate: new Date().toISOString().split('T')[0], testDateNepali: '', labNo: '', result: '', grading: ''});
                                         }} className="bg-indigo-600 text-white px-4 py-1 rounded-lg text-xs font-bold">रिपोर्ट प्रविष्ट</button>
                                     </td>
@@ -444,13 +502,13 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ cu
       )}
 
       {/* Lab Result Entry Form (Modal on top) */}
-      {selectedPatient && (
+      {selectedPatientForLab && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setSelectedPatient(null)}></div>
+              <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setSelectedPatientForLab(null)}></div>
               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative animate-in zoom-in-95">
                   <div className="p-6 border-b bg-indigo-50 text-indigo-800 flex justify-between items-center">
-                      <h3 className="font-bold font-nepali">ल्याब रिपोर्ट प्रविष्टि ({selectedPatient.patient.name})</h3>
-                      <button onClick={() => setSelectedPatient(null)}><X size={20}/></button>
+                      <h3 className="font-bold font-nepali">ल्याब रिपोर्ट प्रविष्टि ({selectedPatientForLab.patient.name})</h3>
+                      <button onClick={() => setSelectedPatientForLab(null)}><X size={20}/></button>
                   </div>
                   <form onSubmit={handleLabSubmit} className="p-6 space-y-4">
                       <Input label="ल्याब नं." value={labFormData.labNo} onChange={e => setLabFormData({...labFormData, labNo: e.target.value})} required icon={<FileDigit size={16}/>} />
@@ -473,7 +531,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ cu
                       )}
 
                       <div className="pt-4 border-t flex justify-end gap-3">
-                          <button type="button" onClick={() => setSelectedPatient(null)} className="px-6 py-2 text-slate-500 font-bold">रद्द</button>
+                          <button type="button" onClick={() => setSelectedPatientForLab(null)} className="px-6 py-2 text-slate-500 font-bold">रद्द</button>
                           <button type="submit" className="bg-indigo-600 text-white px-8 py-2 rounded-xl font-bold shadow-lg">सुरक्षित गर्नुहोस्</button>
                       </div>
                   </form>

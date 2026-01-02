@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Archive, Printer, ArrowLeft, Eye, X, FileText, ClipboardCheck, ShieldCheck, Warehouse, User as UserIcon, CheckCircle2, Search, Clock } from 'lucide-react';
 import { DakhilaPratibedanEntry, User, StockEntryRequest, OrganizationSettings, Store } from '../types';
@@ -9,8 +8,7 @@ interface DakhilaPratibedanProps {
     currentFiscalYear: string;
     currentUser: User;
     stockEntryRequests: StockEntryRequest[];
-    onApproveStockEntry: (requestId: string, approverName: string) => void;
-    onRejectStockEntry: (requestId: string, reason: string, approverName: string) => void;
+    // Removed onApproveStockEntry and onRejectStockEntry as they are handled in StockEntryApproval
     generalSettings: OrganizationSettings;
     stores?: Store[];
 }
@@ -21,8 +19,7 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
     currentFiscalYear, 
     currentUser, 
     stockEntryRequests,
-    onApproveStockEntry,
-    onRejectStockEntry,
+    // Removed onApproveStockEntry and onRejectStockEntry from destructuring
     generalSettings,
     stores = []
 }) => {
@@ -64,19 +61,18 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
 
     const handleApprove = () => {
         if (!selectedRequest) return;
-        if (window.confirm("के तपाईं यो दाखिला अनुरोध स्वीकृत गर्न चाहनुहुन्छ?")) {
-            onApproveStockEntry(selectedRequest.id, currentUser.fullName);
-            setSelectedRequest(null);
-            alert("अनुरोध स्वीकृत भयो।");
-        }
+        // This component no longer directly calls onApproveStockEntry or onRejectStockEntry
+        // The actions are now handled upstream by the StockEntryApproval component
+        // This button now only indicates that approval is managed externally
+        alert("यो दाखिला अनुरोध स्वीकृत गर्न कृपया 'स्टक प्रविष्टि अनुरोध' मेनुमा जानुहोस्।");
     };
 
     const handleRejectSubmit = () => {
         if (!selectedRequest || !rejectionReason.trim()) return;
-        onRejectStockEntry(selectedRequest.id, rejectionReason, currentUser.fullName);
-        setShowRejectModal(false);
-        setSelectedRequest(null);
-        alert("अनुरोध अस्वीकृत गरियो।");
+        // This component no longer directly calls onRejectStockEntry
+        // The actions are now handled upstream by the StockEntryApproval component
+        alert("यो दाखिला अनुरोध अस्वीकृत गर्न कृपया 'स्टक प्रविष्टि अनुरोध' मेनुमा जानुहोस्।");
+        setShowRejectModal(false); // Close modal anyway
     };
 
     const getStoreName = (id: string) => stores.find(s => s.id === id)?.name || 'Unknown Store';
@@ -230,8 +226,8 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
 
         const isReq = !!selectedRequest;
         // Fix: Explicitly narrowing the data source to resolve Property 'dakhilaNo' does not exist on type 'InventoryItem | DakhilaItem'
-        const dNo = selectedRequest 
-            ? (selectedRequest.items[0]?.dakhilaNo || 'N/A') 
+        const dNo = isReq
+            ? (selectedRequest.items[0]?.dakhilaNo || (selectedRequest.dakhilaNo ? selectedRequest.dakhilaNo : 'N/A'))
             : (selectedReport as DakhilaPratibedanEntry).dakhilaNo;
             
         const dDate = isReq ? (data as StockEntryRequest).requestDateBs : (data as DakhilaPratibedanEntry).date;
@@ -240,6 +236,24 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
 
         return (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                {/* Landscape Print Helper CSS */}
+                <style dangerouslySetInnerHTML={{ __html: `
+                    @media print {
+                        .dakhila-report-print {
+                            width: 100% !important;
+                            max-width: none !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            border: none !important;
+                            box-shadow: none !important;
+                        }
+                        @page {
+                            size: A4 landscape;
+                            margin: 1cm;
+                        }
+                    }
+                ` }} />
+
                 <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
                     <div className="flex items-center gap-4">
                         <button onClick={() => { setSelectedRequest(null); setSelectedReport(null); }} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
@@ -270,7 +284,7 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
                 </div>
 
                 {/* FORM 403 LAYOUT */}
-                <div className="bg-white p-10 rounded-xl shadow-lg max-w-[210mm] mx-auto min-h-[297mm] text-slate-900 font-nepali text-sm print:shadow-none print:p-0 print:max-w-none">
+                <div className="bg-white p-10 rounded-xl shadow-lg max-w-[210mm] mx-auto min-h-[297mm] text-slate-900 font-nepali text-sm print:shadow-none print:p-0 print:max-w-none print-full-width dakhila-report-print">
                     <div className="text-right font-bold text-[10px] mb-4">म.ले.प.फारम नं: ४०३</div>
 
                     <div className="mb-10">

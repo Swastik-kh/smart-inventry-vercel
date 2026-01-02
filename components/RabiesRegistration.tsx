@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 /* Added AlertTriangle to the imports */
 import { Save, RotateCcw, Syringe, Calendar, FileDigit, User, Phone, MapPin, CalendarRange, Clock, CheckCircle2, Search, X, AlertCircle, Trash2, Pencil, Check, Info, AlertTriangle, Bone } from 'lucide-react';
@@ -13,6 +12,7 @@ interface RabiesRegistrationProps {
   currentFiscalYear: string;
   patients: RabiesPatient[];
   onAddPatient: (patient: RabiesPatient) => void;
+  // Fix: Renamed onUpdateRabiesPatient to onUpdatePatient
   onUpdatePatient: (patient: RabiesPatient) => void;
   onDeletePatient?: (patientId: string) => void; 
   currentUser: UserType; 
@@ -85,6 +85,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
   currentFiscalYear, 
   patients, 
   onAddPatient, 
+  // Fix: Renamed onUpdateRabiesPatient to onUpdatePatient
   onUpdatePatient,
   onDeletePatient,
   currentUser
@@ -387,6 +388,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
       updatedSchedule[doseIndex] = {
           ...updatedSchedule[doseIndex],
           status: 'Given',
+          dateBs: modalDateBs, // <--- UPDATED AS PER REQUEST: Set dateBs to the given date
           givenDate: modalDateBs 
       };
       onUpdatePatient({ ...patient, schedule: updatedSchedule });
@@ -553,7 +555,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                                               >
                                                   <span className="text-[10px] font-bold uppercase">D{dose.day}</span>
                                                   {dose.status === 'Given' ? <CheckCircle2 size={16} /> : (isOverdue ? <AlertTriangle size={16} className="animate-bounce text-red-600" /> : <Clock size={16} />)}
-                                                  <span className="text-[9px] mt-0.5 font-nepali">{formatAdDateToBsDisplay(dose.date)}</span>
+                                                  <span className="text-[9px] mt-0.5 font-nepali">{formatAdDateToBsDisplay(dose.dateBs || dose.date)}</span>
                                               </button>
                                           );
                                       })}

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo } from 'react';
 import { ShoppingCart, FilePlus, ChevronRight, ArrowLeft, Printer, Save, Calculator, CheckCircle2, Send, ShieldCheck, CheckCheck, Eye, FileText, Clock, Archive, AlertCircle, X } from 'lucide-react';
 import { PurchaseOrderEntry, MagItem, User, FirmEntry, Option, QuotationEntry, OrganizationSettings } from '../types';
@@ -108,7 +107,7 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({ orders, currentFiscalY
 
         const existingNumbers = orders
             .filter(o => o.status === 'Generated' && o.fiscalYear === fyToUse)
-            .map(o => parseInt(o.orderNo || '0'));
+            .map(o => parseInt(String(o.orderNo) || '0')); // Explicitly cast to string
         
         const maxNo = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
         const nextOrderNo = order.orderNo ? order.orderNo : (maxNo + 1).toString();
@@ -317,15 +316,14 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({ orders, currentFiscalY
         if (isAccount) return order.status === 'Pending Account';
         if (isAdmin) return order.status === 'Account Verified';
         return false;
-    });
+    }).sort((a, b) => parseInt(String(b.magFormNo)) - parseInt(String(a.magFormNo))); // Explicitly cast to string
 
     const trackedOrders = orders.filter(order => {
         if (isStoreKeeper) return order.status !== 'Pending';
         if (isAccount) return order.status === 'Account Verified' || order.status === 'Generated' || order.status === 'Stock Entry Requested' || order.status === 'Completed';
         if (isAdmin) return order.status === 'Generated' || order.status === 'Stock Entry Requested' || order.status === 'Completed';
         return false;
-        // Fix: Changed subtraction to parseInt subtraction for string magFormNo
-    }).sort((a, b) => parseInt(b.magFormNo) - parseInt(a.magFormNo));
+    }).sort((a, b) => parseInt(String(b.magFormNo)) - parseInt(String(a.magFormNo))); // Explicitly cast to string
 
     const canEditVendor = isStoreKeeper && !isViewOnlyMode && selectedOrder?.status === 'Pending';
     
@@ -486,9 +484,8 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({ orders, currentFiscalY
                                     inputClassName={`border-b border-dotted border-slate-400 outline-none w-32 text-center bg-transparent font-bold placeholder:text-slate-400 placeholder:font-normal rounded-none px-0 py-0 h-auto focus:ring-0 focus:border-slate-400 ${validationError ? 'text-red-600' : ''}`}
                                     wrapperClassName="w-32"
                                     disabled={!canEditVendor}
-                                    popupAlign="right"
-                                    minDate={todayBS}
-                                    maxDate={todayBS}
+                                    // minDate={todayBS} // Removed hardcoded min/max date
+                                    // maxDate={todayBS} // Removed hardcoded min/max date
                                 />
                             </div>
                             <div className="flex justify-end items-center gap-2">
@@ -657,7 +654,7 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({ orders, currentFiscalY
                             <Clock size={18} className="text-orange-600"/>
                             <h3 className="font-semibold text-orange-800 font-nepali">
                                 {isStoreKeeper ? 'तयारीको लागि (Pending Preparation)' : 
-                                 isAccount ? 'प्रमाणिकरणको लागि (Pending Verification)' : 
+                                 isAccount ? 'प्र प्रमाणिकरणको लागि (Pending Verification)' : 
                                  'स्वीकृतिको लागि (Pending Approval)'}
                             </h3>
                         </div>

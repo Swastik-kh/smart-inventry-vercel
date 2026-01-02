@@ -88,6 +88,37 @@ export interface RabiesPatient {
   schedule: VaccinationDose[];
 }
 
+// Moved TB related interfaces from TBPatientRegistration.tsx
+export interface TBReport {
+  month: number;
+  result: string;
+  labNo: string;
+  date: string;
+  dateNepali?: string;
+}
+
+export interface TBPatient {
+  id: string;
+  patientId: string;
+  name: string;
+  age: string;
+  address: string;
+  phone: string;
+  regType: string;
+  classification: string;
+  registrationDate: string;
+  serviceType: 'TB' | 'Leprosy';
+  leprosyType?: 'MB' | 'PB'; 
+  labResultMonth2Positive?: boolean; 
+  completedSchedule: number[];
+  newReportAvailable?: boolean;
+  latestResult?: string;
+  latestReportMonth?: number;
+  reports: TBReport[];
+  fiscalYear: string;
+}
+
+
 export interface MagItem {
   id: number;
   name: string;
@@ -289,7 +320,8 @@ export interface DakhilaPratibedanEntry {
 
 export interface ReturnItem {
   id: number;
-  kharchaNikasaNo: string; 
+  inventoryId?: string; // Optional: Link to the original inventory item
+  kharchaNikasaNo: string; // From which issue report it was originally issued
   codeNo: string; 
   name: string;
   specification: string;
@@ -309,7 +341,7 @@ export interface ReturnEntry {
   formNo: string; 
   date: string;
   items: ReturnItem[];
-  status?: 'Pending' | 'Verified' | 'Approved' | 'Rejected'; 
+  status?: 'Pending' | 'Approved' | 'Rejected'; 
   rejectionReason?: string;
   returnedBy: Signature; 
   preparedBy: Signature; 
@@ -425,6 +457,12 @@ export interface DashboardProps {
   onUpdateRabiesPatient: (patient: RabiesPatient) => void;
   onDeletePatient: (patientId: string) => void; 
 
+  // Added TB Patient props
+  tbPatients: TBPatient[];
+  onAddTbPatient: (patient: TBPatient) => void;
+  onUpdateTbPatient: (patient: TBPatient) => void;
+  onDeleteTbPatient: (patientId: string) => void;
+
   firms: FirmEntry[];
   onAddFirm: (firm: FirmEntry) => void;
 
@@ -438,6 +476,7 @@ export interface DashboardProps {
 
   stockEntryRequests: StockEntryRequest[];
   onRequestStockEntry: (request: StockEntryRequest) => void;
+  // Fix: Updated onApproveStockEntry signature to include approverDesignation
   onApproveStockEntry: (requestId: string, approverName: string, approverDesignation: string) => void;
   onRejectStockEntry: (requestId: string, reason: string, approverName: string) => void;
 

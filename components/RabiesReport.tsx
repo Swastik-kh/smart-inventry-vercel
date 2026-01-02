@@ -1,15 +1,17 @@
-
 import React, { useState, useMemo } from 'react';
-import { Printer, Calendar, Save, Calculator, Filter, Package, Plus, Minus, Info } from 'lucide-react';
+import { Printer, Calendar, Calculator, Filter, Package, Info } from 'lucide-react';
 import { Select } from './Select';
 import { Input } from './Input';
 import { FISCAL_YEARS } from '../constants';
-import { RabiesPatient } from '../types';
+import { RabiesPatient } from '../types'; 
 
 interface RabiesReportProps {
   currentFiscalYear: string;
   currentUser: { organizationName: string; fullName: string; };
   patients: RabiesPatient[];
+  // Removed TB Patients props as they are not used in RabiesReport
+  // tbPatients: TBPatient[];
+  // onUpdateTbPatient: (patient: TBPatient) => void;
 }
 
 export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, currentUser, patients }) => {

@@ -29,14 +29,13 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
     // Form State for display/editing
     const [reportDetails, setReportDetails] = useState({
         fiscalYear: '',
-        // Fix: magFormNo must be string to match IssueReportEntry and for correct type inference
         magFormNo: '',
         requestDate: '', 
         issueNo: '',     
         issueDate: '',   
         preparedBy: { name: '', designation: '', date: '' },
         recommendedBy: { name: '', designation: '', date: '' },
-        approvedBy: { name: '', designation: '', date: '' },
+        approvedBy: { name: '', designation: '', date: '', },
         rejectionReason: '' 
     });
     const [irItems, setIrItems] = useState<MagItem[]>([]);
@@ -81,7 +80,7 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
         const reportsInCurrentFY = reports.filter(r => r.fiscalYear === targetFiscalYear);
         
         const maxIssueNo = reportsInCurrentFY.reduce((max, r) => {
-            const num = parseInt(r.issueNo || '0');
+            const num = parseInt(String(r.issueNo) || '0'); // Explicitly cast to string
             return isNaN(num) ? max : Math.max(max, num);
         }, 0);
 
@@ -196,7 +195,7 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
             // Find the previous report in the existing reports list
             const previousReport = reports.find(r => 
                 r.fiscalYear === currentFiscalYear && 
-                r.issueNo === prevIssueNo.toString()
+                String(r.issueNo) === prevIssueNo.toString() // Explicitly cast to string
             );
 
             if (previousReport && previousReport.issueDate) {
@@ -302,8 +301,7 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
         if (isStoreKeeper) return report.status === 'Pending'; // Storekeeper needs to prepare
         if (isApprover) return report.status === 'Pending Approval'; // Admin needs to approve
         return false;
-        // Fix: Changed arithmetic operation to use parseInt for string magFormNo
-    }).sort((a, b) => parseInt(b.magFormNo) - parseInt(a.magFormNo));
+    }).sort((a, b) => parseInt(String(b.magFormNo)) - parseInt(String(a.magFormNo))); // Explicitly cast to string
 
     // 2. History (Completed/Rejected)
     const historyReports = reports.filter(report => {
@@ -313,8 +311,7 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
         }
         // Others see Final + Rejected
         return ['Issued', 'Rejected'].includes(report.status);
-        // Fix: Changed arithmetic operation to use parseInt for string magFormNo
-    }).sort((a, b) => parseInt(b.magFormNo) - parseInt(a.magFormNo));
+    }).sort((a, b) => parseInt(String(b.magFormNo)) - parseInt(String(a.magFormNo))); // Explicitly cast to string
 
 
     // Render Form
@@ -450,10 +447,9 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
                                     hideIcon={true}
                                     inputClassName={`border-b border-dotted border-slate-800 w-32 text-center bg-transparent font-bold placeholder:text-slate-400 placeholder:font-normal rounded-none px-0 py-0 h-auto outline-none focus:ring-0 focus:border-slate-800 ${validationError ? 'text-red-600' : ''}`}
                                     wrapperClassName="w-32"
-                                    disabled={isViewOnlyMode}
-                                    popupAlign="right"
-                                    minDate={todayBS}
-                                    maxDate={todayBS}
+                                    disabled={isViewOnlyMode || selectedReport.status === 'Issued' || selectedReport.status === 'Rejected'}
+                                    // minDate={todayBS} // Removed hardcoded min/max date
+                                    // maxDate={todayBS} // Removed hardcoded min/max date
                                 />
                             </div>
                         </div>
@@ -635,7 +631,7 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
         // If Staff/Other -> See only their own (Matching Full Name or Username)
         // This checks if the user Prepared (Requested) the entry
         return (report.preparedBy?.name === currentUser.fullName || report.preparedBy?.name === currentUser.username);
-    }).sort((a, b) => parseInt(b.issueNo || '0') - parseInt(a.issueNo || '0'));
+    }).sort((a, b) => parseInt(String(b.issueNo) || '0') - parseInt(String(a.issueNo) || '0')); // Explicitly cast to string
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">

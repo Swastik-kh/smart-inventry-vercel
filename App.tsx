@@ -4,7 +4,7 @@ import { LoginForm } from './components/LoginForm';
 import { Dashboard } from './components/Dashboard';
 import { APP_NAME, ORG_NAME } from './constants';
 import { Landmark, ShieldCheck } from 'lucide-react';
-import { User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, DakhilaItem } from './types';
+import { User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, DakhilaItem, TBPatient } from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe } from "firebase/database";
 // @ts-ignore
@@ -55,6 +55,8 @@ const App: React.FC = () => {
   const [firms, setFirms] = useState<FirmEntry[]>([]);
   const [quotations, setQuotations] = useState<QuotationEntry[]>([]);
   const [rabiesPatients, setRabiesPatients] = useState<RabiesPatient[]>([]);
+  // Added state for TB Patients
+  const [tbPatients, setTbPatients] = useState<TBPatient[]>([]); 
   const [marmatEntries, setMarmatEntries] = useState<MarmatEntry[]>([]);
   const [dhuliyaunaEntries, setDhuliyaunaEntries] = useState<DhuliyaunaEntry[]>([]);
   const [logBookEntries, setLogBookEntries] = useState<LogBookEntry[]>([]);
@@ -93,6 +95,7 @@ const App: React.FC = () => {
         setFirms([]);
         setQuotations([]);
         setRabiesPatients([]);
+        setTbPatients([]); // Clear TB patients on logout
         setMarmatEntries([]);
         setDhuliyaunaEntries([]);
         setLogBookEntries([]);
@@ -132,6 +135,7 @@ const App: React.FC = () => {
     setupOrgListener('firms', setFirms);
     setupOrgListener('quotations', setQuotations);
     setupOrgListener('rabiesPatients', setRabiesPatients);
+    setupOrgListener('tbPatients', setTbPatients); // Setup listener for TB Patients
     setupOrgListener('marmatEntries', setMarmatEntries);
     setupOrgListener('disposalEntries', setDhuliyaunaEntries);
     setupOrgListener('logBook', setLogBookEntries);
@@ -324,6 +328,111 @@ const App: React.FC = () => {
       }
   };
 
+  // TB Patient CRUD operations
+  const handleAddTbPatient = async (patient: TBPatient) => {
+    if (!currentUser) return;
+    try {
+        await set(getOrgRef(`tbPatients/${patient.id}`), patient);
+    } catch (error) {
+        alert("TB बिरामी दर्ता गर्दा समस्या आयो।");
+        console.error("Error adding TB patient:", error);
+    }
+  };
+
+  const handleUpdateTbPatient = async (patient: TBPatient) => {
+    if (!currentUser) return;
+    try {
+        await set(getOrgRef(`tbPatients/${patient.id}`), patient); // set replaces the entire object
+    } catch (error) {
+        alert("TB बिरामी अपडेट गर्दा समस्या आयो।");
+        console.error("Error updating TB patient:", error);
+    }
+  };
+
+  const handleDeleteTbPatient = async (patientId: string) => {
+    if (!currentUser) return;
+    try {
+        await remove(getOrgRef(`tbPatients/${patientId}`));
+    } catch (error) {
+        alert("TB बिरामी हटाउन सकिएन।");
+        console.error("Error deleting TB patient:", error);
+    }
+  };
+
+  // Return Entry CRUD operations
+  const handleSaveReturnEntry = async (entry: ReturnEntry) => {
+      if (!currentUser) return;
+      try {
+          const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
+          const orgPath = `orgData/${safeOrgName}`;
+          const updates: Record<string, any> = {};
+          
+          updates[`${orgPath}/returnEntries/${entry.id}`] = entry;
+
+          // If the return is approved, update inventory quantities
+          if (entry.status === 'Approved') {
+              const invAllSnap = await get(ref(db, `${orgPath}/inventory`));
+              const currentInvData = invAllSnap.val() || {};
+              const currentInvList: InventoryItem[] = Object.keys(currentInvData).map(k => ({ ...currentInvData[k], id: k }));
+
+              for (const returnedItem of entry.items) {
+                  const existingItem = currentInvList.find(i => 
+                      i.id === returnedItem.inventoryId || // Prefer matching by original inventory ID if available
+                      (i.itemName.trim().toLowerCase() === returnedItem.name.trim().toLowerCase() && 
+                       (i.uniqueCode?.trim().toLowerCase() === returnedItem.codeNo?.trim().toLowerCase() ||
+                        i.sanketNo?.trim().toLowerCase() === returnedItem.codeNo?.trim().toLowerCase()))
+                  );
+
+                  if (existingItem) {
+                      const newQty = (Number(existingItem.currentQuantity) || 0) + (Number(returnedItem.quantity) || 0);
+                      const newTotalAmount = (Number(existingItem.totalAmount) || 0) + (Number(returnedItem.totalAmount) || 0);
+
+                      updates[`${orgPath}/inventory/${existingItem.id}`] = { 
+                          ...existingItem, 
+                          currentQuantity: newQty, 
+                          totalAmount: newTotalAmount, 
+                          lastUpdateDateBs: entry.date, 
+                          lastUpdateDateAd: new Date().toISOString().split('T')[0],
+                          receiptSource: 'Returned'
+                      };
+                  } else {
+                      // If the item doesn't exist, create it as a new inventory item
+                      const newInventoryId = returnedItem.inventoryId || `ITEM-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+                      updates[`${orgPath}/inventory/${newInventoryId}`] = {
+                          id: newInventoryId,
+                          itemName: returnedItem.name,
+                          uniqueCode: returnedItem.codeNo,
+                          sanketNo: returnedItem.codeNo,
+                          ledgerPageNo: "", // Can be filled later
+                          itemType: "Non-Expendable", // Assumed non-expendable for returns
+                          itemClassification: "", // Can be filled later
+                          specification: returnedItem.specification,
+                          unit: returnedItem.unit,
+                          currentQuantity: returnedItem.quantity,
+                          rate: returnedItem.rate,
+                          tax: 0, // Assuming 0 for returned items unless specified
+                          totalAmount: returnedItem.totalAmount,
+                          batchNo: "",
+                          expiryDateAd: "",
+                          expiryDateBs: "",
+                          lastUpdateDateAd: new Date().toISOString().split('T')[0],
+                          lastUpdateDateBs: entry.date,
+                          fiscalYear: entry.fiscalYear,
+                          receiptSource: 'Returned',
+                          remarks: `Returned via form ${entry.formNo}. Original remarks: ${returnedItem.remarks}`,
+                          storeId: "" // Store ID for returned item not explicitly captured in form, needs to be from config or input
+                      };
+                  }
+              }
+          }
+          await update(ref(db), updates);
+      } catch (error) {
+          alert("जिन्सी फिर्ता सुरक्षित गर्दा समस्या आयो।");
+          console.error("Error saving return entry:", error);
+      }
+  };
+
+
   return (
     <>
       {currentUser ? (
@@ -349,6 +458,10 @@ const App: React.FC = () => {
           onAddRabiesPatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}
           onUpdateRabiesPatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}
           onDeletePatient={(id) => remove(getOrgRef(`rabiesPatients/${id}`))}
+          tbPatients={tbPatients} // Pass TB patients
+          onAddTbPatient={handleAddTbPatient} // Pass TB add handler
+          onUpdateTbPatient={handleUpdateTbPatient} // Pass TB update handler
+          onDeleteTbPatient={handleDeleteTbPatient} // Pass TB delete handler
           firms={firms}
           onAddFirm={(f) => set(getOrgRef(`firms/${f.id}`), f)}
           quotations={quotations}
@@ -368,7 +481,7 @@ const App: React.FC = () => {
           dakhilaReports={dakhilaReports}
           onSaveDakhilaReport={(r) => set(getOrgRef(`dakhilaReports/${r.id}`), r)}
           returnEntries={returnEntries}
-          onSaveReturnEntry={(e) => set(getOrgRef(`returnEntries/${e.id}`), e)}
+          onSaveReturnEntry={handleSaveReturnEntry} // Pass return entry handler
           marmatEntries={marmatEntries}
           onSaveMarmatEntry={(e) => set(getOrgRef(`marmatEntries/${e.id}`), e)}
           dhuliyaunaEntries={dhuliyaunaEntries}

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Database, Download, Upload, HardDrive, FileText, ShoppingCart, Archive, FileUp, CheckCircle2, Info, Trash2, Lock, FileOutput, RotateCcw, Wrench, Scroll, ClipboardList, Send, Warehouse, Layers, ShieldCheck, Table as TableIcon, AlertTriangle, Loader2 } from 'lucide-react';
-import { User, InventoryItem, MagFormEntry, PurchaseOrderEntry, IssueReportEntry, RabiesPatient, FirmEntry, Store, DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry } from '../types';
+import { User, InventoryItem, MagFormEntry, PurchaseOrderEntry, IssueReportEntry, RabiesPatient, FirmEntry, Store, DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, TBPatient } from '../types';
 import { Select } from './Select';
 
 interface DatabaseManagementProps {
@@ -12,6 +12,7 @@ interface DatabaseManagementProps {
   purchaseOrders: PurchaseOrderEntry[];
   issueReports: IssueReportEntry[];
   rabiesPatients: RabiesPatient[];
+  tbPatients: TBPatient[]; // Added TB Patients prop
   firms: FirmEntry[];
   stores: Store[];
   dakhilaReports: DakhilaPratibedanEntry[];
@@ -50,8 +51,8 @@ const UPLOAD_FORMATS: Record<string, { headers: string[], example: string[] }> =
             '100', 
             '85.50', 
             '0', 
-            'B-101', 
             '2026-12-31', 
+            'B-101', 
             'USP Standard', 
             'Essential drug supply'
         ]
@@ -65,6 +66,7 @@ export const DatabaseManagement: React.FC<DatabaseManagementProps> = ({
   purchaseOrders,
   issueReports,
   rabiesPatients,
+  tbPatients, // Destructure TB Patients
   firms,
   stores,
   dakhilaReports,
@@ -194,7 +196,9 @@ export const DatabaseManagement: React.FC<DatabaseManagementProps> = ({
     { id: 'inventory', title: 'जिन्सी मौज्दात', data: inventoryItems, icon: <Database size={24} className="text-purple-600" />, desc: 'हालको जिन्सी सामानहरूको सूची', color: 'bg-purple-50 border-purple-200' },
     { id: 'magForms', title: 'माग फारमहरू', data: magForms, icon: <FileText size={24} className="text-orange-600" />, desc: 'सबै माग फारमहरूको विवरण', color: 'bg-orange-50 border-orange-200' },
     { id: 'firms', title: 'फर्महरू', data: firms, icon: <ClipboardList size={24} className="text-slate-600" />, desc: 'सूचीकृत फर्महरूको विवरण', color: 'bg-slate-100 border-slate-200' },
-    { id: 'stores', title: 'स्टोरहरू', data: stores, icon: <HardDrive size={24} className="text-slate-600" />, desc: 'विभिन्न स्टोरहरूको विवरण', color: 'bg-slate-100 border-slate-200' }
+    { id: 'stores', title: 'स्टोरहरू', data: stores, icon: <HardDrive size={24} className="text-slate-600" />, desc: 'विभिन्न स्टोरहरूको विवरण', color: 'bg-slate-100 border-slate-200' },
+    { id: 'rabiesPatients', title: 'रेबिज बिरामीहरू', data: rabiesPatients, icon: <ClipboardList size={24} className="text-red-600" />, desc: 'रेबिज खोप बिरामीहरूको विवरण', color: 'bg-red-50 border-red-200' },
+    { id: 'tbPatients', title: 'क्षयरोग बिरामीहरू', data: tbPatients, icon: <ClipboardList size={24} className="text-blue-600" />, desc: 'क्षयरोग / कुष्ठरोग बिरामीहरूको विवरण', color: 'bg-blue-50 border-blue-200' }
   ];
 
   return (

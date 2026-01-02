@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
   LogOut, Menu, Calendar, Stethoscope, Package, FileText, Settings, LayoutDashboard, 
@@ -25,9 +24,9 @@ import { InventoryMonthlyReport } from './InventoryMonthlyReport';
 import { StockEntryApproval } from './StockEntryApproval'; 
 import { DakhilaPratibedan } from './DakhilaPratibedan'; 
 import { SahayakJinshiKhata } from './SahayakJinshiKhata'; 
+import { JinshiKhata } from './JinshiKhata'; 
 import { JinshiFirtaFaram } from './JinshiFirtaFaram'; 
 import { MarmatAdesh } from './MarmatAdesh';
-import { JinshiKhata } from './JinshiKhata'; 
 import { DatabaseManagement } from './DatabaseManagement';
 import { DhuliyaunaFaram } from './DhuliyaunaFaram';
 import { LogBook } from './LogBook';
@@ -61,6 +60,10 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   onAddRabiesPatient,
   onUpdateRabiesPatient,
   onDeletePatient,
+  tbPatients, // Added tbPatients prop
+  onAddTbPatient, // Added onAddTbPatient prop
+  onUpdateTbPatient, // Added onUpdateTbPatient prop
+  onDeleteTbPatient, // Added onDeleteTbPatient prop
   firms,
   onAddFirm,
   quotations,
@@ -80,7 +83,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   dakhilaReports,
   onSaveDakhilaReport,
   returnEntries,
-  onSaveReturnEntry,
+  onSaveReturnEntry, // Added onSaveReturnEntry prop
   marmatEntries,
   onSaveMarmatEntry,
   dhuliyaunaEntries,
@@ -108,14 +111,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   const todayAd = useMemo(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  }, []);
-
-  const todayBs = useMemo(() => {
-    try {
-        return new NepaliDate().format('YYYY-MM-DD');
-    } catch (e) {
-        return '';
-    }
   }, []);
 
   // Helper to convert BS date string (YYYY-MM-DD) to AD date string (YYYY-MM-DD)
@@ -159,53 +154,103 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   const rabiesTodayNew = useMemo(() => rabiesPatients.filter(p => p.regDateAd === todayAd).length, [rabiesPatients, todayAd]);
   
-  // UPDATED: Detailed Rabies Dose Stats for D0, D3, D7 for today, considering actual given date (BS)
+  /**
+   * Defines a robust date normalization function as per user's request.
+   * Ensures YYYY-MM-DD format with leading zeros for month and day.
+   * Handles both '-' and '/' as separators.
+   */
+  const fixDate = useCallback((d: string) => {
+      if (!d) return '';
+      const parts = d.split(/[-/]/).map(p => p.padStart(2, '0'));
+      if (parts.length === 3) {
+          return `${parts[0]}-${parts[1]}-${parts[2]}`;
+      }
+      return d; // Return original if format is unexpected
+  }, []);
+
+  /**
+   * REWRITTEN: Detailed Rabies Dose Stats for D0, D3, D7 for today.
+   * Logic: 
+   * - Denominator: All doses scheduled for todayBs.
+   * - Numerator: Today's scheduled doses that are status === 'Given'.
+   */
   const rabiesDoseStats = useMemo(() => {
     const stats = {
-        d0Scheduled: 0,
-        d0Received: 0,
-        d3Scheduled: 0,
-        d3Received: 0,
-        d7Scheduled: 0,
-        d7Received: 0,
+        d0TotalScheduledToday: 0, 
+        d0ReceivedToday: 0,      
+        d3TotalScheduledToday: 0,
+        d3ReceivedToday: 0,
+        d7TotalScheduledToday: 0,
+        d7ReceivedToday: 0,
     };
 
-    rabiesPatients.forEach(p => {
-        p.schedule.forEach(dose => {
-            // Scheduled counts: Compare BS scheduled date with today's BS date
-            if (dose.dateBs === todayBs) {
-                if (dose.day === 0) {
-                    stats.d0Scheduled++;
-                } else if (dose.day === 3) {
-                    stats.d3Scheduled++;
-                } else if (dose.day === 7) {
-                    stats.d7Scheduled++;
-                }
-            }
+    let currentTodayBs = '';
+    try {
+        currentTodayBs = new NepaliDate().format('YYYY-MM-DD');
+    } catch (e) {
+        console.error("Error getting current Nepali date:", e);
+        return stats; 
+    }
 
-            // Received counts: Compare BS given date with today's BS date
-            if (dose.status === 'Given' && dose.givenDate === todayBs) {
-                if (dose.day === 0) stats.d0Received++;
-                else if (dose.day === 3) stats.d3Received++;
-                else if (dose.day === 7) stats.d7Received++;
+    const fixedTodayBs = fixDate(currentTodayBs);
+
+    rabiesPatients.forEach(patient => { 
+        // Using 'patient.schedule' as per existing interface (types.ts)
+        const schedule = patient.schedule || []; 
+
+        schedule.forEach(dose => {
+            const fixedDoseDate = fixDate(dose.dateBs || '');
+
+            if (fixedDoseDate === fixedTodayBs) {
+                const doseDay = dose.day; // Checking for 0, 3, 7
+
+                if (doseDay === 0) {
+                    stats.d0TotalScheduledToday++;
+                    if (dose.status === 'Given') stats.d0ReceivedToday++;
+                } else if (doseDay === 3) {
+                    stats.d3TotalScheduledToday++;
+                    if (dose.status === 'Given') stats.d3ReceivedToday++;
+                } else if (doseDay === 7) {
+                    stats.d7TotalScheduledToday++;
+                    if (dose.status === 'Given') stats.d7ReceivedToday++;
+                }
             }
         });
     });
     return stats;
-  }, [rabiesPatients, todayBs]);
+  }, [rabiesPatients, fixDate]);   // Ensure fixDate is a dependency
 
-  // Updated: rabiesRemainingToday now sums specific doses pending today (BS)
+
+  /**
+   * REWRITTEN: rabiesRemainingToday now sums specific doses pending today (BS) - used for the card.
+   * Applies robust `fixDate` normalization.
+   * Includes null/undefined checks for `patient.schedule`.
+   */
   const rabiesRemainingToday = useMemo(() => {
       let count = 0;
-      rabiesPatients.forEach(p => {
-          p.schedule.forEach(dose => {
-              if (dose.dateBs === todayBs && dose.status === 'Pending' && (dose.day === 0 || dose.day === 3 || dose.day === 7)) {
+      
+      let currentTodayBs = '';
+      try {
+          currentTodayBs = new NepaliDate().format('YYYY-MM-DD');
+      } catch (e) {
+          console.error("Error getting current Nepali date for rabiesRemainingToday:", e);
+          return 0;
+      }
+      const fixedTodayBs = fixDate(currentTodayBs);
+
+      rabiesPatients.forEach(patient => {
+          // Using 'patient.schedule' as per existing data structure
+          const schedule = patient.schedule || [];
+          schedule.forEach(dose => {
+              const fixedDoseDate = fixDate(dose.dateBs || '');
+              // IMPORTANT: Using 'dose.day' property
+              if (fixedDoseDate === fixedTodayBs && dose.status === 'Pending' && (dose.day === 0 || dose.day === 3 || dose.day === 7)) {
                   count++;
               }
           });
       });
       return count;
-  }, [rabiesPatients, todayBs]);
+  }, [rabiesPatients, fixDate]); // Depend on rabiesPatients and fixDate
 
   const inventoryTotalCount = useMemo(() => inventoryItems.filter(i => i.currentQuantity > 0).length, [inventoryItems]);
   const magFormsPendingCount = useMemo(() => magForms.filter(f => f.status === 'Pending').length, [magForms]);
@@ -216,9 +261,11 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   const vaccineForecast = useMemo(() => {
       const mlPerDose = 0.2;
-      const todayCount = rabiesDoseStats.d0Scheduled + rabiesDoseStats.d3Scheduled + rabiesDoseStats.d7Scheduled;
-      const todayMl = todayCount * mlPerDose;
-      const totalPendingDosesCount = rabiesPatients.reduce((acc, p) => acc + p.schedule.filter(d => d.status === 'Pending').length, 0); 
+      // Use total scheduled doses for today
+      const todayScheduledDoses = rabiesDoseStats.d0TotalScheduledToday + rabiesDoseStats.d3TotalScheduledToday + rabiesDoseStats.d7TotalScheduledToday;
+      const todayMl = todayScheduledDoses * mlPerDose;
+      
+      const totalPendingDosesCount = rabiesPatients.reduce((acc, p) => acc + (p.schedule ? p.schedule.filter(d => d.status === 'Pending').length : 0), 0); 
       const totalMl = totalPendingDosesCount * mlPerDose;
       return {
           today: { ml: todayMl.toFixed(1), vials05: Math.ceil(todayMl / 0.5), vials10: Math.ceil(todayMl / 1.0) },
@@ -298,10 +345,12 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     return 0;
   }, [stockEntryRequests, currentUser.role]);
 
+  // UPDATED: JinshiFirta Badge Count
   const jinshiFirtaBadgeCount = useMemo(() => {
       if (!returnEntries) return 0;
-      const isApproverRole = ['STOREKEEPER', 'ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
-      if (isApproverRole) {
+      // Storekeeper / Admin / Approval see pending for verification/approval
+      const isApproverOrStorekeeper = ['STOREKEEPER', 'ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
+      if (isApproverOrStorekeeper) {
           return returnEntries.filter(entry => entry.status === 'Pending').length;
       }
       return 0;
@@ -330,7 +379,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     { id: 'dashboard', label: 'ड्यासबोर्ड (Dashboard)', icon: <LayoutDashboard size={20} /> },
     { id: 'services', label: 'सेवा (Services)', icon: <Stethoscope size={20} />, subItems: [{ id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग (TB/Leprosy)', icon: <Activity size={16} /> }, { id: 'rabies', label: 'रेबिज़ खोप क्लिनिक (Rabies Vaccine)', icon: <Syringe size={16} /> }] },
     { id: 'inventory', label: 'जिन्सी व्यवस्थापन (Inventory)', icon: <Package size={20} />, subItems: [{ id: 'stock_entry_approval', label: 'स्टक प्रविष्टि अनुरोध', icon: <ClipboardCheck size={16} />, badgeCount: pendingStockRequestsCount }, { id: 'jinshi_maujdat', label: 'जिन्सी मौज्दात (Stock)', icon: <Warehouse size={16} /> }, { id: 'form_suchikaran', label: 'फर्म सुचीकरण (Firms)', icon: <ClipboardList size={16} /> }, { id: 'quotation', label: 'कोटेशन (Quotation)', icon: <FileSpreadsheet size={16} /> }, { id: 'mag_faram', label: 'माग फारम (Demand)', icon: <FilePlus size={16} />, badgeCount: magFaramBadgeCount }, { id: 'kharid_adesh', label: 'खरिद आदेश (PO)', icon: <ShoppingCart size={16} />, badgeCount: kharidAdeshBadgeCount }, { id: 'nikasha_pratibedan', label: 'निकासा प्रतिवेदन (Issue)', icon: <FileOutput size={16} />, badgeCount: nikashaPratibedanBadgeCount }, { id: 'sahayak_jinshi_khata', label: 'सहायक जिन्सी खाता', icon: <BookOpen size={16} /> }, { id: 'jinshi_khata', label: 'जिन्सी खाता (Ledger)', icon: <Book size={16} /> }, { id: 'dakhila_pratibedan', label: 'दाखिला प्रतिवेदन', icon: <Archive size={16} />, badgeCount: dakhilaPratibedanBadgeCount }, { id: 'jinshi_firta_khata', label: 'जिन्सी फिर्ता खाता', icon: <RotateCcw size={16} />, badgeCount: jinshiFirtaBadgeCount }, { id: 'marmat_adesh', label: 'मर्मत आवेदन/आदेश', icon: <Wrench size={16} />, badgeCount: marmatAdeshBadgeCount }, { id: 'dhuliyauna_faram', label: 'लिलाम / धुल्याउने', icon: <Trash2 size={16} />, badgeCount: dhuliyaunaFaramBadgeCount }, { id: 'log_book', label: 'लग बुक (Log Book)', icon: <Scroll size={16} /> }] },
-    { id: 'report', label: 'रिपोर्ट (Report)', icon: <FileText size={20} />, subItems: [{ id: 'report_tb_leprosy', label: 'क्षयरोग/कुष्ठरोग रिपोर्ट (TB/Leprosy)', icon: <Activity size={16} /> }, { id: 'report_rabies', label: 'रेबिज़ रिपोर्ट', icon: <Syringe size={16} /> }, { id: 'report_inventory_monthly', label: 'जिन्सी मासिक प्रतिवेदन (Monthly Report)', icon: <BarChart3 size={16} /> }] },
+    { id: 'report', label: 'रिपोर्ट (Report)', icon: <FileText size={20} />, subItems: [{ id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग रिपोर्ट (TB/Leprosy)', icon: <Activity size={16} /> }, { id: 'report_rabies', label: 'रेबिज रिपोर्ट (Rabies Report)', icon: <Syringe size={16} /> }, { id: 'report_inventory_monthly', label: 'जिन्सी मासिक प्रतिवेदन (Monthly Report)', icon: <BarChart3 size={16} /> }] },
     { id: 'settings', label: 'सेटिङ (Settings)', icon: <Settings size={20} />, subItems: [{ id: 'general_setting', label: 'सामान्य सेटिङ', icon: <Sliders size={16} /> }, { id: 'store_setup', label: 'स्टोर सेटअप', icon: <Store size={16} /> }, { id: 'database_management', label: 'डाटाबेस व्यवस्थापन', icon: <Database size={16} /> }, { id: 'user_management', label: 'प्रयोगकर्ता सेटअप', icon: <Users size={16} /> }, { id: 'change_password', label: 'पासवर्ड परिवर्तन', icon: <KeyRound size={16} /> }] },
   ];
 
@@ -397,28 +446,31 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                         <span className="text-xl font-black text-slate-800">{rabiesTodayNew}</span>
                     </div>
                     <div className="space-y-2 bg-orange-50 p-3 rounded-xl border border-orange-100">
-                        <p className="text-xs font-bold text-orange-800 font-nepali mb-1">आजको खोप (Doses)</p>
-                        <div className="flex items-center justify-between text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
-                            <span className="font-bold text-orange-700 font-nepali">D0 खोप:</span>
-                            <span className="font-black text-orange-600">
-                                <span className="text-base font-black text-orange-800">{rabiesDoseStats.d0Received}</span>
-                                <span className="text-xs text-orange-600"> / {rabiesDoseStats.d0Scheduled}</span>
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
-                            <span className="font-bold text-orange-700 font-nepali">D3 खोप:</span>
-                            <span className="font-black text-orange-600">
-                                <span className="text-base font-black text-orange-800">{rabiesDoseStats.d3Received}</span>
-                                <span className="text-xs text-orange-600"> / {rabiesDoseStats.d3Scheduled}</span>
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
-                            <span className="font-bold text-orange-700 font-nepali">D7 खोप:</span>
-                            <span className="font-black text-orange-600">
-                                <span className="text-base font-black text-orange-800">{rabiesDoseStats.d7Received}</span>
-                                <span className="text-xs text-orange-600"> / {rabiesDoseStats.d7Scheduled}</span>
-                            </span>
-                        </div>
+                      <p className="text-xs font-bold text-orange-800 font-nepali mb-1">आजको खोप (Doses)</p>
+                      
+                      <div className="flex items-center justify-between text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
+                          <span className="font-bold text-orange-700 font-nepali">D0 खोप:</span>
+                          <span className="font-black text-orange-600">
+                              <span className="text-base font-black text-orange-800">{rabiesDoseStats.d0ReceivedToday}</span>
+                              <span className="text-xs text-orange-600"> / {rabiesDoseStats.d0TotalScheduledToday}</span>
+                          </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
+                          <span className="font-bold text-orange-700 font-nepali">D3 खोप:</span>
+                          <span className="font-black text-orange-600">
+                              <span className="text-base font-black text-orange-800">{rabiesDoseStats.d3ReceivedToday}</span>
+                              <span className="text-xs text-orange-600"> / {rabiesDoseStats.d3TotalScheduledToday}</span>
+                          </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
+                          <span className="font-bold text-orange-700 font-nepali">D7 खोप:</span>
+                          <span className="font-black text-orange-600">
+                              <span className="text-base font-black text-orange-800">{rabiesDoseStats.d7ReceivedToday}</span>
+                              <span className="text-xs text-orange-600"> / {rabiesDoseStats.d7TotalScheduledToday}</span>
+                          </span>
+                      </div>
                     </div>
                 </div>
                 <button onClick={() => handleDashboardAction('rabies')} className="mt-6 w-full py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-colors">Manage Patients</button>
@@ -450,8 +502,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                                 <p className="text-sm font-black text-slate-700">{vaccineForecast.today.vials05}</p>
                             </div>
                             <div className="bg-white p-1 rounded-lg border border-slate-200">
-                                <p className="text-[9px] text-slate-400 font-bold">1.0ml Vials</p>
-                                <p className="text-sm font-black text-slate-700">{vaccineForecast.today.vials10}</p>
+                                <p className="text-sm font-black text-slate-700">1.0ml Vials</p>
                             </div>
                         </div>
                     </div>
@@ -483,16 +534,50 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             {/* NEW CARD FOR RABIES PENDING DOSES */}
+             <div onClick={() => handleDashboardAction('rabies')} className={`bg-white p-6 rounded-2xl border shadow-sm hover:shadow-lg transition-all cursor-pointer group active:scale-[0.98] ${rabiesRemainingToday > 0 ? 'bg-green-50 border-green-200' : 'border-slate-200'}`}>
+                <div className="flex items-center justify-between mb-4">
+                    <div className={`p-3 rounded-xl shadow-inner ${rabiesRemainingToday > 0 ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+                        <CalendarCheck size={24} />
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Rabies Clinic</p>
+                        <h3 className={`text-sm font-bold font-nepali ${rabiesRemainingToday > 0 ? 'text-green-800' : 'text-slate-700'}`}>आजको खोप अनुगमन</h3>
+                    </div>
+                </div>
+                <div className="flex items-baseline gap-3">
+                    <span className={`text-4xl font-black ${rabiesRemainingToday > 0 ? 'text-green-600 animate-pulse' : 'text-slate-800'}`}>
+                        {rabiesRemainingToday}
+                    </span>
+                    <span className="text-xs font-bold text-slate-400 font-nepali uppercase flex items-center gap-1">
+                        आज {rabiesRemainingToday > 0 ? 'बाँकी' : 'कुनै छैन'} <ChevronRight size={14}/>
+                    </span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-2 font-nepali italic">D0, D3, D7 खोपहरू आज लगाउन बाँकी। (Click to view)</p>
+             </div>
+
              <div onClick={() => openExpiryDetail('expired')} className="bg-white p-6 rounded-2xl border border-red-200 shadow-sm hover:shadow-lg transition-all cursor-pointer group active:scale-[0.98]">
-                <div className="flex items-center justify-between mb-4"><div className="bg-red-100 p-3 rounded-xl text-red-600 shadow-inner"><AlertOctagon size={24} /></div><div className="text-right"><p className="text-[10px] font-bold text-slate-400 uppercase">Stock Health</p><h3 className="text-sm font-bold text-red-600 font-nepali">म्याद नाघेका सामानहरू</h3></div></div>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="bg-red-100 p-3 rounded-xl text-red-600 shadow-inner"><AlertOctagon size={24} /></div>
+                    <div className="text-right">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Stock Health</p>
+                        <h3 className="text-sm font-bold text-red-600 font-nepali">म्याद नाघेका सामानहरू</h3>
+                    </div>
+                </div>
                 <div className="flex items-baseline gap-3"><span className="text-4xl font-black text-red-600">{expiredItems.length}</span><span className="text-xs font-bold text-slate-400 font-nepali uppercase flex items-center gap-1">Items Expired <ChevronRight size={14}/></span></div>
                 <p className="text-[11px] text-slate-500 mt-2 font-nepali italic">यी सामानहरू तुरुन्त हटाउनुहोस्। (Click to view)</p>
              </div>
 
              <div onClick={() => openExpiryDetail('near-expiry')} className="bg-white p-6 rounded-2xl border border-amber-200 shadow-sm hover:shadow-lg transition-all cursor-pointer group active:scale-[0.98]">
-                <div className="flex items-center justify-between mb-4"><div className="bg-amber-100 p-3 rounded-xl text-amber-600 shadow-inner"><Timer size={24} /></div><div className="text-right"><p className="text-[10px] font-bold text-slate-400 uppercase">Near Expiry</p><h3 className="text-sm font-bold text-amber-600 font-nepali">३ महिनाभित्र सकिने</h3></div></div>
-                <div className="flex items-baseline gap-3"><span className="text-4xl font-black text-amber-600">{nearExpiryItems.length}</span><span className="text-xs font-bold text-slate-400 font-nepali uppercase flex items-center gap-1">Items Near Expiry <ChevronRight size={14}/></span></div>
-                <p className="text-[11px] text-slate-500 mt-2 font-nepali italic">आगामी ९० दिनमा सकिने सामान। (Click to view)</p>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="bg-amber-100 p-3 rounded-xl text-amber-600 shadow-inner"><Timer size={24} /></div>
+                    <div className="text-right">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Alert</p>
+                        <h3 className="text-sm font-bold text-amber-600 font-nepali">चाँडै म्याद सकिने</h3>
+                    </div>
+                </div>
+                <div className="flex items-baseline gap-3"><span className="text-4xl font-black text-amber-600">{nearExpiryItems.length}</span><span className="text-xs font-bold text-slate-400 font-nepali uppercase flex items-center gap-1">Near Expiry <ChevronRight size={14}/></span></div>
+                <p className="text-[11px] text-slate-500 mt-2 font-nepali italic">आगामी ९० दिनमा म्याद सकिने सामानहरू।</p>
              </div>
           </div>
         </div>
@@ -500,25 +585,42 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'user_management': return <UserManagement currentUser={currentUser} users={users} onAddUser={onAddUser} onUpdateUser={onUpdateUser} onDeleteUser={onDeleteUser} />;
       case 'change_password': return <ChangePassword currentUser={currentUser} users={users} onChangePassword={onChangePassword} />;
       case 'store_setup': return <StoreSetup currentUser={currentUser} currentFiscalYear={currentFiscalYear} stores={stores} onAddStore={onAddStore} onUpdateStore={onUpdateStore} onDeleteStore={onDeleteStore} inventoryItems={inventoryItems} onUpdateInventoryItem={onUpdateInventoryItem} />;
-      case 'tb_leprosy': return <TBPatientRegistration currentFiscalYear={currentFiscalYear} />;
+      case 'tb_leprosy': return <TBPatientRegistration 
+        currentFiscalYear={currentFiscalYear} 
+        patients={tbPatients} // Pass tbPatients prop
+        onAddPatient={onAddTbPatient} // Pass onAddTbPatient prop
+        onUpdatePatient={onUpdateTbPatient} // Pass onUpdateTbPatient prop
+        onDeletePatient={onDeleteTbPatient} // Pass onDeleteTbPatient prop
+      />;
+      // Fix: Changed onUpdateRabiesPatient to onUpdatePatient to match RabiesRegistrationProps
       case 'rabies': return <RabiesRegistration currentFiscalYear={currentFiscalYear} patients={rabiesPatients} onAddPatient={onAddRabiesPatient} onUpdatePatient={onUpdateRabiesPatient} onDeletePatient={onDeletePatient} currentUser={currentUser} />;
+      // FIX: Removed tbPatients and onUpdateTbPatient from RabiesReport props
       case 'report_rabies': return <RabiesReport currentFiscalYear={currentFiscalYear} currentUser={currentUser} patients={rabiesPatients} />;
       case 'mag_faram': return <MagFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} existingForms={magForms} onSave={onSaveMagForm} onDelete={onDeleteMagForm} inventoryItems={inventoryItems} stores={stores} generalSettings={generalSettings} />;
       case 'kharid_adesh': return <KharidAdesh orders={purchaseOrders} currentFiscalYear={currentFiscalYear} onSave={onUpdatePurchaseOrder} currentUser={currentUser} firms={firms} quotations={quotations} onDakhilaClick={(po) => { setActiveItem('jinshi_maujdat'); setPendingPoDakhila(po); }} generalSettings={generalSettings} />;
       case 'nikasha_pratibedan': return <NikashaPratibedan reports={issueReports} onSave={onUpdateIssueReport} currentUser={currentUser} currentFiscalYear={currentFiscalYear} generalSettings={generalSettings} />;
       case 'form_suchikaran': return <FirmListing currentFiscalYear={currentFiscalYear} firms={firms} onAddFirm={onAddFirm} />;
       case 'quotation': return <Quotation currentFiscalYear={currentFiscalYear} firms={firms} quotations={quotations} onAddQuotation={onAddQuotation} inventoryItems={inventoryItems} />;
-      case 'jinshi_maujdat': return <JinshiMaujdat currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} onAddInventoryItem={onAddInventoryItem} onUpdateInventoryItem={onUpdateInventoryItem} onDeleteInventoryItem={onDeleteInventoryItem} stores={stores} onRequestStockEntry={onRequestStockEntry} pendingPoDakhila={pendingPoDakhila} onClearPendingPoDakhila={() => setPendingPoDakhila(null)} />;
+      case 'jinshi_maujdat': return <JinshiMaujdat currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} onAddInventoryItem={onAddInventoryItem} onUpdateInventoryItem={onUpdateInventoryItem} onDeleteInventoryItem={onDeleteInventoryItem} onRequestStockEntry={onRequestStockEntry} stores={stores} pendingPoDakhila={pendingPoDakhila} onClearPendingPoDakhila={() => setPendingPoDakhila(null)} />;
       case 'stock_entry_approval': return <StockEntryApproval requests={stockEntryRequests} currentUser={currentUser} onApprove={onApproveStockEntry} onReject={onRejectStockEntry} stores={stores} />;
-      case 'dakhila_pratibedan': return <DakhilaPratibedan dakhilaReports={dakhilaReports} onSaveDakhilaReport={onSaveDakhilaReport} currentFiscalYear={currentFiscalYear} currentUser={currentUser} stockEntryRequests={stockEntryRequests} onApproveStockEntry={onApproveStockEntry} onRejectStockEntry={onRejectStockEntry} generalSettings={generalSettings} stores={stores} />;
-      case 'sahayak_jinshi_khata': return <SahayakJinshiKhata currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} issueReports={issueReports} dakhilaReports={dakhilaReports} stockEntryRequests={stockEntryRequests} users={users} returnEntries={returnEntries} generalSettings={generalSettings} />;
+      case 'dakhila_pratibedan': return <DakhilaPratibedan 
+          dakhilaReports={dakhilaReports} 
+          onSaveDakhilaReport={onSaveDakhilaReport} 
+          currentFiscalYear={currentFiscalYear} 
+          currentUser={currentUser} 
+          stockEntryRequests={stockEntryRequests} 
+          generalSettings={generalSettings} 
+          stores={stores} 
+      />;
+      // FIX: Removed stockEntryRequests from SahayakJinshiKhata props
+      case 'sahayak_jinshi_khata': return <SahayakJinshiKhata currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} issueReports={issueReports} dakhilaReports={dakhilaReports} users={users} returnEntries={returnEntries} generalSettings={generalSettings} />;
       case 'jinshi_khata': return <JinshiKhata currentFiscalYear={currentFiscalYear} inventoryItems={inventoryItems} issueReports={issueReports} dakhilaReports={dakhilaReports} stockEntryRequests={stockEntryRequests} returnEntries={returnEntries} generalSettings={generalSettings} />;
       case 'jinshi_firta_khata': return <JinshiFirtaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} returnEntries={returnEntries} onSaveReturnEntry={onSaveReturnEntry} issueReports={issueReports} generalSettings={generalSettings} />;
       case 'marmat_adesh': return <MarmatAdesh currentFiscalYear={currentFiscalYear} currentUser={currentUser} marmatEntries={marmatEntries} onSaveMarmatEntry={onSaveMarmatEntry} inventoryItems={inventoryItems} generalSettings={generalSettings} />;
       case 'dhuliyauna_faram': return <DhuliyaunaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} dhuliyaunaEntries={dhuliyaunaEntries} onSaveDhuliyaunaEntry={onSaveDhuliyaunaEntry} stores={stores} />;
       case 'log_book': return <LogBook currentUser={currentUser} currentFiscalYear={currentFiscalYear} inventoryItems={inventoryItems} logBookEntries={logBookEntries} onAddLogEntry={onSaveLogBookEntry} />;
-      case 'report_inventory_monthly': return <InventoryMonthlyReport currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} stores={stores} magForms={magForms} onSaveMagForm={onSaveMagForm} generalSettings={generalSettings} />;
-      case 'database_management': return <DatabaseManagement currentUser={currentUser} users={users} inventoryItems={inventoryItems} magForms={magForms} purchaseOrders={purchaseOrders} issueReports={issueReports} rabiesPatients={rabiesPatients} firms={firms} stores={stores} dakhilaReports={dakhilaReports} returnEntries={returnEntries} marmatEntries={marmatEntries} dhuliyaunaEntries={dhuliyaunaEntries} logBookEntries={logBookEntries} onClearData={onClearData} onUploadData={onUploadData} />;
+      case 'report_inventory_monthly': return <InventoryMonthlyReport currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} magForms={magForms} onSaveMagForm={onSaveMagForm} generalSettings={generalSettings} />;
+      case 'database_management': return <DatabaseManagement currentUser={currentUser} users={users} inventoryItems={inventoryItems} magForms={magForms} purchaseOrders={purchaseOrders} issueReports={issueReports} rabiesPatients={rabiesPatients} tbPatients={tbPatients} firms={firms} stores={stores} dakhilaReports={dakhilaReports} returnEntries={returnEntries} marmatEntries={marmatEntries} dhuliyaunaEntries={dhuliyaunaEntries} logBookEntries={logBookEntries} onClearData={onClearData} onUploadData={onUploadData} />;
       default: return null;
     }
   };
@@ -613,7 +715,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                                             </td>
                                             <td className="px-3 py-3 border-r print:border-slate-800 print:text-black">{stores.find(s => s.id === item.storeId)?.name || 'Unknown'}</td>
                                             <td className="px-3 py-3 font-mono border-r print:border-slate-800 print:text-black">{item.batchNo || '-'}</td>
-                                            <td className="px-3 py-3 font-bold border-r print:border-slate-800 ${expiryModalType === 'expired' ? 'text-red-600 print:text-black' : 'text-amber-600 print:text-black'}">
+                                            <td className={`px-3 py-3 font-bold border-r print:border-slate-800 ${expiryModalType === 'expired' ? 'text-red-600 print:text-black' : 'text-amber-600 print:text-black'}`}>
                                                 {item.expiryDateAd}
                                                 <div className="text-[9px] font-normal text-slate-400 print:text-slate-600">{item.expiryDateBs} (BS)</div>
                                             </td>
@@ -641,8 +743,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                         <button onClick={() => setShowExpiryModal(false)} className="px-8 py-2 bg-slate-800 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-200 hover:bg-slate-900 transition-all">बन्द गर्नुहोस्</button>
                     </div>
                 </div>
-            </div>
-        )}
+            )}
       </div>
     </div>
   );
