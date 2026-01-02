@@ -298,7 +298,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       const todayScheduledDoses = rabiesDoseStats.d0TotalScheduledToday + rabiesDoseStats.d3TotalScheduledToday + rabiesDoseStats.d7TotalScheduledToday;
       const todayMl = todayScheduledDoses * mlPerDose;
       
-      const totalPendingDosesCount = rabiesPatients.reduce((acc, p) => acc + (p.schedule ? p.schedule.filter(d => d.status === 'Pending').length : 0), 0), 0; 
+      // FIX: Removed the extra ', 0' at the end of the reduce function
+      const totalPendingDosesCount = rabiesPatients.reduce((acc, p) => acc + (p.schedule ? p.schedule.filter(d => d.status === 'Pending').length : 0), 0); 
       const totalMl = totalPendingDosesCount * mlPerDose;
       return {
           today: { ml: todayMl.toFixed(1), vials05: Math.ceil(todayMl / 0.5), vials10: Math.ceil(todayMl / 1.0) },
@@ -542,7 +543,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                     
                     <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
                         <div className="flex justify-between items-center mb-2">
-                             <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Total Pending</span>
+                             <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Total Pending</span>
                              <span className="text-xs font-black text-indigo-600">{vaccineForecast.overall.ml} ml</span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-center">
