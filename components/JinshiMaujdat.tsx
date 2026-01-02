@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Package, Calendar, Plus, RotateCcw, Save, X, CheckCircle2, Search, 
@@ -114,11 +113,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ item, storeName, on
                              </div>
                              <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase">Rate</label>
-                                <p className="text-lg font-bold">{item.rate?.toFixed(2) || '0.00'}</p>
+                                <p className="font-medium">{item.rate?.toFixed(2) || '0.00'}</p>
                              </div>
                              <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase">Total Value</label>
-                                <p className="text-lg font-bold">{item.totalAmount?.toFixed(2) || '0.00'}</p>
+                                <p className="font-medium">{item.totalAmount?.toFixed(2) || '0.00'}</p>
                              </div>
                         </div>
                         <div className="col-span-2 bg-orange-50 p-3 rounded-lg border border-orange-100 flex justify-between">
@@ -297,14 +296,17 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
         if (mode !== 'add') return '';
         const fyItems = inventoryItems.filter(item => item.fiscalYear === currentFiscalYear && item.dakhilaNo);
         const maxNum = fyItems.reduce((max, item) => {
-            const parts = String(item.dakhilaNo).split('-');
-            if (parts.length >= 2 && parts[1] === 'DA') {
-                const num = parseInt(parts[0]);
+            const dakhilaNoString = String(item.dakhilaNo);
+            // Specifically parse for the new "DA-NNN" format
+            const match = dakhilaNoString.match(/^DA-(\d{3})$/); 
+            if (match) {
+                const num = parseInt(match[1]);
                 return isNaN(num) ? max : Math.max(max, num);
             }
-            return max;
+            return max; // Ignore non-matching formats
         }, 0);
-        return `${String(maxNum + 1).padStart(4, '0')}-DA`;
+        // Generate in "DA-NNN" format
+        return `DA-${String(maxNum + 1).padStart(3, '0')}`;
     }, [currentFiscalYear, inventoryItems, mode]);
 
     const [commonDetails, setCommonDetails] = useState({
@@ -567,9 +569,10 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
             let previousDakhilaNo = '';
             inventoryItems.forEach(item => {
                 if (item.fiscalYear === currentFiscalYear && item.dakhilaNo) {
-                    const parts = String(item.dakhilaNo).split('-');
-                    if (parts.length >= 2 && parts[1] === 'DA') {
-                        const num = parseInt(parts[0]);
+                    // Match the new "DA-NNN" format
+                    const match = String(item.dakhilaNo).match(/^DA-(\d{3})$/);
+                    if (match) {
+                        const num = parseInt(match[1]);
                         if (!isNaN(num) && num > maxDakhilaNum) {
                             maxDakhilaNum = num;
                             previousDakhilaDate = item.lastUpdateDateBs || ''; 
@@ -578,6 +581,9 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
                     }
                 }
             });
+            // Ensure newly generated dakhilaNo is consistent with the latest existing dakhilaNo for this fiscal year
+            // This is primarily for date validation when the user explicitly changes the dakhilaNo or date.
+            // When automatically generated, dakhilaNo increases, so date validation should align.
             if (previousDakhilaDate && dateBs < previousDakhilaDate) {
                 setValidationError(`मिति क्रम मिलेन (Invalid Date Order): \nअघिल्लो दाखिला नं (${previousDakhilaNo}) को मिति (${previousDakhilaDate}) भन्दा \nअहिलेको मिति (${dateBs}) अगाडि हुन सक्दैन।`);
                 setIsSaving(false);

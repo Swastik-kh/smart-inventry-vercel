@@ -11,6 +11,8 @@ interface DakhilaPratibedanProps {
     // Removed onApproveStockEntry and onRejectStockEntry as they are handled in StockEntryApproval
     generalSettings: OrganizationSettings;
     stores?: Store[];
+    initialSelectedReportId?: string | null; // New prop for direct loading
+    onInitialReportLoaded?: () => void; // New callback for clearing initial load state
 }
 
 export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({ 
@@ -21,7 +23,9 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
     stockEntryRequests,
     // Removed onApproveStockEntry and onRejectStockEntry from destructuring
     generalSettings,
-    stores = []
+    stores = [],
+    initialSelectedReportId, // Destructure new prop
+    onInitialReportLoaded // Destructure new callback
 }) => {
     const [selectedReport, setSelectedReport] = useState<DakhilaPratibedanEntry | null>(null);
     const [selectedRequest, setSelectedRequest] = useState<StockEntryRequest | null>(null);
@@ -33,6 +37,20 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectionReason, setRejectionReason] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Effect to handle initial report loading from props
+    useEffect(() => {
+        if (initialSelectedReportId && dakhilaReports.length > 0) {
+            const reportToLoad = dakhilaReports.find(r => r.id === initialSelectedReportId);
+            if (reportToLoad) {
+                handleLoadReport(reportToLoad);
+                if (onInitialReportLoaded) {
+                    onInitialReportLoaded(); // Notify parent that report has been loaded
+                }
+            }
+        }
+    }, [initialSelectedReportId, dakhilaReports, onInitialReportLoaded]);
+
 
     // Filter Pending requests
     const pendingRequests = useMemo(() => 
@@ -269,15 +287,15 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
                     <div className="flex gap-2">
                          {isApproverRole && isReq && (
                              <>
-                                <button onClick={() => setShowRejectModal(true)} className="flex items-center gap-2 px-6 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-medium transition-colors">
+                                <button onClick={() => setShowRejectModal(true)} className="flex items-center gap-2 px-6 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-medium transition-colors no-print">
                                     अस्वीकार (Reject)
                                 </button>
-                                <button onClick={handleApprove} className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg font-medium shadow-sm transition-all active:scale-95">
+                                <button onClick={handleApprove} className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg font-medium shadow-sm transition-all active:scale-95 no-print">
                                     <ShieldCheck size={18} /> स्वीकृत गर्नुहोस्
                                 </button>
                              </>
                          )}
-                         <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-medium shadow-sm">
+                         <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-medium shadow-sm no-print">
                             <Printer size={18} /> प्रिन्ट (Print)
                         </button>
                     </div>
@@ -297,6 +315,13 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
                                 <h2 className="text-lg font-bold">{generalSettings.subTitleNepali}</h2>
                                 {generalSettings.subTitleNepali2 && <h3 className="text-base font-bold">{generalSettings.subTitleNepali2}</h3>}
                                 {generalSettings.subTitleNepali3 && <h3 className="text-lg font-bold">{generalSettings.subTitleNepali3}</h3>}
+                                {/* ADDED: Contact Details Row from generalSettings */}
+                                <div className="text-[10px] mt-2 space-x-3 font-medium text-slate-600">
+                                    {generalSettings.address && <span>{generalSettings.address}</span>}
+                                    {generalSettings.phone && <span>| फोन: {generalSettings.phone}</span>}
+                                    {generalSettings.email && <span>| ईमेल: {generalSettings.email}</span>}
+                                    {generalSettings.panNo && <span>| पान नं: {generalSettings.panNo}</span>}
+                                </div>
                             </div>
                             <div className="w-24"></div> 
                         </div>
@@ -368,7 +393,7 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
                     <div className="grid grid-cols-2 gap-20 mt-16 text-sm">
                         {/* Prepared By Footer */}
                         <div className="text-center">
-                            <div className="border-t border-slate-800 pt-3">
+                            <div className="border-t border-slate-800 pt-3 max-w-[180px] mx-auto">
                                 <p className="font-bold">तयार गर्ने (जिन्सी शाखा)</p>
                                 <div className="mt-4 space-y-0.5">
                                     <p className="font-bold text-slate-800">{isReq ? (data as StockEntryRequest).requesterName : (data as DakhilaPratibedanEntry).preparedBy?.name || '................................'}</p>
@@ -380,7 +405,7 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
 
                         {/* Approved By Footer */}
                         <div className="text-center">
-                            <div className="border-t border-slate-800 pt-3">
+                            <div className="border-t border-slate-800 pt-3 max-w-[180px] mx-auto">
                                 <p className="font-bold">स्वीकृत गर्ने (कार्यालय प्रमुख)</p>
                                 <div className="mt-4 space-y-0.5">
                                     <p className="font-bold text-slate-800">{isReq ? '................................' : (data as DakhilaPratibedanEntry).approvedBy?.name || '................................'}</p>

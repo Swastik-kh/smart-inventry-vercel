@@ -4,7 +4,7 @@ import {
   ChevronDown, ChevronRight, Syringe, Activity, 
   ClipboardList, FileSpreadsheet, FilePlus, ShoppingCart, FileOutput, 
   BookOpen, Book, Archive, RotateCcw, Wrench, Scroll, BarChart3,
-  Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, ArrowRightCircle, AlertTriangle, Pill, Scissors, Clock, Calculator, Trash2, UsersRound, CalendarCheck, UserPlus, Droplets, Info, TrendingUp, AlertOctagon, Timer, Printer
+  Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, ArrowRightCircle, AlertTriangle, Pill, Scissors, Clock, Calculator, Trash2, UsersRound, CalendarCheck, UserPlus, Droplets, Info, TrendingUp, AlertOctagon, Timer, Printer, Eye
 } from 'lucide-react';
 import { APP_NAME, ORG_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps, PurchaseOrderEntry, InventoryItem } from '../types'; 
@@ -102,6 +102,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   const [pendingPoDakhila, setPendingPoDakhila] = useState<PurchaseOrderEntry | null>(null);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [lastSeenNotificationId, setLastSeenNotificationId] = useState<string | null>(null);
+  
+  // New state to hold the ID of the Dakhila Report to view directly
+  const [initialDakhilaReportIdToView, setInitialDakhilaReportIdToView] = useState<string | null>(null);
 
   // Expiry List States
   const [showExpiryModal, setShowExpiryModal] = useState(false);
@@ -254,10 +257,16 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   const inventoryTotalCount = useMemo(() => inventoryItems.filter(i => i.currentQuantity > 0).length, [inventoryItems]);
   const magFormsPendingCount = useMemo(() => magForms.filter(f => f.status === 'Pending').length, [magForms]);
-  const latestApprovedDakhila = useMemo(() => {
-      const approved = stockEntryRequests.filter(req => req.status === 'Approved');
-      return approved.length > 0 ? approved.sort((a, b) => parseInt(b.id) - parseInt(a.id))[0] : null;
-  }, [stockEntryRequests]);
+  
+  // UPDATED: Now points to the latest DakhilaPratibedanEntry
+  const latestDakhilaReport = useMemo(() => {
+      if (dakhilaReports.length === 0) return null;
+      const sortedReports = dakhilaReports
+          .filter(r => r.fiscalYear === currentFiscalYear && r.status === 'Final')
+          .sort((a, b) => b.id.localeCompare(a.id)); // Sort by ID (which is timestamp-based)
+      return sortedReports.length > 0 ? sortedReports[0] : null;
+  }, [dakhilaReports, currentFiscalYear]);
+
 
   const vaccineForecast = useMemo(() => {
       const mlPerDose = 0.2;
@@ -279,8 +288,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   };
 
   const handleNotificationClick = () => {
-      if (latestApprovedDakhila) {
-          setLastSeenNotificationId(latestApprovedDakhila.id);
+      if (latestDakhilaReport) {
+          setLastSeenNotificationId(latestDakhilaReport.id);
           setShowNotificationModal(true);
       }
   };
@@ -610,7 +619,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
           currentUser={currentUser} 
           stockEntryRequests={stockEntryRequests} 
           generalSettings={generalSettings} 
-          stores={stores} 
+          stores={stores}
+          initialSelectedReportId={initialDakhilaReportIdToView}
+          onInitialReportLoaded={() => setInitialDakhilaReportIdToView(null)}
       />;
       // FIX: Removed stockEntryRequests from SahayakJinshiKhata props
       case 'sahayak_jinshi_khata': return <SahayakJinshiKhata currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} issueReports={issueReports} dakhilaReports={dakhilaReports} users={users} returnEntries={returnEntries} generalSettings={generalSettings} />;
@@ -625,18 +636,88 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     }
   };
 
+  const canViewDakhilaDetailsFromNotification = ['STOREKEEPER', 'ADMIN', 'SUPER_ADMIN'].includes(currentUser.role);
+
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       {isSidebarOpen && <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden no-print" onClick={() => setIsSidebarOpen(false)} />}
       <aside className={`fixed md:relative z-50 h-full bg-slate-900 text-white flex flex-col transition-all duration-300 no-print overflow-hidden ${isSidebarOpen ? 'w-64' : 'w-0 md:w-0'}`}><div className="p-6 border-b border-slate-800 flex items-center gap-3 bg-slate-950 shrink-0"><div className="bg-primary-600 p-2 rounded-lg"><Activity size={20} className="text-white" /></div><div className="whitespace-nowrap"><h2 className="font-nepali font-bold text-lg">{APP_NAME}</h2><p className="text-xs text-slate-400 font-nepali truncate">{currentUser.organizationName || ORG_NAME}</p></div></div><nav className="flex-1 p-4 space-y-2 overflow-y-auto">{menuItems.map((item) => (<div key={item.id} className="w-full"><button onClick={() => handleMenuClick(item)} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${activeItem === item.id ? 'bg-primary-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}><div className="flex items-center gap-3"><div className="shrink-0">{item.icon}</div><span className="font-medium font-nepali text-left truncate">{item.label}</span></div>{item.subItems && <div className="text-slate-500 shrink-0">{expandedMenu === item.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</div>}</button>{item.subItems && expandedMenu === item.id && (<div className="mt-1 ml-4 pl-3 border-l border-slate-700 space-y-1">{item.subItems.map((subItem) => (<button key={subItem.id} onClick={() => handleSubItemClick(subItem.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm transition-colors ${activeItem === subItem.id ? 'bg-slate-800 text-primary-300 font-bold' : 'text-slate-400 hover:text-slate-200'}`}><div className="flex items-center gap-2"><div className="shrink-0">{subItem.icon}</div><span className="font-nepali text-left truncate">{subItem.label}</span></div>{subItem.badgeCount !== undefined && subItem.badgeCount > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 rounded-full shrink-0">{subItem.badgeCount}</span>}</button>))}</div>)}</div>))}</nav><div className="p-4 border-t border-slate-800 bg-slate-950 shrink-0"><button onClick={onLogout} className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 w-full rounded-xl transition-all whitespace-nowrap"><LogOut size={18} /><span>लगआउट</span></button></div></aside>
 
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
-        <header className="bg-white border-b p-4 flex md:hidden items-center justify-between z-10 no-print"><div className="flex items-center gap-3"><button onClick={() => setIsSidebarOpen(true)} className="bg-primary-600 p-1.5 rounded-md shadow-md active:scale-95 transition-transform"><Menu size={18} className="text-white" /></button><span className="font-bold text-slate-700 font-nepali truncate">{APP_NAME}</span></div><div className="flex items-center gap-4">{latestApprovedDakhila && <button onClick={handleNotificationClick} className="relative p-1 text-slate-600"><Bell size={20} />{latestApprovedDakhila.id !== lastSeenNotificationId && <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>}</button>}<button onClick={onLogout} className="text-slate-500"><LogOut size={20} /></button></div></header>
-        <div className="hidden md:flex bg-white border-b px-8 py-4 justify-between items-center z-10 no-print"><div className="flex items-center gap-4"><button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-lg hover:bg-slate-100 transition-colors shadow-sm bg-white border border-slate-200"><Menu size={24} /></button><h2 className="text-lg font-semibold text-slate-700 font-nepali">ड्यासबोर्ड</h2><div className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium border border-blue-100"><Calendar size={14} /><span className="font-nepali">आ.व. {fiscalYearLabel}</span></div></div><div className="flex items-center gap-6"><button onClick={handleNotificationClick} className="p-2 text-slate-600 relative hover:bg-slate-50 rounded-full transition-colors" disabled={!latestApprovedDakhila}><Bell size={22} />{latestApprovedDakhila && latestApprovedDakhila.id !== lastSeenNotificationId && <span className="absolute top-1.5 right-2 h-3 w-3 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>}</button><div className="flex items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-2xl border border-slate-200"><div className="text-right"><p className="text-sm font-bold truncate max-w-[150px]">{currentUser.fullName}</p><p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">{currentUser.role}</p></div><div className="w-10 h-10 bg-primary-100 text-primary-700 rounded-xl flex items-center justify-center font-bold uppercase shadow-sm border border-primary-200">{currentUser.username.charAt(0)}</div></div></div></div>
+        <header className="bg-white border-b p-4 flex md:hidden items-center justify-between z-10 no-print"><div className="flex items-center gap-3"><button onClick={() => setIsSidebarOpen(true)} className="bg-primary-600 p-1.5 rounded-md shadow-md active:scale-95 transition-transform"><Menu size={18} className="text-white" /></button><span className="font-bold text-slate-700 font-nepali truncate">{APP_NAME}</span></div><div className="flex items-center gap-4">{latestDakhilaReport && <button onClick={handleNotificationClick} className="relative p-1 text-slate-600"><Bell size={20} />{latestDakhilaReport.id !== lastSeenNotificationId && <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>}</button>}<button onClick={onLogout} className="text-slate-500"><LogOut size={20} /></button></div></header>
+        <div className="hidden md:flex bg-white border-b px-8 py-4 justify-between items-center z-10 no-print"><div className="flex items-center gap-4"><button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-lg hover:bg-slate-100 transition-colors shadow-sm bg-white border border-slate-200"><Menu size={24} /></button><h2 className="text-lg font-semibold text-slate-700 font-nepali">ड्यासबोर्ड</h2><div className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium border border-blue-100"><Calendar size={14} /><span className="font-nepali">आ.व. {fiscalYearLabel}</span></div></div><div className="flex items-center gap-6">{latestDakhilaReport && <button onClick={handleNotificationClick} className="p-2 text-slate-600 relative hover:bg-slate-50 rounded-full transition-colors" disabled={!latestDakhilaReport}><Bell size={22} />{latestDakhilaReport.id !== lastSeenNotificationId && <span className="absolute top-1.5 right-2 h-3 w-3 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>}</button>}<div className="flex items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-2xl border border-slate-200"><div className="text-right"><p className="text-sm font-bold truncate max-w-[150px]">{currentUser.fullName}</p><p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">{currentUser.role}</p></div><div className="w-10 h-10 bg-primary-100 text-primary-700 rounded-xl flex items-center justify-center font-bold uppercase shadow-sm border border-primary-200">{currentUser.username.charAt(0)}</div></div></div></div>
 
         <main className="flex-1 overflow-y-auto bg-slate-50/50 p-4 md:p-6 relative print:p-0 print:bg-white print:overflow-visible">
             {renderContent()}
         </main>
+
+        {showNotificationModal && latestDakhilaReport && (
+            <div className="fixed inset-0 z-[100] flex items-start justify-end p-4 pt-20 no-print">
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowNotificationModal(false)}></div>
+                <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in slide-in-from-right-8 duration-300">
+                    <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50/50">
+                        <div className="flex items-center gap-3">
+                            <Bell size={20} className="text-indigo-600" />
+                            <h3 className="font-bold text-slate-800 text-lg font-nepali">नयाँ दाखिला सूचना (New Dakhila Notification)</h3>
+                        </div>
+                        <button onClick={() => setShowNotificationModal(false)} className="p-1.5 hover:bg-white/50 rounded-full"><X size={20} className="text-slate-400"/></button>
+                    </div>
+                    <div className="p-6 space-y-4">
+                        <p className="text-slate-700 font-nepali">
+                            <strong>दाखिला नं:</strong> <span className="font-bold text-indigo-600">#{latestDakhilaReport.dakhilaNo}</span>
+                        </p>
+                        <p className="text-slate-700 font-nepali">
+                            <strong>मिति:</strong> {latestDakhilaReport.date}
+                        </p>
+                        <p className="text-slate-700 font-nepali">
+                            <strong>तयार गर्ने:</strong> {latestDakhilaReport.preparedBy?.name}
+                        </p>
+
+                        {/* Display items list with blurred rate and total amount */}
+                        {latestDakhilaReport.items && latestDakhilaReport.items.length > 0 && (
+                            <div className="mt-4 border-t pt-4 space-y-2">
+                                <h4 className="text-sm font-bold text-slate-700 font-nepali flex items-center gap-2 mb-2">
+                                    <Package size={16} className="text-indigo-600"/> दाखिला गरिएका सामानहरू (Items)
+                                </h4>
+                                <ul className="space-y-2 text-xs">
+                                    {latestDakhilaReport.items.slice(0, 3).map((item, idx) => ( // Show first 3 items for brevity
+                                        <li key={idx} className="flex items-center gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                            <span className="font-medium text-slate-800 flex-1 truncate">{item.name}</span>
+                                            <span className="text-slate-600">{item.quantity} {item.unit}</span>
+                                            <span className="text-slate-600 text-transparent bg-slate-200 rounded px-1 blur-sm select-none">रु. {item.rate.toFixed(2)}</span>
+                                            <span className="text-indigo-600 font-bold text-transparent bg-indigo-200 rounded px-1 blur-sm select-none">रु. {item.totalAmount.toFixed(2)}</span>
+                                        </li>
+                                    ))}
+                                    {latestDakhilaReport.items.length > 3 && (
+                                        <li className="text-center text-slate-500 italic text-[10px] pt-1">
+                                            र अन्य {latestDakhilaReport.items.length - 3} सामानहरू...
+                                        </li>
+                                    )}
+                                </ul>
+                                <p className="text-[10px] text-slate-500 italic mt-4 border-t pt-2">
+                                    <Info size={12} className="inline-block mr-1"/> वित्तीय विवरणहरू सुरक्षाको लागि अस्पष्ट पारिएको छ।
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                    <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+                        <button 
+                            onClick={() => {
+                                setActiveItem('dakhila_pratibedan');
+                                setInitialDakhilaReportIdToView(latestDakhilaReport.id);
+                                setShowNotificationModal(false);
+                            }}
+                            disabled={!canViewDakhilaDetailsFromNotification}
+                            title={!canViewDakhilaDetailsFromNotification ? "तपाईंलाई यो रिपोर्ट हेर्न अनुमति छैन (You do not have permission to view this report)." : ""}
+                            className={`flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium shadow-sm transition-all hover:bg-indigo-700 
+                                ${!canViewDakhilaDetailsFromNotification ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                            <Eye size={18} /> विवरण हेर्नुहोस्
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {showExpiryModal && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4 print:static print:p-0">
