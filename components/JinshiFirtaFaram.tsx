@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { RotateCcw, Plus, Trash2, Printer, Save, ArrowLeft, Search, CheckCircle2, Send, Clock, AlertCircle, Eye, X } from 'lucide-react';
-import { InventoryItem, User, ReturnEntry, ReturnItem, IssueReportEntry, OrganizationSettings } from '../types';
+import { InventoryItem, User, ReturnEntry, ReturnItem, IssueReportEntry, OrganizationSettings, Signature } from '../types'; // Added Signature import
 import { SearchableSelect } from './SearchableSelect';
 import { NepaliDatePicker } from './NepaliDatePicker';
 // @ts-ignore
@@ -35,10 +35,11 @@ export const JinshiFirtaFaram: React.FC<JinshiFirtaFaramProps> = ({
     formNo: '1',
     date: '',
     status: 'Pending' as 'Pending' | 'Verified' | 'Approved' | 'Rejected',
-    returnedBy: { name: currentUser.fullName, designation: currentUser.designation, date: '' },
-    preparedBy: { name: '', designation: '', date: '' },
-    recommendedBy: { name: '', designation: '', date: '' },
-    approvedBy: { name: '', designation: '', date: '' },
+    // Fix: Explicitly cast to Signature type to handle optional properties correctly
+    returnedBy: { name: currentUser.fullName, designation: currentUser.designation, date: '' } as Signature,
+    preparedBy: { name: '', designation: '', date: '' } as Signature,
+    recommendedBy: { name: '', designation: '', date: '' } as Signature,
+    approvedBy: { name: '', designation: '', date: '' } as Signature,
   });
 
   const [isViewOnly, setIsViewOnly] = useState(false);
@@ -124,10 +125,10 @@ export const JinshiFirtaFaram: React.FC<JinshiFirtaFaramProps> = ({
   const handleReset = () => {
       setFormDetails({
         id: '', fiscalYear: currentFiscalYear, formNo: '1', date: '', status: 'Pending',
-        returnedBy: { name: currentUser.fullName, designation: currentUser.designation, date: '' },
-        preparedBy: { name: '', designation: '', date: '' },
-        recommendedBy: { name: '', designation: '', date: '' },
-        approvedBy: { name: '', designation: '', date: '' },
+        returnedBy: { name: currentUser.fullName, designation: currentUser.designation, date: '' } as Signature,
+        preparedBy: { name: '', designation: '', date: '' } as Signature,
+        recommendedBy: { name: '', designation: '', date: '' } as Signature,
+        approvedBy: { name: '', designation: '', date: '' } as Signature,
       });
       setItems([{ id: Date.now(), kharchaNikasaNo: '', codeNo: '', name: '', specification: '', unit: '', quantity: 0, rate: 0, totalAmount: 0, vatAmount: 0, grandTotal: 0, condition: '', remarks: '' }]);
       setIsViewOnly(false);
@@ -199,7 +200,9 @@ export const JinshiFirtaFaram: React.FC<JinshiFirtaFaramProps> = ({
                       {items.map((item) => (
                           <tr key={item.id}>
                               <td className="border p-2">
-                                  {isViewOnly ? item.name : <SearchableSelect options={returnableItemOptions} value={item.name} onSelect={(opt) => handleInventorySelect(item.id, opt)} />}
+                                  {isViewOnly ? item.name : 
+                                  // Fix: Added the required 'onChange' prop
+                                  <SearchableSelect options={returnableItemOptions} value={item.name} onChange={(val) => updateItem(item.id, 'name', val)} onSelect={(opt) => handleInventorySelect(item.id, opt)} />}
                               </td>
                               <td className="border p-2 text-center">{item.unit}</td>
                               <td className="border p-2">

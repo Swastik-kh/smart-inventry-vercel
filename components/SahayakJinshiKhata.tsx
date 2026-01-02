@@ -140,10 +140,12 @@ export const SahayakJinshiKhata: React.FC<SahayakJinshiKhataProps> = ({
                     सहायक जिन्सी खाता (व्यक्तिगत जिम्मेवारी)
                 </div>
                 <div className="w-full md:w-80">
+                    {/* Fix: Added the required 'onChange' prop */}
                     <SearchableSelect 
                         label="कर्मचारी/व्यक्ति छान्नुहोस्"
                         options={personOptions}
                         value={selectedPersonName}
+                        onChange={(val) => setSelectedPersonName(val)} 
                         onSelect={(opt) => setSelectedPersonName(opt.value)}
                         placeholder="नाम खोज्नुहोस्..."
                     />
