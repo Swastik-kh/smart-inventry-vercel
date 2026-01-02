@@ -206,15 +206,19 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
    * Logic: 
    * - Denominator: All doses scheduled for todayBs.
    * - Numerator: Today's scheduled doses that are status === 'Given'.
+   * - Includes progress percentage for UI display.
    */
   const rabiesDoseStats = useMemo(() => {
     const stats = {
         d0TotalScheduledToday: 0, 
         d0ReceivedToday: 0,      
+        d0Progress: 0,
         d3TotalScheduledToday: 0,
         d3ReceivedToday: 0,
+        d3Progress: 0,
         d7TotalScheduledToday: 0,
         d7ReceivedToday: 0,
+        d7Progress: 0,
     };
 
     let currentTodayBs = '';
@@ -250,6 +254,11 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
             }
         });
     });
+
+    stats.d0Progress = stats.d0TotalScheduledToday > 0 ? Math.round((stats.d0ReceivedToday / stats.d0TotalScheduledToday) * 100) : 0;
+    stats.d3Progress = stats.d3TotalScheduledToday > 0 ? Math.round((stats.d3ReceivedToday / stats.d3TotalScheduledToday) * 100) : 0;
+    stats.d7Progress = stats.d7TotalScheduledToday > 0 ? Math.round((stats.d7ReceivedToday / stats.d7TotalScheduledToday) * 100) : 0;
+
     return stats;
   }, [rabiesPatients, fixDate]);   // Ensure fixDate is a dependency
 
@@ -511,31 +520,53 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                         <span className="text-xs font-bold text-slate-600 font-nepali">आजको नयाँ दर्ता</span>
                         <span className="text-xl font-black text-slate-800">{rabiesTodayNew}</span>
                     </div>
+                    {/* NEW: Dose Completion Stats with Progress Bars */}
                     <div className="space-y-2 bg-orange-50 p-3 rounded-xl border border-orange-100">
                       <p className="text-xs font-bold text-orange-800 font-nepali mb-1">आजको खोप (Doses)</p>
                       
-                      <div className="flex items-center justify-between text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
-                          <span className="font-bold text-orange-700 font-nepali">D0 खोप:</span>
-                          <span className="font-black text-orange-600">
-                              <span className="text-base font-black text-orange-800">{rabiesDoseStats.d0ReceivedToday}</span>
-                              <span className="text-xs text-orange-600"> / {rabiesDoseStats.d0TotalScheduledToday}</span>
-                          </span>
+                      {/* D0 Dose */}
+                      <div className="flex flex-col gap-1 text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
+                          <div className="flex items-center justify-between">
+                              <span className="font-bold text-orange-700 font-nepali">D0 खोप:</span>
+                              <span className="font-black text-orange-600">
+                                  <span className="text-base font-black text-orange-800">{rabiesDoseStats.d0ReceivedToday}</span>
+                                  <span className="text-xs text-orange-600"> / {rabiesDoseStats.d0TotalScheduledToday}</span>
+                              </span>
+                          </div>
+                          <div className="w-full bg-orange-200 rounded-full h-1.5">
+                              <div className="bg-orange-600 h-1.5 rounded-full" style={{ width: `${rabiesDoseStats.d0Progress}%` }}></div>
+                          </div>
+                          <span className="text-right text-[10px] text-orange-500">{rabiesDoseStats.d0Progress}% Complete</span>
                       </div>
 
-                      <div className="flex items-center justify-between text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
-                          <span className="font-bold text-orange-700 font-nepali">D3 खोप:</span>
-                          <span className="font-black text-orange-600">
-                              <span className="text-base font-black text-orange-800">{rabiesDoseStats.d3ReceivedToday}</span>
-                              <span className="text-xs text-orange-600"> / {rabiesDoseStats.d3TotalScheduledToday}</span>
-                          </span>
+                      {/* D3 Dose */}
+                      <div className="flex flex-col gap-1 text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
+                          <div className="flex items-center justify-between">
+                              <span className="font-bold text-orange-700 font-nepali">D3 खोप:</span>
+                              <span className="font-black text-orange-600">
+                                  <span className="text-base font-black text-orange-800">{rabiesDoseStats.d3ReceivedToday}</span>
+                                  <span className="text-xs text-orange-600"> / {rabiesDoseStats.d3TotalScheduledToday}</span>
+                              </span>
+                          </div>
+                          <div className="w-full bg-orange-200 rounded-full h-1.5">
+                              <div className="bg-orange-600 h-1.5 rounded-full" style={{ width: `${rabiesDoseStats.d3Progress}%` }}></div>
+                          </div>
+                          <span className="text-right text-[10px] text-orange-500">{rabiesDoseStats.d3Progress}% Complete</span>
                       </div>
 
-                      <div className="flex items-center justify-between text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
-                          <span className="font-bold text-orange-700 font-nepali">D7 खोप:</span>
-                          <span className="font-black text-orange-600">
-                              <span className="text-base font-black text-orange-800">{rabiesDoseStats.d7ReceivedToday}</span>
-                              <span className="text-xs text-orange-600"> / {rabiesDoseStats.d7TotalScheduledToday}</span>
-                          </span>
+                      {/* D7 Dose */}
+                      <div className="flex flex-col gap-1 text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
+                          <div className="flex items-center justify-between">
+                              <span className="font-bold text-orange-700 font-nepali">D7 खोप:</span>
+                              <span className="font-black text-orange-600">
+                                  <span className="text-base font-black text-orange-800">{rabiesDoseStats.d7ReceivedToday}</span>
+                                  <span className="text-xs text-orange-600"> / {rabiesDoseStats.d7TotalScheduledToday}</span>
+                              </span>
+                          </div>
+                          <div className="w-full bg-orange-200 rounded-full h-1.5">
+                              <div className="bg-orange-600 h-1.5 rounded-full" style={{ width: `${rabiesDoseStats.d7Progress}%` }}></div>
+                          </div>
+                          <span className="text-right text-[10px] text-orange-500">{rabiesDoseStats.d7Progress}% Complete</span>
                       </div>
                     </div>
                 </div>
