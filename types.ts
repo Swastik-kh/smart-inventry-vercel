@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 
 export interface FiscalYear {
@@ -431,7 +432,7 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
 
 export interface DashboardProps {
   onLogout: () => void;
-  currentUser: User;
+  currentUser: User | null; // Fix: Allow currentUser to be null
   currentFiscalYear: string;
   users: User[];
   onAddUser: (user: User) => void;
