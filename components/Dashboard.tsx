@@ -570,7 +570,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                                 <p className="text-sm font-black text-indigo-700">{vaccineForecast.overall.vials05}</p>
                             </div>
                             <div className="bg-white p-1 rounded-lg border border-indigo-100">
-                                <p className="text-sm font-black text-indigo-700">1.0ml Vials</p>
+                                <p className="text-[9px] text-indigo-400 font-bold">1.0ml Vials</p>
+                                <p className="text-sm font-black text-indigo-700">{vaccineForecast.overall.vials10}</p>
                             </div>
                         </div>
                     </div>
@@ -865,7 +866,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                         <button onClick={() => setShowExpiryModal(false)} className="px-6 py-2 bg-slate-800 text-white rounded-lg text-sm font-bold shadow-lg shadow-slate-200 hover:bg-slate-900 transition-all">बन्द गर्नुहोस्</button>
                     </div>
                 </div>
-            )}
+            </div>
+        )}
       </div>
     </div>
   );
