@@ -69,12 +69,12 @@ export const GarbhawatiTDRegistration: React.FC<GarbhawatiTDRegistrationProps> =
     lmpAd: getTodayAd(),
     eddBs: '',
     eddAd: '',
-    td1DateBs: undefined,
-    td1DateAd: undefined,
-    td2DateBs: undefined,
-    td2DateAd: undefined,
-    tdBoosterDateBs: undefined,
-    tdBoosterDateAd: undefined,
+    td1DateBs: null, // Initialize as null
+    td1DateAd: null, // Initialize as null
+    td2DateBs: null, // Initialize as null
+    td2DateAd: null, // Initialize as null
+    tdBoosterDateBs: null, // Initialize as null
+    tdBoosterDateAd: null, // Initialize as null
     remarks: '',
   });
 
@@ -88,12 +88,12 @@ export const GarbhawatiTDRegistration: React.FC<GarbhawatiTDRegistrationProps> =
             lmpAd: getTodayAd(),
             eddBs: '', // Reset EDD for new entry
             eddAd: '',
-            td1DateBs: undefined,
-            td1DateAd: undefined,
-            td2DateBs: undefined,
-            td2DateAd: undefined,
-            tdBoosterDateBs: undefined,
-            tdBoosterDateAd: undefined,
+            td1DateBs: null, // Reset to null
+            td1DateAd: null, // Reset to null
+            td2DateBs: null, // Reset to null
+            td2DateAd: null, // Reset to null
+            tdBoosterDateBs: null, // Reset to null
+            tdBoosterDateAd: null, // Reset to null
         }));
     }
   }, [currentFiscalYear, patients, editingPatientId]);
@@ -151,8 +151,21 @@ export const GarbhawatiTDRegistration: React.FC<GarbhawatiTDRegistrationProps> =
     }
 
     setValidationError(null);
-    const patientToSave: GarbhawatiPatient = {
+
+    // Sanitize data before saving: convert undefined date fields to null
+    const sanitizedData = {
       ...formData,
+      td1DateBs: formData.td1DateBs || null,
+      td1DateAd: formData.td1DateAd || null,
+      td2DateBs: formData.td2DateBs || null,
+      td2DateAd: formData.td2DateAd || null,
+      tdBoosterDateBs: formData.tdBoosterDateBs || null,
+      tdBoosterDateAd: formData.tdBoosterDateAd || null,
+      remarks: formData.remarks || null, // Also sanitize remarks if it can be undefined
+    };
+
+    const patientToSave: GarbhawatiPatient = {
+      ...sanitizedData, // Use sanitized data
       id: editingPatientId || Date.now().toString(),
       fiscalYear: currentFiscalYear,
     };
@@ -169,7 +182,18 @@ export const GarbhawatiTDRegistration: React.FC<GarbhawatiTDRegistrationProps> =
 
   const handleEditPatient = (patient: GarbhawatiPatient) => {
     setEditingPatientId(patient.id);
-    setFormData({ ...patient });
+    // Ensure that when loading an existing patient, undefined values are converted to null
+    // to match the form's state initialization.
+    setFormData({ 
+        ...patient,
+        td1DateBs: patient.td1DateBs || null,
+        td1DateAd: patient.td1DateAd || null,
+        td2DateBs: patient.td2DateBs || null,
+        td2DateAd: patient.td2DateAd || null,
+        tdBoosterDateBs: patient.tdBoosterDateBs || null,
+        tdBoosterDateAd: patient.tdBoosterDateAd || null,
+        remarks: patient.remarks || null,
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -195,12 +219,12 @@ export const GarbhawatiTDRegistration: React.FC<GarbhawatiTDRegistrationProps> =
       lmpAd: getTodayAd(),
       eddBs: '',
       eddAd: '',
-      td1DateBs: undefined,
-      td1DateAd: undefined,
-      td2DateBs: undefined,
-      td2DateAd: undefined,
-      tdBoosterDateBs: undefined,
-      tdBoosterDateAd: undefined,
+      td1DateBs: null, // Reset to null
+      td1DateAd: null, // Reset to null
+      td2DateBs: null, // Reset to null
+      td2DateAd: null, // Reset to null
+      tdBoosterDateBs: null, // Reset to null
+      tdBoosterDateAd: null, // Reset to null
       remarks: '',
     }));
     setValidationError(null);

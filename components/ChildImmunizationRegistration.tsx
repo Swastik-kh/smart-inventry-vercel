@@ -27,7 +27,6 @@ const genderOptions: Option[] = [
 // Dates are relative to DOB (days)
 const NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE = [
     { name: 'BCG (जन्ममा)', relativeDays: 0 },
-    { name: 'OPV-0 (जन्ममा)', relativeDays: 0 },
     { name: 'DPT-HepB-Hib-1 (६ हप्ता)', relativeDays: 42 },
     { name: 'OPV-1 (६ हप्ता)', relativeDays: 42 },
     { name: 'PCV-1 (६ हप्ता)', relativeDays: 42 },
@@ -39,11 +38,10 @@ const NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE = [
     { name: 'OPV-3 (१४ हप्ता)', relativeDays: 98 },
     // Fix: Corrected PCV-2 relative days as per national schedule (10 weeks)
     { name: 'PCV-2 (१० हप्ता)', relativeDays: 70 }, 
-    { name: 'IPV (१४ हप्ता)', relativeDays: 98 },
+    { name: 'FIPV (१४ हप्ता)', relativeDays: 98 },
     { name: 'MR-1 (९ महिना)', relativeDays: 270 },
     { name: 'JE (९ महिना)', relativeDays: 270 }, // Japanese Encephalitis
     { name: 'PCV-3 (९ महिना)', relativeDays: 270 }, // Assuming 3rd PCV dose is at 9 months from the image's structure
-    { name: 'Vit. A (९ महिना)', relativeDays: 270 },
     { name: 'MR-2 (१५ महिना)', relativeDays: 450 },
     { name: 'Typhoid (१५ महिना)', relativeDays: 450 }, // ADDED: Typhoid as per image
     { name: 'HPV (१० वर्ष - किशोरी)', relativeDays: 3650 }, // ADDED: HPV for 10-year-old girls, placeholder date for auto-scheduling
