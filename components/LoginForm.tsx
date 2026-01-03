@@ -177,7 +177,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ users, onLoginSuccess, ini
             <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">
                 Smart Inventory Management System
             </p>
-            <div className="flex items-center justify-center gap-1.5 text-slate-400">
+            <div className="flex items-center gap-1.5 text-slate-400">
                 <Code size={12} />
                 <p className="text-[11px] font-medium italic">
                     Developed by: swastik khatiwada

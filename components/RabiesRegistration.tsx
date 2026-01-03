@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 /* Added AlertTriangle to the imports */
 import { Save, RotateCcw, Syringe, Calendar, FileDigit, User, Phone, MapPin, CalendarRange, Clock, CheckCircle2, Search, X, AlertCircle, Trash2, Pencil, Check, Info, AlertTriangle, Bone } from 'lucide-react';
@@ -458,7 +459,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                   </div>
                   <div>
                       <label className="text-xs font-bold text-indigo-500 uppercase tracking-wide">दर्ता नम्बर (Reg No)</label>
-                      <input value={formData.regNo} readOnly className="bg-transparent font-mono text-lg font-bold text-slate-800 outline-none w-full" />
+                      <input value={formData.regNo} readOnly className="bg-transparent font-mono text-lg font-bold text-slate-800 p-0 outline-none w-full" />
                   </div>
                   <div className="ml-auto text-right">
                       <label className="text-xs font-bold text-indigo-500 uppercase tracking-wide">आर्थिक वर्ष</label>
@@ -534,44 +535,45 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                                     <span className={`px-1 rounded font-bold border ${
                                         p.exposureCategory === 'Category III' ? 'bg-red-50 text-red-700 border-red-200' :
                                         p.exposureCategory === 'Category II' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                                        'bg-blue-50 text-blue-700 border-blue-100'
-                                    }`}>{p.exposureCategory}</span>
-                                    {p.bodyPart && <span className="text-[10px] bg-slate-100 px-1 rounded">({p.bodyPart})</span>}
+                                        'bg-blue-50 text-blue-700 border-blue-200'
+                                    }`}>
+                                      {p.exposureCategory}
+                                    </span>
                                   </div>
                               </td>
                               <td className="px-6 py-4">
-                                  <div className="flex items-center gap-2">
-                                      {p.schedule.map((dose, idx) => {
-                                          const isOverdue = dose.status === 'Pending' && dose.date < todayAd;
-                                          const isToday = dose.date === todayAd;
-                                          
+                                  <div className="flex flex-wrap gap-1">
+                                      {(p.schedule || []).map((dose, idx) => {
+                                          const isOverdue = dose.status === 'Pending' && new Date(dose.date) < new Date(todayAd);
                                           return (
-                                              <button key={idx} type="button" onClick={() => handleDoseClick(p, idx, dose)} className={`flex flex-col items-center justify-center w-12 h-14 rounded-lg border transition-all ${
-                                                      dose.status === 'Given' ? 'bg-green-100 border-green-300 text-green-800 shadow-sm' :
-                                                      isToday ? 'bg-orange-50 border-orange-300 text-orange-700 animate-pulse ring-2 ring-orange-100' :
-                                                      isOverdue ? 'bg-red-100 border-red-400 text-red-800 shadow-inner font-bold ring-1 ring-red-200' :
-                                                      'bg-slate-50 border-slate-200 text-slate-400'
-                                                  }`}
+                                              <button
+                                                  key={idx}
+                                                  type="button"
+                                                  onClick={() => handleDoseClick(p, idx, dose)}
+                                                  disabled={dose.status === 'Given' && !isAdmin}
+                                                  className={`
+                                                      px-2 py-1 rounded text-[10px] font-bold border
+                                                      ${dose.status === 'Given'
+                                                          ? 'bg-green-100 text-green-700 border-green-200'
+                                                          : isOverdue
+                                                              ? 'bg-red-100 text-red-700 border-red-200 animate-pulse'
+                                                              : 'bg-blue-50 text-blue-700 border-blue-200'
+                                                      }
+                                                      ${(dose.status === 'Given' && !isAdmin) ? 'opacity-70 cursor-not-allowed' : ''}
+                                                  `}
                                               >
-                                                  <span className="text-[10px] font-bold uppercase">D{dose.day}</span>
-                                                  {dose.status === 'Given' ? <CheckCircle2 size={16} /> : (isOverdue ? <AlertTriangle size={16} className="animate-bounce text-red-600" /> : <Clock size={16} />)}
-                                                  <span className="text-[9px] mt-0.5 font-nepali">{formatAdDateToBsDisplay(dose.dateBs || dose.date)}</span>
+                                                  D{dose.day} ({formatAdDateToBsDisplay(dose.date)})
+                                                  {dose.status === 'Given' && <Check size={10} className="inline-block ml-1" />}
                                               </button>
                                           );
                                       })}
                                   </div>
                               </td>
                               <td className="px-6 py-4 text-right">
-                                  <div className="flex justify-end gap-1">
+                                  <div className="flex justify-end gap-2">
+                                      <button onClick={() => handleEditPatient(p)} className="text-indigo-400 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors" title="Edit Patient"><Pencil size={18}/></button>
                                       {isAdmin && (
-                                          <button onClick={() => handleEditPatient(p)} className="text-indigo-400 hover:text-indigo-600 p-2 hover:bg-indigo-50 rounded-full transition-all" title="बिरामी विवरण सच्याउनुहोस्">
-                                              <Pencil size={18} />
-                                          </button>
-                                      )}
-                                      {isAdmin && (
-                                          <button onClick={() => handleDeleteClick(p.id, p.name)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-all" title="बिरामी विवरण हटाउनुहोस्">
-                                              <Trash2 size={18} />
-                                          </button>
+                                          <button onClick={() => handleDeleteClick(p.id, p.name)} className="text-red-400 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors" title="Delete Patient"><Trash2 size={18}/></button>
                                       )}
                                   </div>
                               </td>
@@ -583,6 +585,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
           </div>
       </div>
 
+      {/* Dose Update Modal */}
       {selectedDoseInfo && (
           <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-12 sm:pt-24">
               <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedDoseInfo(null)}></div>
@@ -590,63 +593,44 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                   <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50/50">
                       <div className="flex items-center gap-2">
                           <Syringe size={20} className="text-indigo-600"/>
-                          <h3 className="font-bold text-slate-800 font-nepali text-sm">खोप विवरण (Update Status)</h3>
+                          <h3 className="font-bold text-slate-800 font-nepali text-sm">खोप स्थिति अपडेट (Update Dose Status)</h3>
                       </div>
                       <button type="button" onClick={() => setSelectedDoseInfo(null)} className="p-2 hover:bg-white/50 rounded-full transition-colors"><X size={20} className="text-slate-400"/></button>
                   </div>
                   <div className="p-6 space-y-4">
                       <div className="text-center">
                           <h4 className="text-lg font-bold text-slate-800">{selectedDoseInfo.patient.name}</h4>
-                          <div className="flex flex-col items-center gap-1 mt-2">
-                            <span className="text-[10px] font-bold bg-slate-100 px-2 py-1 rounded-full uppercase">{selectedDoseInfo.patient.exposureCategory}</span>
-                            <span className={`text-xs font-bold px-3 py-1 rounded-lg border ${
-                                (selectedDoseInfo.dose.status === 'Pending' && selectedDoseInfo.dose.date < todayAd) 
-                                ? 'bg-red-50 text-red-700 border-red-100' 
-                                : 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                            }`}>
-                                तालिका (Scheduled): {convertAdToBsFull(selectedDoseInfo.dose.date)}
-                            </span>
-                          </div>
+                          <p className="text-sm text-slate-600">खोप: <span className="font-bold text-indigo-700">D{selectedDoseInfo.dose.day}</span></p>
+                          <p className="text-xs text-slate-500">निर्धारित मिति (Scheduled): {convertAdToBsFull(selectedDoseInfo.dose.date)}</p>
                       </div>
                       
-                      <div className="space-y-3">
-                          <NepaliDatePicker 
-                            label="खोप लगाएको मिति (Given Date - BS)" 
-                            value={modalDateBs} 
-                            onChange={setModalDateBs} 
-                            /* D0 dose allows selection before scheduled date for correction */
-                            minDate={isAdmin || selectedDoseInfo.dose.day === 0 ? undefined : convertAdToBsFull(selectedDoseInfo.dose.date)}
-                            popupAlign="right"
-                            disabled={selectedDoseInfo.dose.status === 'Given'}
-                          />
-                          
-                          {selectedDoseInfo.dose.status === 'Given' && (
-                              <div className="bg-green-50 border border-green-100 p-3 rounded-lg text-center font-nepali text-green-700">
-                                  <CheckCircle2 size={20} className="mx-auto mb-1" />
-                                  <span className="font-bold">खोप लगाइसकियो (Locked)</span>
-                                  {isAdmin && <p className="text-[10px] text-slate-500 mt-1 italic">एकपटक 'Given' भएपछि मिति सच्याउन मिल्दैन।</p>}
-                              </div>
-                          )}
+                      {doseUpdateError && (
+                          <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-r-xl text-red-700 text-xs flex items-start gap-2 animate-pulse">
+                              <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                              <span>{doseUpdateError}</span>
+                          </div>
+                      )}
 
-                          {selectedDoseInfo.dose.status !== 'Given' && selectedDoseInfo.dose.date < todayAd && (
-                              <div className="flex items-start gap-2 text-[11px] text-red-600 font-bold bg-red-50 p-2 rounded border border-red-100">
-                                  <AlertTriangle size={14} className="shrink-0" />
-                                  <span>यो खोप लगाउन ढिला भइसकेको छ (Overdue)!</span>
-                              </div>
-                          )}
-
-                          {doseUpdateError && (
-                            <div className="flex items-start gap-2 text-[11px] text-red-600 font-bold bg-red-50 p-3 rounded-lg border border-red-100 animate-pulse">
-                              <AlertTriangle size={18} className="shrink-0" />
-                              <span className="font-nepali leading-snug">{doseUpdateError}</span>
-                            </div>
-                          )}
-                      </div>
+                      <NepaliDatePicker 
+                          label="खोप दिएको मिति (Given Date - BS)" 
+                          value={modalDateBs} 
+                          onChange={setModalDateBs} 
+                          required
+                          disabled={selectedDoseInfo.dose.status === 'Given' && !isAdmin}
+                      />
+                      
+                      {selectedDoseInfo.dose.status === 'Given' && (
+                          <div className="bg-green-50 border border-green-100 p-3 rounded-lg text-center font-nepali text-green-700">
+                              <CheckCircle2 size={20} className="mx-auto mb-1" />
+                              <span className="font-bold">खोप लगाइसकियो (Locked)</span>
+                              {isAdmin && <p className="text-xs mt-1">एडमिनले मात्र सम्पादन गर्न सक्छ (Only Admin can edit)</p>}
+                          </div>
+                      )}
                   </div>
                   <div className="p-4 border-t border-slate-100 flex gap-3 bg-slate-50">
                       <button type="button" onClick={() => setSelectedDoseInfo(null)} className="flex-1 py-2 text-slate-600 font-medium font-nepali hover:bg-slate-200 rounded-lg transition-colors text-sm">बन्द (Close)</button>
-                      {selectedDoseInfo.dose.status !== 'Given' && (
-                          <button type="button" onClick={confirmDoseUpdate} className="flex-1 py-2 bg-green-600 text-white rounded-lg font-medium shadow-sm font-nepali hover:bg-green-700 transition-all active:scale-95 text-sm flex items-center justify-center gap-2">
+                      {(selectedDoseInfo.dose.status !== 'Given' || isAdmin) && (
+                          <button type="button" onClick={confirmDoseUpdate} className="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-medium shadow-sm font-nepali hover:bg-indigo-700 transition-all active:scale-95 text-sm flex items-center justify-center gap-2">
                               <Check size={16} />
                               सुरक्षित गर्नुहोस्
                           </button>

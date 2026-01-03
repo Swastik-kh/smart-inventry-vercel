@@ -4,10 +4,10 @@ import {
   ChevronDown, ChevronRight, Syringe, Activity, 
   ClipboardList, FileSpreadsheet, FilePlus, ShoppingCart, FileOutput, 
   BookOpen, Book, Archive, RotateCcw, Wrench, Scroll, BarChart3,
-  Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, ArrowRightCircle, AlertTriangle, Pill, Scissors, Clock, Calculator, Trash2, UsersRound, CalendarCheck, UserPlus, Droplets, Info, TrendingUp, AlertOctagon, Timer, Printer, Eye
+  Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, ArrowRightCircle, AlertTriangle, Pill, Scissors, Clock, Calculator, Trash2, UsersRound, CalendarCheck, UserPlus, Droplets, Info, TrendingUp, AlertOctagon, Timer, Printer, Eye, Baby
 } from 'lucide-react';
-import { APP_NAME, ORG_NAME, FISCAL_YEARS } from '../constants';
-import { DashboardProps, PurchaseOrderEntry, InventoryItem, DakhilaPratibedanEntry } from '../types'; 
+import { APP_NAME, FISCAL_YEARS } from '../constants';
+import { DashboardProps, PurchaseOrderEntry, InventoryItem, DakhilaPratibedanEntry, GarbhawatiPatient, ChildImmunizationRecord } from '../types'; 
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -31,6 +31,8 @@ import { DatabaseManagement } from './DatabaseManagement';
 import { DhuliyaunaFaram } from './DhuliyaunaFaram';
 import { LogBook } from './LogBook';
 import { GeneralSetting } from './GeneralSetting';
+// NEW: Import the new tabbed component
+import { VaccinationServiceTabs } from './VaccinationServiceTabs';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -62,10 +64,18 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   onAddRabiesPatient,
   onUpdateRabiesPatient,
   onDeletePatient,
-  tbPatients, // Added tbPatients prop
-  onAddTbPatient, // Added onAddTbPatient prop
-  onUpdateTbPatient, // Added onUpdateTbPatient prop
-  onDeleteTbPatient, // Added onDeleteTbPatient prop
+  tbPatients, 
+  onAddTbPatient, 
+  onUpdateTbPatient, 
+  onDeleteTbPatient, 
+  garbhawatiPatients, 
+  onAddGarbhawatiPatient, 
+  onUpdateGarbhawatiPatient, 
+  onDeleteGarbhawatiPatient, 
+  bachhaImmunizationRecords, 
+  onAddBachhaImmunizationRecord, 
+  onUpdateBachhaImmunizationRecord, 
+  onDeleteBachhaImmunizationRecord, 
   firms,
   onAddFirm,
   quotations,
@@ -85,7 +95,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   dakhilaReports,
   onSaveDakhilaReport,
   returnEntries,
-  onSaveReturnEntry, // Added onSaveReturnEntry prop
+  onSaveReturnEntry, 
   marmatEntries,
   onSaveMarmatEntry,
   dhuliyaunaEntries,
@@ -103,14 +113,10 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   const [pendingPoDakhila, setPendingPoDakhila] = useState<PurchaseOrderEntry | null>(null);
   
-  // Renamed: This now controls the single detailed report modal
   const [showDetailedReportModal, setShowDetailedReportModal] = useState(false); 
-  // New: Controls the list of notifications popup
   const [showNotificationListModal, setShowNotificationListModal] = useState(false); 
-  // New: Holds the data for the detailed report modal
   const [selectedReportForDetailedView, setSelectedReportForDetailedView] = useState<DakhilaPratibedanEntry | null>(null); 
   
-  // Initialize lastSeenNotificationId from localStorage
   const [lastSeenNotificationId, setLastSeenNotificationId] = useState<string | null>(() => {
     try {
       return localStorage.getItem(LAST_SEEN_NOTIFICATION_KEY);
@@ -120,7 +126,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     }
   });
 
-  // Effect to persist lastSeenNotificationId to localStorage whenever it changes
   useEffect(() => {
     try {
       if (lastSeenNotificationId !== null) {
@@ -133,27 +138,22 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     }
   }, [lastSeenNotificationId]);
   
-  // New state to hold the ID of the Dakhila Report to view directly
   const [initialDakhilaReportIdToView, setInitialDakhilaReportIdToView] = useState<string | null>(null);
 
-  // Expiry List States
   const [showExpiryModal, setShowExpiryModal] = useState(false);
   const [expiryModalType, setExpiryModalType] = useState<'expired' | 'near-expiry'>('expired');
 
-  // Statistics Calculations
   const todayAd = useMemo(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   }, []);
 
-  // Helper to convert BS date string (YYYY-MM-DD) to AD date string (YYYY-MM-DD)
   const convertBsToAdFull = useCallback((bsDateStr: string): string => {
     if (!bsDateStr) return '';
     try {
         const parts = bsDateStr.split(/[-/]/);
         if (parts.length === 3) {
             const [y, m, d] = parts.map(Number);
-            // NepaliDate constructor expects 1-indexed month
             const nd = new NepaliDate(y, m, d);
             const adDate = nd.toJsDate();
             const adYear = adDate.getFullYear();
@@ -187,27 +187,15 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   const rabiesTodayNew = useMemo(() => rabiesPatients.filter(p => p.regDateAd === todayAd).length, [rabiesPatients, todayAd]);
   
-  /**
-   * Defines a robust date normalization function as per user's request.
-   * Ensures YYYY-MM-DD format with leading zeros for month and day.
-   * Handles both '-' and '/' as separators.
-   */
   const fixDate = useCallback((d: string) => {
       if (!d) return '';
       const parts = d.split(/[-/]/).map(p => p.padStart(2, '0'));
       if (parts.length === 3) {
           return `${parts[0]}-${parts[1]}-${parts[2]}`;
       }
-      return d; // Return original if format is unexpected
+      return d; 
   }, []);
 
-  /**
-   * REWRITTEN: Detailed Rabies Dose Stats for D0, D3, D7 for today.
-   * Logic: 
-   * - Denominator: All doses scheduled for todayBs.
-   * - Numerator: Today's scheduled doses that are status === 'Given'.
-   * - Includes progress percentage for UI display.
-   */
   const rabiesDoseStats = useMemo(() => {
     const stats = {
         d0TotalScheduledToday: 0, 
@@ -232,14 +220,13 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     const fixedTodayBs = fixDate(currentTodayBs);
 
     rabiesPatients.forEach(patient => { 
-        // Using 'patient.schedule' as per existing interface (types.ts)
         const schedule = patient.schedule || []; 
 
         schedule.forEach(dose => {
             const fixedDoseDate = fixDate(dose.dateBs || '');
 
             if (fixedDoseDate === fixedTodayBs) {
-                const doseDay = dose.day; // Checking for 0, 3, 7
+                const doseDay = dose.day; 
 
                 if (doseDay === 0) {
                     stats.d0TotalScheduledToday++;
@@ -260,14 +247,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     stats.d7Progress = stats.d7TotalScheduledToday > 0 ? Math.round((stats.d7ReceivedToday / stats.d7TotalScheduledToday) * 100) : 0;
 
     return stats;
-  }, [rabiesPatients, fixDate]);   // Ensure fixDate is a dependency
+  }, [rabiesPatients, fixDate]);   
 
-
-  /**
-   * REWRITTEN: rabiesRemainingToday now sums specific doses pending today (BS) - used for the card.
-   * Applies robust `fixDate` normalization.
-   * Includes null/undefined checks for `patient.schedule`.
-   */
   const rabiesRemainingToday = useMemo(() => {
       let count = 0;
       
@@ -281,48 +262,42 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       const fixedTodayBs = fixDate(currentTodayBs);
 
       rabiesPatients.forEach(patient => {
-          // Using 'patient.schedule' as per existing data structure
           const schedule = patient.schedule || [];
           schedule.forEach(dose => {
               const fixedDoseDate = fixDate(dose.dateBs || '');
-              // IMPORTANT: Using 'dose.day' property
               if (fixedDoseDate === fixedTodayBs && dose.status === 'Pending' && (dose.day === 0 || dose.day === 3 || dose.day === 7)) {
                   count++;
               }
           });
       });
       return count;
-  }, [rabiesPatients, fixDate]); // Depend on rabiesPatients and fixDate
+  }, [rabiesPatients, fixDate]); 
 
   const inventoryTotalCount = useMemo(() => inventoryItems.filter(i => i.currentQuantity > 0).length, [inventoryItems]);
   const magFormsPendingCount = useMemo(() => magForms.filter(f => f.status === 'Pending').length, [magForms]);
   
-  // UPDATED: Now points to the latest DakhilaPratibedanEntry for BADGE only
   const latestDakhilaReport = useMemo(() => {
       if (dakhilaReports.length === 0) return null;
       const sortedReports = dakhilaReports
           .filter(r => r.fiscalYear === currentFiscalYear && r.status === 'Final')
-          .sort((a, b) => b.id.localeCompare(a.id)); // Sort by ID (which is timestamp-based)
+          .sort((a, b) => b.id.localeCompare(a.id)); 
       return sortedReports.length > 0 ? sortedReports[0] : null;
   }, [dakhilaReports, currentFiscalYear]);
 
-  // NEW: Last 5 Dakhila reports for the list modal
   const lastFiveDakhilaReports = useMemo(() => {
       if (dakhilaReports.length === 0) return [];
       return dakhilaReports
           .filter(r => r.fiscalYear === currentFiscalYear && r.status === 'Final')
-          .sort((a, b) => b.id.localeCompare(a.id)) // Sort by ID (newest first)
-          .slice(0, 5); // Take the last 5
+          .sort((a, b) => b.id.localeCompare(a.id)) 
+          .slice(0, 5); 
   }, [dakhilaReports, currentFiscalYear]);
 
 
   const vaccineForecast = useMemo(() => {
       const mlPerDose = 0.2;
-      // Use total scheduled doses for today
       const todayScheduledDoses = rabiesDoseStats.d0TotalScheduledToday + rabiesDoseStats.d3TotalScheduledToday + rabiesDoseStats.d7TotalScheduledToday;
       const todayMl = todayScheduledDoses * mlPerDose;
       
-      // FIX: Removed the extra ', 0' at the end of the reduce function
       const totalPendingDosesCount = rabiesPatients.reduce((acc, p) => acc + (p.schedule ? p.schedule.filter(d => d.status === 'Pending').length : 0), 0); 
       const totalMl = totalPendingDosesCount * mlPerDose;
       return {
@@ -331,16 +306,13 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       };
   }, [rabiesDoseStats, rabiesPatients]);
 
-  // Fix: Add null check for currentUser
   const hasAccess = (menuId: string) => {
-      if (!currentUser) return false; // If currentUser is null, no access
+      if (!currentUser) return false; 
       if (currentUser.role === 'SUPER_ADMIN') return true;
       return currentUser.allowedMenus?.includes(menuId);
   };
 
   const handleNotificationClick = () => {
-      // Removed the line `setLastSeenNotificationId(latestDakhilaReport.id);`
-      // The badge should persist until a specific notification is clicked from the list.
       setShowNotificationListModal(true);
   };
 
@@ -364,7 +336,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   const pendingStockRequestsCount = stockEntryRequests.filter(r => r.status === 'Pending').length;
   const magFaramBadgeCount = useMemo(() => {
-      // Fix: Add null check for currentUser
       if (!currentUser) return 0;
       if (currentUser.role === 'STOREKEEPER') return magForms.filter(f => f.status === 'Pending').length;
       if (['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role)) return magForms.filter(f => f.status === 'Verified').length;
@@ -372,7 +343,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   }, [magForms, currentUser]);
 
   const kharidAdeshBadgeCount = useMemo(() => {
-      // Fix: Add null check for currentUser
       if (!currentUser) return 0;
       if (!purchaseOrders) return 0;
       const isStoreKeeper = currentUser.role === 'STOREKEEPER';
@@ -388,7 +358,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   }, [purchaseOrders, currentUser]);
 
   const nikashaPratibedanBadgeCount = useMemo(() => {
-    // Fix: Add null check for currentUser
     if (!currentUser) return 0;
     if (!issueReports) return 0;
     const isStoreKeeper = currentUser.role === 'STOREKEEPER';
@@ -402,7 +371,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   }, [issueReports, currentUser]);
 
   const dakhilaPratibedanBadgeCount = useMemo(() => {
-    // Fix: Add null check for currentUser
     if (!currentUser) return 0;
     if (!stockEntryRequests) return 0;
     const isApproverRole = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
@@ -412,12 +380,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     return 0;
   }, [stockEntryRequests, currentUser]);
 
-  // UPDATED: JinshiFirta Badge Count
   const jinshiFirtaBadgeCount = useMemo(() => {
-      // Fix: Add null check for currentUser
       if (!currentUser) return 0;
       if (!returnEntries) return 0;
-      // Storekeeper / Admin / Approval see pending for verification/approval
       const isApproverOrStorekeeper = ['STOREKEEPER', 'ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
       if (isApproverOrStorekeeper) {
           return returnEntries.filter(entry => entry.status === 'Pending').length;
@@ -426,7 +391,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   }, [returnEntries, currentUser]);
 
   const marmatAdeshBadgeCount = useMemo(() => {
-      // Fix: Add null check for currentUser
       if (!currentUser) return 0;
       if (!marmatEntries) return 0;
       const isApproverRole = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
@@ -437,7 +401,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   }, [marmatEntries, currentUser]);
 
   const dhuliyaunaFaramBadgeCount = useMemo(() => {
-      // Fix: Add null check for currentUser
       if (!currentUser) return 0;
       if (!dhuliyaunaEntries) return 0;
       const isApproverRole = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
@@ -447,7 +410,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       return 0;
   }, [dhuliyaunaEntries, currentUser]);
 
-
+  // UPDATED: allMenuItems structure to make 'khop_sewa' directly render the tabbed view
   const allMenuItems: MenuItem[] = [
     { id: 'dashboard', label: 'ड्यासबोर्ड (Dashboard)', icon: <LayoutDashboard size={20} /> },
     { 
@@ -456,7 +419,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       icon: <Stethoscope size={20} />, 
       subItems: [
         { id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग (TB/Leprosy)', icon: <Activity size={16} /> }, 
-        { id: 'khop_sewa', label: 'खोप सेवा (Vaccination Service)', icon: <Pill size={16} /> }, // NEW SUB-MENU
+        { id: 'khop_sewa', label: 'खोप सेवा (Vaccination Service)', icon: <Baby size={16} /> }, // Now a direct menu item for tabbed view
         { id: 'rabies', label: 'रेबिज़ खोप क्लिनिक (Rabies Vaccine)', icon: <Syringe size={16} /> }
       ] 
     },
@@ -466,45 +429,53 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   ];
 
   const menuItems = useMemo(() => {
-    // Fix: Add null check for currentUser
-    if (!currentUser) return []; // Return empty if no user logged in
+    if (!currentUser) return []; 
     const isCurrentUserSuperAdmin = currentUser.role === 'SUPER_ADMIN';
     const allowedMenus = new Set(currentUser.allowedMenus || []); 
 
-    return allMenuItems.reduce<MenuItem[]>((acc, item) => {
-        if (isCurrentUserSuperAdmin) {
-            acc.push(item);
+    const filterMenuItems = (items: MenuItem[]): MenuItem[] => {
+        return items.reduce<MenuItem[]>((acc, item) => {
+            if (isCurrentUserSuperAdmin) {
+                acc.push(item);
+                return acc;
+            }
+
+            if (item.id === 'dashboard') {
+                acc.push(item);
+                return acc;
+            }
+            
+            let filteredSubItems: MenuItem[] | undefined = undefined;
+            if (item.subItems) {
+                filteredSubItems = filterMenuItems(item.subItems);
+            }
+
+            const shouldIncludeParent = allowedMenus.has(item.id) || (filteredSubItems && filteredSubItems.length > 0) || item.id === 'change_password';
+
+            if (shouldIncludeParent) {
+                acc.push({ ...item, subItems: filteredSubItems });
+            }
+            
             return acc;
-        }
+        }, []);
+    };
 
-        if (item.id === 'dashboard') {
-            acc.push(item);
-            return acc;
-        }
-
-        const filteredSubItems = item.subItems?.filter(subItem => {
-            return subItem.id === 'change_password' || allowedMenus.has(subItem.id);
-        }) || [];
-
-        const shouldIncludeParent = allowedMenus.has(item.id) || filteredSubItems.length > 0;
-
-        if (shouldIncludeParent) {
-            acc.push({ ...item, subItems: filteredSubItems });
-        }
-        
-        return acc;
-    }, []);
+    return filterMenuItems(allMenuItems);
   }, [currentUser, allMenuItems]);
 
   const handleMenuClick = (item: MenuItem) => {
-    if (item.subItems) setExpandedMenu(expandedMenu === item.id ? null : item.id);
-    else { setActiveItem(item.id); setIsSidebarOpen(false); }
+    // If it's a sub-menu parent, expand/collapse
+    if (item.subItems) {
+        setExpandedMenu(expandedMenu === item.id ? null : item.id);
+    } else { 
+        setActiveItem(item.id); 
+        setIsSidebarOpen(false); 
+    }
   };
 
   const handleSubItemClick = (subItemId: string) => { setActiveItem(subItemId); setIsSidebarOpen(false); };
 
   const renderContent = () => {
-    // Fix: Render nothing if currentUser is null, as many sub-components depend on it.
     if (!currentUser) return null;
 
     switch (activeItem) {
@@ -640,7 +611,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             {/* NEW CARD FOR RABIES PENDING DOSES */}
              <div onClick={() => handleDashboardAction('rabies')} className={`bg-white p-6 rounded-2xl border shadow-sm hover:shadow-lg transition-all cursor-pointer group active:scale-[0.98] ${rabiesRemainingToday > 0 ? 'bg-green-50 border-green-200' : 'border-slate-200'}`}>
                 <div className="flex items-center justify-between mb-4">
                     <div className={`p-3 rounded-xl shadow-inner ${rabiesRemainingToday > 0 ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
@@ -689,13 +659,19 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         </div> 
       ); 
 
-      // All other cases return a component and are already correctly self-closing.
+      // UPDATED: Render the new VaccinationServiceTabs component
       case 'khop_sewa': return (
-        <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500 animate-in fade-in zoom-in-95">
-          <Pill size={48} className="text-primary-400 mb-4" />
-          <h3 className="text-xl font-bold text-slate-700 font-nepali mb-2">खोप सेवा (Vaccination Service)</h3>
-          <p className="text-sm text-slate-500">यस खण्डमा अन्य खोप सेवाहरू थपिनेछन्।</p>
-        </div>
+        <VaccinationServiceTabs
+          currentFiscalYear={currentFiscalYear}
+          garbhawatiPatients={garbhawatiPatients}
+          onAddGarbhawatiPatient={onAddGarbhawatiPatient}
+          onUpdateGarbhawatiPatient={onUpdateGarbhawatiPatient}
+          onDeleteGarbhawatiPatient={onDeleteGarbhawatiPatient}
+          bachhaImmunizationRecords={bachhaImmunizationRecords}
+          onAddBachhaImmunizationRecord={onAddBachhaImmunizationRecord}
+          onUpdateBachhaImmunizationRecord={onUpdateBachhaImmunizationRecord}
+          onDeleteBachhaImmunizationRecord={onDeleteBachhaImmunizationRecord}
+        />
       );
       case 'user_management': return <UserManagement currentUser={currentUser} users={users} onAddUser={onAddUser} onUpdateUser={onUpdateUser} onDeleteUser={onDeleteUser} />;
       case 'change_password': return <ChangePassword currentUser={currentUser} users={users} onChangePassword={onChangePassword} />;
@@ -744,7 +720,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       {isSidebarOpen && <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden no-print" onClick={() => setIsSidebarOpen(false)} />}
-      <aside className={`fixed md:relative z-50 h-full bg-slate-900 text-white flex flex-col transition-all duration-300 no-print overflow-hidden ${isSidebarOpen ? 'w-64' : 'w-0 md:w-0'}`}><div className="p-6 border-b border-slate-800 flex items-center gap-3 bg-slate-950 shrink-0"><div className="bg-primary-600 p-2 rounded-lg"><Activity size={20} className="text-white" /></div><div className="whitespace-nowrap"><h2 className="font-nepali font-bold text-lg">{APP_NAME}</h2><p className="text-xs text-slate-400 font-nepali truncate">{currentUser?.organizationName || ORG_NAME}</p></div></div><nav className="flex-1 p-4 space-y-2 overflow-y-auto">{menuItems.map((item) => (<div key={item.id} className="w-full"><button onClick={() => handleMenuClick(item)} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${activeItem === item.id ? 'bg-primary-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}><div className="flex items-center gap-3"><div className="shrink-0">{item.icon}</div><span className="font-medium font-nepali text-left truncate">{item.label}</span></div>{item.subItems && <div className="text-slate-500 shrink-0">{expandedMenu === item.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</div>}</button>{item.subItems && expandedMenu === item.id && (<div className="mt-1 ml-4 pl-3 border-l border-slate-700 space-y-1">{item.subItems.map((subItem) => (<button key={subItem.id} onClick={() => handleSubItemClick(subItem.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm transition-colors ${activeItem === subItem.id ? 'bg-slate-800 text-primary-300 font-bold' : 'text-slate-400 hover:text-slate-200'}`}><div className="flex items-center gap-2"><div className="shrink-0">{subItem.icon}</div><span className="font-nepali text-left truncate">{subItem.label}</span></div>{subItem.badgeCount !== undefined && subItem.badgeCount > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 rounded-full shrink-0">{subItem.badgeCount}</span>}</button>))}</div>)}</div>))}</nav><div className="p-4 border-t border-slate-800 bg-slate-950 shrink-0"><button onClick={onLogout} className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 w-full rounded-xl transition-all whitespace-nowrap"><LogOut size={18} /><span>लगआउट</span></button></div></aside>
+      <aside className={`fixed md:relative z-50 h-full bg-slate-900 text-white flex flex-col transition-all duration-300 no-print overflow-hidden ${isSidebarOpen ? 'w-64' : 'w-0 md:w-0'}`}><div className="p-6 border-b border-slate-800 flex items-center gap-3 bg-slate-950 shrink-0"><div className="bg-primary-600 p-2 rounded-lg"><Activity size={20} className="text-white" /></div><div className="whitespace-nowrap"><h2 className="font-nepali font-bold text-lg">{APP_NAME}</h2><p className="text-xs text-slate-400 font-nepali truncate">{currentUser?.organizationName || 'Smart Inventory HQ'}</p></div></div><nav className="flex-1 p-4 space-y-2 overflow-y-auto">{menuItems.map((item) => (<div key={item.id} className="w-full"><button onClick={() => handleMenuClick(item)} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${activeItem === item.id ? 'bg-primary-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}><div className="flex items-center gap-3"><div className="shrink-0">{item.icon}</div><span className="font-medium font-nepali text-left truncate">{item.label}</span></div>{item.subItems && <div className="text-slate-500 shrink-0">{expandedMenu === item.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</div>}</button>{item.subItems && expandedMenu === item.id && (<div className="mt-1 ml-4 pl-3 border-l border-slate-700 space-y-1">{item.subItems.map((subItem) => (<button key={subItem.id} onClick={() => handleSubItemClick(subItem.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm transition-colors ${activeItem === subItem.id ? 'bg-slate-800 text-primary-300 font-bold' : 'text-slate-400 hover:text-slate-200'}`}><div className="flex items-center gap-2"><div className="shrink-0">{subItem.icon}</div><span className="font-nepali text-left truncate">{subItem.label}</span></div>{subItem.badgeCount !== undefined && subItem.badgeCount > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 rounded-full shrink-0">{subItem.badgeCount}</span>}</button>))}</div>)}</div>))}</nav><div className="p-4 border-t border-slate-800 bg-slate-950 shrink-0"><button onClick={onLogout} className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 w-full rounded-xl transition-all whitespace-nowrap"><LogOut size={18} /><span>लगआउट</span></button></div></aside>
 
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
         <header className="bg-white border-b p-4 flex md:hidden items-center justify-between z-10 no-print"><div className="flex items-center gap-3"><button onClick={() => setIsSidebarOpen(true)} className="bg-primary-600 p-1.5 rounded-md shadow-md active:scale-95 transition-transform"><Menu size={18} className="text-white" /></button><span className="font-bold text-slate-700 font-nepali truncate">{APP_NAME}</span></div><div className="flex items-center gap-4">{latestDakhilaReport && <button onClick={handleNotificationClick} className="relative p-1 text-slate-600"><Bell size={20} />{latestDakhilaReport.id > (lastSeenNotificationId || '') && <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>}</button>}<button onClick={onLogout} className="text-slate-500"><LogOut size={20} /></button></div></header>
@@ -771,7 +747,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                             <p className="text-slate-500 italic font-nepali">कुनै नयाँ दाखिला रिपोर्ट भेटिएन।</p>
                         ) : (
                             lastFiveDakhilaReports.map(report => {
-                                // Assuming IDs are sortable strings, compare to check if unseen
                                 const isUnseen = report.id > (lastSeenNotificationId || ''); 
                                 return (
                                     <div 
@@ -791,7 +766,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                                         </div>
                                         <button 
                                             onClick={() => {
-                                                setLastSeenNotificationId(report.id); // Mark this report as seen
+                                                setLastSeenNotificationId(report.id); 
                                                 setSelectedReportForDetailedView(report);
                                                 setShowNotificationListModal(false);
                                                 setShowDetailedReportModal(true);
@@ -842,7 +817,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                                     <Package size={16} className="text-indigo-600"/> दाखिला गरिएका सामानहरू (Items)
                                 </h4>
                                 <ul className="space-y-2 text-xs">
-                                    {selectedReportForDetailedView.items.slice(0, 3).map((item, idx) => ( // Show first 3 items for brevity
+                                    {selectedReportForDetailedView.items.slice(0, 3).map((item, idx) => ( 
                                         <li key={idx} className="flex items-center gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
                                             <span className="font-medium text-slate-800 flex-1 truncate">{item.name}</span>
                                             <span className="text-slate-600">{item.quantity} {item.unit}</span>

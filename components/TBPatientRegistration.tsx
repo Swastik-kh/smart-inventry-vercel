@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Save, RotateCcw, Activity, UserPlus, List, Phone, MapPin, 
@@ -24,7 +25,7 @@ interface TBPatientRegistrationProps {
 
 export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({ 
   currentFiscalYear, 
-  patients, // Use patients from props
+  patients = [], // Defensive default value: ensures 'patients' is always an array
   onAddPatient, 
   onUpdatePatient,
   onDeletePatient
@@ -120,7 +121,8 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
     // Calculate difference in days (approximate)
     const diffDays = Math.ceil(Math.abs(today.toJsDate().getTime() - regDateNepali.toJsDate().getTime()) / (1000 * 60 * 60 * 24));
     
-    const isDone = (month: number) => p.completedSchedule.includes(month);
+    // FIX: Use nullish coalescing for p.completedSchedule
+    const isDone = (month: number) => (p.completedSchedule || []).includes(month);
 
     if (diffDays >= 0 && diffDays <= 30 && !isDone(0)) return { required: true, reason: 'सुरुवाती निदान (Month 0)', scheduleMonth: 0 };
     if (diffDays >= 55 && diffDays <= 75 && !isDone(2)) return { required: true, reason: 'दोस्रो महिना (Month 2)', scheduleMonth: 2 };
@@ -130,19 +132,24 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
   };
 
   // Fix: Ensure fiscalYear is recognized on patient objects for filtering
-  const patientsNeedingSputum = useMemo(() => patients
+  const patientsNeedingSputum = useMemo(() => (patients || []) // Defensive check, though 'patients' is defaulted to []
     .map(p => ({ ...p, ...getSputumTestStatus(p) }))
     .filter(p => p.required), [patients, currentFiscalYear]); // Re-evaluate when patients or FY changes
 
-  const patientsWithNewReports = useMemo(() => patients.filter(p => p.newReportAvailable), [patients]);
+  const patientsWithNewReports = useMemo(() => (patients || []).filter(p => p.newReportAvailable), [patients]); // Defensive check
   const newReportCount = patientsWithNewReports.length;
   
+  // FIX: Rewritten allReportsHistory with robust checks
   const allReportsHistory = useMemo(() => {
-      const history: {patient: TBPatient, report: TBReport}[] = [];
+      const history: Array<{patient: TBPatient, report: TBReport}> = [];
+      // 'patients' is guaranteed to be an array due to prop default
       patients.forEach(p => {
+        // Use optional chaining for p.reports and check if it's an array
+        if (p?.reports && Array.isArray(p.reports)) { 
           p.reports.forEach(r => {
-              history.push({ patient: p, report: r });
+            history.push({ patient: p, report: r });
           });
+        }
       });
       // FIX: Access .report.date for sorting
       return history.sort((a, b) => new Date(b.report.date).getTime() - new Date(a.report.date).getTime());
@@ -155,7 +162,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
     if (!formData.name.trim()) { alert("कृपया बिरामीको नाम भर्नुहोस्।"); return; }
     if (!formData.age.trim()) { alert("कृपया बिरामीको उमेर भर्नुहोस्।"); return; }
     if (!formData.address.trim()) { alert(" कृपया बिरामीको ठेगाना भर्नुहोस्।"); return; }
-    if (!formData.regType.trim()) { alert("कृपया दर्ता प्रकार छान्नुहोस्।"); return; }
+    if (!formData.regType.trim()) { alert(" कृपया दर्ता प्रकार छान्नुहोस्।"); return; }
     if (!formData.registrationDate.trim()) { alert("कृपया दर्ता मिति भर्नुहोस्।"); return; }
 
     if (activeTab === 'TB' && !formData.classification.trim()) {
@@ -240,11 +247,11 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
 
       const updatedPatient: TBPatient = {
           ...patient,
-          completedSchedule: [...new Set([...patient.completedSchedule, scheduleMonth])], // Ensure unique months
+          completedSchedule: [...new Set([...(patient.completedSchedule || []), scheduleMonth])], // Ensure unique months and nullish coalescing
           newReportAvailable: true,
           latestResult: newReport.result,
           latestReportMonth: scheduleMonth,
-          reports: [newReport, ...patient.reports].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // Sort by latest date
+          reports: [newReport, ...(patient.reports || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // Sort by latest date, nullish coalescing
       };
       
       onUpdatePatient(updatedPatient); // Use the prop to update
@@ -273,7 +280,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
       {/* Stats Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between">
-            <div><p className="text-slate-500 text-xs font-bold font-nepali mb-1">कुल दर्ता ({activeTab})</p><h3 className="text-2xl font-black text-slate-800">{patients.filter(p => p.serviceType === activeTab && p.fiscalYear === currentFiscalYear).length}</h3></div>
+            <div><p className="text-slate-500 text-xs font-bold font-nepali mb-1">कुल दर्ता ({activeTab})</p><h3 className="text-2xl font-black text-slate-800">{(patients || []).filter(p => p.serviceType === activeTab && p.fiscalYear === currentFiscalYear).length}</h3></div> {/* Defensive check */}
             <div className="bg-blue-50 p-3 rounded-lg text-blue-600"><Users size={20} /></div>
         </div>
 
@@ -361,7 +368,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
                   </tr>
               </thead>
               <tbody className="divide-y">
-                  {patients.filter(p => p.fiscalYear === currentFiscalYear && p.serviceType === activeTab && (p.name.includes(searchTerm) || p.address.includes(searchTerm))).map(p => (
+                  {(patients || []).filter(p => p.fiscalYear === currentFiscalYear && p.serviceType === activeTab && (p.name.includes(searchTerm) || p.address.includes(searchTerm))).map(p => ( // Defensive check
                       <tr key={p.id} className="hover:bg-slate-50">
                           <td className="px-6 py-4 font-mono font-bold text-indigo-600 text-xs">{p.patientId}</td>
                           <td className="px-6 py-4">
@@ -375,7 +382,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
                           </td>
                           <td className="px-6 py-4">
                               {p.latestResult ? (
-                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${p.latestResult.includes('Pos') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{p.latestResult}</span>
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-black ${p.latestResult.includes('Pos') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{p.latestResult}</span>
                               ) : '-'}
                           </td>
                           <td className="px-6 py-4 text-xs text-slate-500 font-nepali">{p.registrationDate}</td>

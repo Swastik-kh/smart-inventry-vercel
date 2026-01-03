@@ -1,9 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { LoginForm } from './components/LoginForm';
 import { Dashboard } from './components/Dashboard';
 import { APP_NAME, ORG_NAME } from './constants';
 import { Landmark, ShieldCheck } from 'lucide-react';
-import { User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, DakhilaItem, TBPatient } from './types';
+import { 
+  User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, 
+  IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
+  DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
+  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord 
+} from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe } from "firebase/database";
 // @ts-ignore
@@ -33,7 +39,8 @@ const DEFAULT_ADMIN: User = {
     fullName: 'Administrator',
     designation: 'System Manager',
     phoneNumber: '98XXXXXXXX',
-    allowedMenus: ['dashboard', 'inventory', 'settings']
+    // UPDATED: Allowed menus include khop_sewa to access the new tabbed view
+    allowedMenus: ['dashboard', 'inventory', 'settings', 'services', 'khop_sewa']
 };
 
 const App: React.FC = () => {
@@ -56,6 +63,10 @@ const App: React.FC = () => {
   const [rabiesPatients, setRabiesPatients] = useState<RabiesPatient[]>([]);
   // Added state for TB Patients
   const [tbPatients, setTbPatients] = useState<TBPatient[]>([]); 
+  // NEW: State for Garbhawati Patients
+  const [garbhawatiPatients, setGarbhawatiPatients] = useState<GarbhawatiPatient[]>([]);
+  // NEW: State for Child Immunization Records
+  const [bachhaImmunizationRecords, setBachhaImmunizationRecords] = useState<ChildImmunizationRecord[]>([]);
   const [marmatEntries, setMarmatEntries] = useState<MarmatEntry[]>([]);
   const [dhuliyaunaEntries, setDhuliyaunaEntries] = useState<DhuliyaunaEntry[]>([]);
   const [logBookEntries, setLogBookEntries] = useState<LogBookEntry[]>([]);
@@ -95,6 +106,9 @@ const App: React.FC = () => {
         setQuotations([]);
         setRabiesPatients([]);
         setTbPatients([]); // Clear TB patients on logout
+        // NEW: Clear Garbhawati & Child Immunization on logout
+        setGarbhawatiPatients([]);
+        setBachhaImmunizationRecords([]);
         setMarmatEntries([]);
         setDhuliyaunaEntries([]);
         setLogBookEntries([]);
@@ -135,6 +149,9 @@ const App: React.FC = () => {
     setupOrgListener('quotations', setQuotations);
     setupOrgListener('rabiesPatients', setRabiesPatients);
     setupOrgListener('tbPatients', setTbPatients); // Setup listener for TB Patients
+    // NEW: Setup listeners for Garbhawati and Child Immunization
+    setupOrgListener('garbhawatiPatients', setGarbhawatiPatients);
+    setupOrgListener('bachhaImmunizationRecords', setBachhaImmunizationRecords);
     setupOrgListener('marmatEntries', setMarmatEntries);
     setupOrgListener('disposalEntries', setDhuliyaunaEntries);
     setupOrgListener('logBook', setLogBookEntries);
@@ -302,7 +319,8 @@ const App: React.FC = () => {
                   specification: item.specification || '', source: request.receiptSource, unit: item.unit,
                   quantity: incomingQty, rate: incomingRate, totalAmount: incomingQty * incomingRate,
                   vatAmount: (incomingQty * incomingRate) * (incomingTax / 100), grandTotal: incomingTotal,
-                  otherExpenses: 0, finalTotal: incomingTotal, remarks: item.remarks || ''
+                  otherExpenses: 0, finalTotal: incomingTotal, remarks: item.remarks || '',
+                  itemType: item.itemType 
               });
               if (existingItem) {
                   const newQty = (Number(existingItem.currentQuantity) || 0) + incomingQty;
@@ -319,7 +337,8 @@ const App: React.FC = () => {
               id: formalDakhilaId, fiscalYear: request.fiscalYear, dakhilaNo: request.dakhilaNo || formalDakhilaId,
               date: request.requestDateBs, orderNo: request.refNo || 'BULK-ENTRY', items: dakhilaItems, status: 'Final',
               preparedBy: { name: request.requesterName || request.requestedBy, designation: request.requesterDesignation || 'Staff', date: request.requestDateBs },
-              approvedBy: { name: approverName, designation: approverDesignation, date: request.requestDateBs }
+              approvedBy: { name: approverName, designation: approverDesignation, date: request.requestDateBs },
+              storeId: request.storeId 
           };
           await update(ref(db), updates);
       } catch (error) {
@@ -356,6 +375,68 @@ const App: React.FC = () => {
         alert("TB बिरामी हटाउन सकिएन।");
         console.error("Error deleting TB patient:", error);
     }
+  };
+
+  // NEW: Garbhawati Patient CRUD operations
+  const handleAddGarbhawatiPatient = async (patient: GarbhawatiPatient) => {
+      if (!currentUser) return;
+      try {
+          await set(getOrgRef(`garbhawatiPatients/${patient.id}`), patient);
+      } catch (error) {
+          alert("गर्भवती बिरामी दर्ता गर्दा समस्या आयो।");
+          console.error("Error adding Garbhawati patient:", error);
+      }
+  };
+
+  const handleUpdateGarbhawatiPatient = async (patient: GarbhawatiPatient) => {
+      if (!currentUser) return;
+      try {
+          await set(getOrgRef(`garbhawatiPatients/${patient.id}`), patient);
+      } catch (error) {
+          alert("गर्भवती बिरामी अपडेट गर्दा समस्या आयो।");
+          console.error("Error updating Garbhawati patient:", error);
+      }
+  };
+
+  const handleDeleteGarbhawatiPatient = async (patientId: string) => {
+      if (!currentUser) return;
+      try {
+          await remove(getOrgRef(`garbhawatiPatients/${patientId}`));
+      } catch (error) {
+          alert("गर्भवती बिरामी हटाउन सकिएन।");
+          console.error("Error deleting Garbhawati patient:", error);
+      }
+  };
+
+  // NEW: Child Immunization Record CRUD operations
+  const handleAddBachhaImmunizationRecord = async (record: ChildImmunizationRecord) => {
+      if (!currentUser) return;
+      try {
+          await set(getOrgRef(`bachhaImmunizationRecords/${record.id}`), record);
+      } catch (error) {
+          alert("बच्चाको खोप रेकर्ड दर्ता गर्दा समस्या आयो।");
+          console.error("Error adding Child Immunization record:", error);
+      }
+  };
+
+  const handleUpdateBachhaImmunizationRecord = async (record: ChildImmunizationRecord) => {
+      if (!currentUser) return;
+      try {
+          await set(getOrgRef(`bachhaImmunizationRecords/${record.id}`), record);
+      } catch (error) {
+          alert("बच्चाको खोप रेकर्ड अपडेट गर्दा समस्या आयो।");
+          console.error("Error updating Child Immunization record:", error);
+      }
+  };
+
+  const handleDeleteBachhaImmunizationRecord = async (recordId: string) => {
+      if (!currentUser) return;
+      try {
+          await remove(getOrgRef(`bachhaImmunizationRecords/${recordId}`));
+      } catch (error) {
+          alert("बच्चाको खोप रेकर्ड हटाउन सकिएन।");
+          console.error("Error deleting Child Immunization record:", error);
+      }
   };
 
   // Return Entry CRUD operations
@@ -461,6 +542,14 @@ const App: React.FC = () => {
           onAddTbPatient={handleAddTbPatient} // Pass TB add handler
           onUpdateTbPatient={handleUpdateTbPatient} // Pass TB update handler
           onDeleteTbPatient={handleDeleteTbPatient} // Pass TB delete handler
+          garbhawatiPatients={garbhawatiPatients} // Pass Garbhawati patients
+          onAddGarbhawatiPatient={handleAddGarbhawatiPatient} // Pass Garbhawati add handler
+          onUpdateGarbhawatiPatient={handleUpdateGarbhawatiPatient} // Pass Garbhawati update handler
+          onDeleteGarbhawatiPatient={handleDeleteGarbhawatiPatient} // Pass Garbhawati delete handler
+          bachhaImmunizationRecords={bachhaImmunizationRecords} // Pass Child immunization records
+          onAddBachhaImmunizationRecord={handleAddBachhaImmunizationRecord} // Pass Child immunization add handler
+          onUpdateBachhaImmunizationRecord={handleUpdateBachhaImmunizationRecord} // Pass Child immunization update handler
+          onDeleteBachhaImmunizationRecord={handleDeleteBachhaImmunizationRecord} // Pass Child immunization delete handler
           firms={firms}
           onAddFirm={(f) => set(getOrgRef(`firms/${f.id}`), f)}
           quotations={quotations}

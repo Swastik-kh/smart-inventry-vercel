@@ -11,7 +11,9 @@ const PERMISSION_STRUCTURE = [
         label: 'सेवा (Services)',
         children: [
             { id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग (TB/Leprosy)' },
-            { id: 'khop_sewa', label: 'खोप सेवा (Vaccination Service)' }, // ADDED KHOP SEWA
+            // UPDATED: 'khop_sewa' no longer has children directly in this permission structure
+            // as its children are now tabs within the 'khop_sewa' view itself.
+            { id: 'khop_sewa', label: 'खोप सेवा (Vaccination Service)' }, 
             { id: 'rabies', label: 'रेबिज खोप क्लिनिक (Rabies Vaccine)' }
         ]
     },
@@ -23,7 +25,7 @@ const PERMISSION_STRUCTURE = [
             { id: 'jinshi_maujdat', label: 'जिन्सी मौज्दात (Inventory Stock)' }, 
             { id: 'form_suchikaran', label: 'फर्म सुचीकरण (Firm Listing)' },
             { id: 'quotation', label: 'सामानको कोटेशन (Quotation)' },
-            { id: 'mag_faram', label: 'माग फारम (Demand Form)' },
+            { id: 'mag_faram', label: 'माग फार form (Demand Form)' },
             { id: 'kharid_adesh', label: 'खरिद आदेश (Purchase Order)' },
             { id: 'nikasha_pratibedan', label: 'निकासा प्रतिवेदन (Issue Report)' },
             { id: 'sahayak_jinshi_khata', label: 'सहायक जिन्सी खाता (Sub. Ledger)' },
@@ -151,17 +153,62 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       });
   };
 
-  const toggleParentPermission = (parentId: string, childrenIds: string[]) => {
-      const isParentChecked = formData.allowedMenus.includes(parentId);
+  const flattenDescendantIds = (item: any): string[] => {
+    if (!item.children) return [item.id];
+    return [item.id, ...item.children.flatMap((child: any) => flattenDescendantIds(child))];
+  };
+
+  const toggleParentPermission = (parentId: string, groupChildren: any[]) => {
       setFormData(prev => {
           let newMenus = [...prev.allowedMenus];
-          if (isParentChecked) {
-              newMenus = newMenus.filter(id => id !== parentId && !childrenIds.includes(id));
+          const allDescendantIds = groupChildren.flatMap((child: any) => flattenDescendantIds(child));
+          
+          const isParentCurrentlyChecked = newMenus.includes(parentId) && allDescendantIds.every(id => newMenus.includes(id));
+
+          if (isParentCurrentlyChecked) {
+              newMenus = newMenus.filter(id => id !== parentId && !allDescendantIds.includes(id));
           } else {
-              newMenus = Array.from(new Set([...newMenus, parentId, ...childrenIds]));
+              newMenus = Array.from(new Set([...newMenus, parentId, ...allDescendantIds]));
           }
           return { ...prev, allowedMenus: newMenus };
       });
+  };
+
+  const renderPermissionGroup = (group: any, level: number = 0) => {
+    const allDescendantIds = group.children ? group.children.flatMap((child: any) => flattenDescendantIds(child)) : [];
+    const isParentChecked = formData.allowedMenus.includes(group.id) && allDescendantIds.every(id => formData.allowedMenus.includes(id));
+    const someChildrenChecked = allDescendantIds.some(id => formData.allowedMenus.includes(id)) && !isParentChecked;
+
+    return (
+        <div key={group.id} className={`${level > 0 ? 'ml-4 border-l border-slate-200' : ''}`}>
+            <div className={`flex items-center justify-between p-3 ${level === 0 ? 'bg-slate-50/50' : 'bg-white'}`}>
+                <div className="flex items-center gap-3">
+                    {group.children && (
+                        <button type="button" onClick={() => setExpandedPermissions(prev => prev.includes(group.id) ? prev.filter(x => x !== group.id) : [...prev, group.id])} className="text-slate-400">
+                            {expandedPermissions.includes(group.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        </button>
+                    )}
+                    <div onClick={() => toggleParentPermission(group.id, group.children || [])} className="flex items-center gap-2 cursor-pointer">
+                        <div className={isParentChecked ? 'text-primary-600' : 'text-slate-300'}>{isParentChecked ? <CheckSquare size={18} /> : (someChildrenChecked ? <div className="w-[18px] h-[18px] bg-primary-100 border-2 border-primary-600 rounded flex items-center justify-center"><div className="w-2 h-2 bg-primary-600 rounded-sm"></div></div> : <Square size={18} />)}</div>
+                        <span className="font-medium text-slate-700 text-sm">{group.label}</span>
+                    </div>
+                </div>
+            </div>
+            {group.children && expandedPermissions.includes(group.id) && (
+                <div className="bg-white">
+                    {group.children.map((child: any) => (
+                        child.children ? renderPermissionGroup(child, level + 1) : (
+                            <div key={child.id} onClick={() => togglePermission(child.id)} className="flex items-center gap-3 p-2 rounded hover:bg-slate-50 cursor-pointer ml-4">
+                                <div className="text-slate-300"><CornerDownRight size={14} /></div>
+                                <div className={formData.allowedMenus.includes(child.id) ? 'text-primary-600' : 'text-slate-300'}>{formData.allowedMenus.includes(child.id) ? <CheckSquare size={16} /> : <Square size={16} />}</div>
+                                <span className={`text-sm ${formData.allowedMenus.includes(child.id) ? 'text-slate-800' : 'text-slate-500'}`}>{child.label}</span>
+                            </div>
+                        )
+                    ))}
+                </div>
+            )}
+        </div>
+    );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -171,7 +218,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     const userToSave: User = {
         id: editingId || Date.now().toString(),
         username: formData.username, password: formData.password,
-        role: formData.role, // Now directly use formData.role as the dropdown is filtered
+        role: formData.role, 
         fullName: formData.fullName, designation: formData.designation,
         phoneNumber: formData.phoneNumber, organizationName: formData.organizationName,
         allowedMenus: finalMenus
@@ -205,17 +252,16 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 value={formData.organizationName} 
                 onChange={e => setFormData({...formData, organizationName: e.target.value})} 
                 required 
-                readOnly={currentUser.role === 'ADMIN'} // ADMIN can't change their org when creating
+                readOnly={currentUser.role === 'ADMIN'} 
                 className={currentUser.role === 'ADMIN' ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''} 
                 icon={<Building2 size={16} />} 
             />
-            {/* Show role selection for SUPER_ADMIN and ADMIN (when creating lower roles) */}
             {(canManageUsers) && (
               <Select 
                   label="भूमिका" 
                   value={formData.role} 
                   onChange={e => setFormData({...formData, role: e.target.value as UserRole})} 
-                  options={rolesForDropdown} // Use dynamically filtered roles
+                  options={rolesForDropdown} 
                   icon={<Users size={16} />} 
               />
             )}
@@ -225,35 +271,11 @@ export const UserManagement: React.FC<UserManagementProps> = ({
             <div className="md:col-span-2 mt-2 bg-slate-50 p-4 rounded-lg border border-slate-100">
                 <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><Shield size={16} className="text-primary-600"/>मेनु र सब-मेनु पहुँच अधिकार (Permissions)</h4>
                 <div className="space-y-3">
-                    {PERMISSION_STRUCTURE.map((group) => {
-                        const childrenIds = group.children.map(c => c.id);
-                        const allChildrenChecked = childrenIds.every(id => formData.allowedMenus.includes(id));
-                        const someChildrenChecked = childrenIds.some(id => formData.allowedMenus.includes(id)) && !allChildrenChecked;
-                        return (
-                            <div key={group.id} className="border border-slate-200 rounded-lg bg-white overflow-hidden">
-                                <div className="flex items-center justify-between p-3 bg-slate-50/50">
-                                    <div className="flex items-center gap-3">
-                                        <button type="button" onClick={() => setExpandedPermissions(prev => prev.includes(group.id) ? prev.filter(x => x !== group.id) : [...prev, group.id])} className="text-slate-400"><ChevronDown size={16} /></button>
-                                        <div onClick={() => toggleParentPermission(group.id, childrenIds)} className="flex items-center gap-2 cursor-pointer">
-                                            <div className={allChildrenChecked ? 'text-primary-600' : 'text-slate-300'}>{allChildrenChecked ? <CheckSquare size={18} /> : (someChildrenChecked ? <div className="w-[18px] h-[18px] bg-primary-100 border-2 border-primary-600 rounded flex items-center justify-center"><div className="w-2 h-2 bg-primary-600 rounded-sm"></div></div> : <Square size={18} />)}</div>
-                                            <span className="font-medium text-slate-700 text-sm">{group.label}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                {expandedPermissions.includes(group.id) && (
-                                    <div className="border-t border-slate-100 p-2 pl-4 bg-white grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        {group.children.map(child => (
-                                            <div key={child.id} onClick={() => togglePermission(child.id)} className="flex items-center gap-3 p-2 rounded hover:bg-slate-50 cursor-pointer ml-4">
-                                                <div className="text-slate-300"><CornerDownRight size={14} /></div>
-                                                <div className={formData.allowedMenus.includes(child.id) ? 'text-primary-600' : 'text-slate-300'}>{formData.allowedMenus.includes(child.id) ? <CheckSquare size={16} /> : <Square size={16} />}</div>
-                                                <span className={`text-sm ${formData.allowedMenus.includes(child.id) ? 'text-slate-800' : 'text-slate-500'}`}>{child.label}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                    {PERMISSION_STRUCTURE.map((group) => (
+                        <div key={group.id} className="border border-slate-200 rounded-lg bg-white overflow-hidden">
+                            {renderPermissionGroup(group)}
+                        </div>
+                    ))}
                 </div>
             </div>
 

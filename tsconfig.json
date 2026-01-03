@@ -19,9 +19,9 @@
     "allowJs": true,
     "jsx": "react-jsx",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      // "@/*": [ // Removed @/ alias
+      //   "./*"
+      // ]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true

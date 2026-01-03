@@ -118,6 +118,56 @@ export interface TBPatient {
   fiscalYear: string;
 }
 
+// NEW: Garbhawati Patient Interface
+export interface GarbhawatiPatient {
+  id: string;
+  fiscalYear: string;
+  regNo: string; // GTD-FY-NNN
+  name: string;
+  age: string;
+  address: string;
+  phone: string;
+  gravida: number; // Number of pregnancies
+  lmpBs: string; // Last Menstrual Period in BS
+  lmpAd: string; // Last Menstrual Period in AD
+  eddBs: string; // Estimated Due Date in BS
+  eddAd: string; // Estimated Due Date in AD
+  td1DateBs?: string; // TD1 vaccine date in BS
+  td1DateAd?: string; // TD1 vaccine date in AD
+  td2DateBs?: string; // TD2 vaccine date in BS
+  td2DateAd?: string; // TD2 vaccine date in AD
+  tdBoosterDateBs?: string; // TD Booster vaccine date in BS
+  tdBoosterDateAd?: string; // TD Booster vaccine date in AD
+  remarks?: string;
+}
+
+// NEW: Child Immunization Record Interface
+export interface ChildImmunizationVaccine {
+  name: string; // e.g., BCG, DPT-HepB-Hib-1, MR-1
+  scheduledDateBs: string;
+  scheduledDateAd: string;
+  givenDateBs?: string;
+  givenDateAd?: string;
+  status: 'Pending' | 'Given' | 'Missed';
+}
+
+export interface ChildImmunizationRecord {
+  id: string;
+  fiscalYear: string;
+  regNo: string; // CIP-FY-NNN
+  childName: string;
+  gender: 'Male' | 'Female' | 'Other'; // Added gender for child
+  dobBs: string; // Date of Birth in BS
+  dobAd: string; // Date of Birth in AD
+  motherName: string;
+  fatherName: string;
+  address: string;
+  phone: string;
+  birthWeightKg?: number; // Birth weight in kg
+  vaccines: ChildImmunizationVaccine[];
+  remarks?: string;
+}
+
 
 export interface MagItem {
   id: number;
@@ -304,7 +354,7 @@ export interface DakhilaItem {
   finalTotal: number; 
   remarks: string;
   // Added: itemType is passed from InventoryItem to DakhilaItem
-  itemType: 'Expendable' | 'Non-Expendable'; 
+  itemType?: 'Expendable' | 'Non-Expendable'; 
 }
 
 export interface DakhilaPratibedanEntry {
@@ -398,7 +448,7 @@ export interface DhuliyaunaEntry {
   disposalType: 'Dhuliyauna' | 'Lilaam' | 'Minaha';
   items: DhuliyaunaItem[];
   preparedBy: Signature;
-  approvedBy: Signature;
+    approvedBy: Signature;
 }
 
 export interface LogBookEntry {
@@ -465,6 +515,18 @@ export interface DashboardProps {
   onAddTbPatient: (patient: TBPatient) => void;
   onUpdateTbPatient: (patient: TBPatient) => void;
   onDeleteTbPatient: (patientId: string) => void;
+
+  // NEW: Garbhawati Patients props
+  garbhawatiPatients: GarbhawatiPatient[];
+  onAddGarbhawatiPatient: (patient: GarbhawatiPatient) => void;
+  onUpdateGarbhawatiPatient: (patient: GarbhawatiPatient) => void;
+  onDeleteGarbhawatiPatient: (patientId: string) => void;
+
+  // NEW: Child Immunization Records props
+  bachhaImmunizationRecords: ChildImmunizationRecord[];
+  onAddBachhaImmunizationRecord: (record: ChildImmunizationRecord) => void;
+  onUpdateBachhaImmunizationRecord: (record: ChildImmunizationRecord) => void;
+  onDeleteBachhaImmunizationRecord: (recordId: string) => void;
 
   firms: FirmEntry[];
   onAddFirm: (firm: FirmEntry) => void;
