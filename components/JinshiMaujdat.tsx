@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Package, Calendar, Plus, RotateCcw, Save, X, CheckCircle2, Search, 
@@ -266,7 +267,7 @@ interface BulkInventoryEntryModalProps {
       commonDakhilaNo: string,
       mode: 'opening' | 'add'
   ) => void;
-  inventoryItems: InventoryItem[];
+  committedInventoryItems: InventoryItem[]; // Renamed for clarity
   currentFiscalYear: string;
   mode: 'opening' | 'add'; 
   receiptSourceOptions: Option[];
@@ -275,12 +276,20 @@ interface BulkInventoryEntryModalProps {
   onAddClassification: (newClassification: string) => void; 
   onAddReceiptSource: (newSource: string) => void; 
   initialData?: PurchaseOrderEntry | null; 
+  generateNewSequentialCode: (
+      prefix: string, 
+      currentFy: string, 
+      committedItems: InventoryItem[], 
+      draftItems: InventoryItem[],     
+      key: 'uniqueCode' | 'sanketNo'
+  ) => string;
+  onClearPendingPoDakhila?: () => void; // Added here
 }
 
 const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({ 
     onClose, 
     onSave, 
-    inventoryItems,
+    committedInventoryItems, // Use committedInventoryItems here
     currentFiscalYear,
     mode, 
     receiptSourceOptions,
@@ -288,13 +297,15 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
     itemClassificationOptions, 
     onAddClassification, 
     onAddReceiptSource, 
-    initialData 
+    initialData,
+    generateNewSequentialCode, // Destructure the prop
+    onClearPendingPoDakhila // Destructure the prop
 }) => {
     const initialStoreId = storeOptions && storeOptions.length > 0 ? storeOptions[0].value : '';
 
     const initialDakhilaNo = useMemo(() => {
         if (mode !== 'add') return '';
-        const fyItems = inventoryItems.filter(item => item.fiscalYear === currentFiscalYear && item.dakhilaNo);
+        const fyItems = committedInventoryItems.filter(item => item.fiscalYear === currentFiscalYear && item.dakhilaNo);
         const maxNum = fyItems.reduce((max, item) => {
             const dakhilaNoString = String(item.dakhilaNo);
             // Specifically parse for the new "DA-NNN" format
@@ -307,7 +318,7 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
         }, 0);
         // Generate in "DA-NNN" format
         return `DA-${String(maxNum + 1).padStart(3, '0')}`;
-    }, [currentFiscalYear, inventoryItems, mode]);
+    }, [currentFiscalYear, committedInventoryItems, mode]);
 
     const [commonDetails, setCommonDetails] = useState({
         receiptSource: mode === 'opening' ? 'Opening' : '',
@@ -355,6 +366,7 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
         }
     }, []);
 
+    // Effect to process initialData (from Purchase Order)
     useEffect(() => {
         if (initialData) {
             setCommonDetails(prev => ({
@@ -365,26 +377,83 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
                 dakhilaNo: initialDakhilaNo 
             }));
 
-            const itemsFromPo = initialData.items.map((poItem: any) => {
-                const newItem = createEmptyBulkItem(mode, initialStoreId);
+            // Create a temporary array of InventoryItem-like objects to pass as draftItems to generateNewSequentialCode
+            const temporaryDraftItems: InventoryItem[] = [];
+
+            const itemsFromPo = initialData.items.map((poItem: any, index: number) => {
+                const newItem = createEmptyBulkItem(mode, commonDetails.storeId);
                 const qty = parseFloat(poItem.quantity.toString()) || 0;
                 const rt = parseFloat(poItem.rate?.toString() || '0') || 0;
-                return {
+
+                // Try to find an existing inventory item by name to get codes/units/specs/type
+                const existingInvItem = committedInventoryItems.find(i =>
+                    i.itemName.trim().toLowerCase() === poItem.name.trim().toLowerCase()
+                );
+
+                let uniqueCodeCandidate = poItem.codeNo || existingInvItem?.uniqueCode || '';
+                let sanketNoCandidate = existingInvItem?.sanketNo || '';
+                let itemTypeToUse = existingInvItem?.itemType || newItem.itemType; // Use existing type or default
+                let itemClassificationToUse = existingInvItem?.itemClassification || '';
+                let specificationToUse = poItem.specification || existingInvItem?.specification || '';
+                let unitToUse = poItem.unit || existingInvItem?.unit || '';
+
+                // If neither PO provides a code, nor an existing item has a uniqueCode/sanketNo, generate one
+                // Pass a slice of `temporaryDraftItems` to ensure uniqueness within the current batch being constructed
+                const currentBatchDrafts = temporaryDraftItems.slice(0, index);
+
+                if (!uniqueCodeCandidate && !sanketNoCandidate) {
+                    uniqueCodeCandidate = generateNewSequentialCode('UC', currentFiscalYear, committedInventoryItems, currentBatchDrafts, 'uniqueCode');
+                    sanketNoCandidate = generateNewSequentialCode('SN', currentFiscalYear, committedInventoryItems, currentBatchDrafts, 'sanketNo');
+                } else if (!uniqueCodeCandidate) {
+                    // If only uniqueCode is missing, generate uniqueCode
+                    uniqueCodeCandidate = generateNewSequentialCode('UC', currentFiscalYear, committedInventoryItems, currentBatchDrafts, 'uniqueCode');
+                } else if (!sanketNoCandidate) {
+                    // If only sanketNo is missing, generate sanketNo
+                    sanketNoCandidate = generateNewSequentialCode('SN', currentFiscalYear, committedInventoryItems, currentBatchDrafts, 'sanketNo');
+                }
+
+                // If this is not the first row, and itemType is still not set, inherit from the first row if possible
+                if (!itemTypeToUse && bulkItems.length > 0 && bulkItems[0].itemType) {
+                    itemTypeToUse = bulkItems[0].itemType;
+                }
+                
+                const constructedItem: InventoryItem = {
                     ...newItem,
                     itemName: poItem.name,
-                    specification: poItem.specification || '',
-                    unit: poItem.unit,
+                    uniqueCode: uniqueCodeCandidate,
+                    sanketNo: sanketNoCandidate,
+                    ledgerPageNo: existingInvItem?.ledgerPageNo || '',
+                    itemType: itemTypeToUse,
+                    itemClassification: itemClassificationToUse, // Corrected typo here
+                    specification: specificationToUse,
+                    unit: unitToUse,
                     currentQuantity: qty,
-                    rate: rt, 
-                    totalAmount: qty * rt
+                    rate: rt,
+                    totalAmount: qty * rt,
+                    dakhilaNo: commonDetails.dakhilaNo,
+                    fiscalYear: currentFiscalYear,
+                    lastUpdateDateAd: commonDetails.dateAd,
+                    lastUpdateDateBs: commonDetails.dateBs,
+                    receiptSource: commonDetails.receiptSource,
                 };
+
+                // Add to temporaryDraftItems for subsequent uniqueness checks within this batch
+                temporaryDraftItems.push(constructedItem);
+
+                return constructedItem;
             });
             
             if (itemsFromPo.length > 0) {
                 setBulkItems(itemsFromPo);
             }
+            // Important: clear the pendingPoDakhila after it has been processed to avoid re-opening the modal
+            // This is handled by a callback from JinshiMaujdat to clear its state
+            if (initialData && onClearPendingPoDakhila) {
+                onClearPendingPoDakhila(); 
+            }
         }
-    }, [initialData, createEmptyBulkItem, mode, initialStoreId, initialDakhilaNo]);
+    }, [initialData, createEmptyBulkItem, mode, commonDetails.storeId, commonDetails.dakhilaNo, commonDetails.dateAd, commonDetails.dateBs, commonDetails.receiptSource, committedInventoryItems, currentFiscalYear, generateNewSequentialCode, initialDakhilaNo, onClearPendingPoDakhila, bulkItems]); // Added bulkItems to deps for itemType fallback
+
 
     const [validationError, setValidationError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -394,17 +463,17 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
     const masterType = bulkItems.length > 0 ? bulkItems[0].itemType : '';
 
     const allInventoryItemOptions: Option[] = useMemo(() => {
-        return inventoryItems.map(item => ({
+        return committedInventoryItems.map(item => ({
             id: item.id,
             value: item.itemName, 
             label: `${item.itemName} (${item.unit}) - ${item.uniqueCode || item.sanketNo || ''}`,
             itemData: item 
         }));
-    }, [inventoryItems]);
+    }, [committedInventoryItems]);
 
     const filteredInventoryItemOptions: Option[] = useMemo(() => {
         if (!masterType) return allInventoryItemOptions;
-        return inventoryItems
+        return committedInventoryItems
             .filter(item => item.itemType === masterType) 
             .map(item => ({
                 id: item.id,
@@ -412,29 +481,7 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
                 label: `${item.itemName} (${item.unit}) - ${item.uniqueCode || item.sanketNo || ''}`,
                 itemData: item
             }));
-    }, [inventoryItems, masterType, allInventoryItemOptions]);
-
-
-    const generateNewSequentialCode = useCallback((
-        prefix: string, 
-        currentFy: string, 
-        committedItems: InventoryItem[], 
-        draftItems: InventoryItem[],     
-        key: 'uniqueCode' | 'sanketNo'
-    ): string => {
-        const fyClean = currentFy.replace('/', '');
-        const allRelevantItems = [...committedItems, ...draftItems];
-        const relevantCodes = allRelevantItems
-            .filter(item => item[key] && String(item[key]).startsWith(`${prefix}-${fyClean}-`))
-            .map(item => {
-                const code = String(item[key]);
-                const parts = code.split('-');
-                return parts.length > 2 ? parseInt(parts[2]) : 0;
-            })
-            .filter(num => !isNaN(num)); 
-        const maxNum = relevantCodes.length > 0 ? Math.max(...relevantCodes) : 0;
-        return `${prefix}-${fyClean}-${String(maxNum + 1).padStart(3, '0')}`;
-    }, [currentFiscalYear]);
+    }, [committedInventoryItems, masterType, allInventoryItemOptions]);
 
 
     const handleAddRow = () => {
@@ -506,15 +553,17 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
             const masterType = prev.length > 0 ? prev[0].itemType : '';
             const isFirstRow = prev.length > 0 && prev[0].id === itemId;
 
+            // Collect items already in bulkItems for uniqueness check within the current draft
+            const draftItemsForCodeGeneration = prev.filter(item => item.id !== itemId);
+
             return prev.map(item => {
             if (item.id === itemId) {
                 let updatedItem = { ...item, itemName: newName };
-                let existing = inventoryItems.find(i => 
+                let existing = committedInventoryItems.find(i => 
                     i.itemName.toLowerCase() === newName.toLowerCase() && i.storeId === commonDetails.storeId
                 );
-                if (!existing) existing = inventoryItems.find(i => i.itemName.toLowerCase() === newName.toLowerCase());
-                const otherDraftItems = prev.filter(i => i.id !== itemId);
-
+                if (!existing) existing = committedInventoryItems.find(i => i.itemName.toLowerCase() === newName.toLowerCase());
+                
                 if (existing) {
                     updatedItem.uniqueCode = existing.uniqueCode || '';
                     updatedItem.sanketNo = existing.sanketNo || '';
@@ -532,8 +581,12 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
                     }
                     updatedItem.remarks = ''; 
                 } else if (newName.trim() !== '') {
-                    if (!updatedItem.uniqueCode || !inventoryItems.some(i => i.uniqueCode === updatedItem.uniqueCode)) {
-                        updatedItem.uniqueCode = generateNewSequentialCode('UC', currentFiscalYear, inventoryItems, otherDraftItems, 'uniqueCode');
+                    // Auto-generate if not existing and new name typed
+                    if (!updatedItem.uniqueCode) { 
+                        updatedItem.uniqueCode = generateNewSequentialCode('UC', currentFiscalYear, committedInventoryItems, draftItemsForCodeGeneration, 'uniqueCode');
+                    }
+                    if (!updatedItem.sanketNo) { 
+                        updatedItem.sanketNo = generateNewSequentialCode('SN', currentFiscalYear, committedInventoryItems, draftItemsForCodeGeneration, 'sanketNo');
                     }
                     updatedItem.unit = '';
                     if (!isFirstRow && masterType) { updatedItem.itemType = masterType; } else { updatedItem.itemType = '' as 'Expendable' | 'Non-Expendable'; }
@@ -567,7 +620,7 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
             let maxDakhilaNum = 0;
             let previousDakhilaDate = '';
             let previousDakhilaNo = '';
-            inventoryItems.forEach(item => {
+            committedInventoryItems.forEach(item => {
                 if (item.fiscalYear === currentFiscalYear && item.dakhilaNo) {
                     // Match the new "DA-NNN" format
                     const match = String(item.dakhilaNo).match(/^DA-(\d{3})$/);
@@ -593,13 +646,13 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
 
         if (!commonDetails.storeId) { setValidationError('कृपया गोदाम/स्टोर छान्नुहोस्।'); setIsSaving(false); return; }
         if (mode === 'add' && !commonDetails.receiptSource) { setValidationError('कृपया प्राप्तिको स्रोत भर्नुहोस्।'); setIsSaving(false); return; }
-        if (!commonDetails.dateBs) { setValidationError('कृपया मिति भर्नुहोस्।'); setIsSaving(false); return; }
+        if (!commonDetails.dateBs) { setValidationError(' कृपया मिति भर्नुहोस्।'); setIsSaving(false); return; }
         if (mode === 'add' && !commonDetails.dakhilaNo.trim()) { setValidationError('कृपया दाखिला नं. भर्नुहोस्।'); setIsSaving(false); return; }
 
         let hasError = false;
         const validatedItems = bulkItems.map((item, index) => {
             const itemNumber = index + 1;
-            const isExistingItemInSelectedStore = inventoryItems.some(i => i.itemName.toLowerCase() === item.itemName.toLowerCase() && i.storeId === commonDetails.storeId);
+            const isExistingItemInSelectedStore = committedInventoryItems.some(i => i.itemName.toLowerCase() === item.itemName.toLowerCase() && i.storeId === commonDetails.storeId);
 
             if (!item.itemName.trim()) { setValidationError(`क्रम संख्या ${itemNumber} मा सामानको नाम आवश्यक छ।`); hasError = true; }
             if (!item.itemType) { setValidationError(`क्रम संख्या ${itemNumber} मा सामानको प्रकार आवश्यक छ।`); hasError = true; }
@@ -608,7 +661,7 @@ const BulkInventoryEntryModal: React.FC<BulkInventoryEntryModalProps> = ({
             if (qtyNum <= 0) { setValidationError(`क्रम संख्या ${itemNumber} मा मान्य परिमाण आवश्यक छ।`); hasError = true; }
 
             if (item.ledgerPageNo?.trim()) {
-                const conflictingItem = inventoryItems.find(i => i.storeId === commonDetails.storeId && i.itemType === item.itemType && i.ledgerPageNo === item.ledgerPageNo?.trim() && i.itemName.toLowerCase() !== item.itemName.toLowerCase());
+                const conflictingItem = committedInventoryItems.find(i => i.storeId === commonDetails.storeId && i.itemType === item.itemType && i.ledgerPageNo === item.ledgerPageNo?.trim() && i.itemName.toLowerCase() !== item.itemName.toLowerCase());
                 if (conflictingItem) { setValidationError(`क्रम संख्या ${itemNumber} मा खाता पाना नं. ${item.ledgerPageNo} पहिले नै "${conflictingItem.itemName}" को लागि प्रयोग भइसकेको छ।`); hasError = true; }
             }
             if (mode === 'opening') {
@@ -828,6 +881,28 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
     }
   };
 
+  const generateNewSequentialCode = useCallback((
+      prefix: string, 
+      currentFy: string, 
+      committedItems: InventoryItem[], 
+      draftItems: InventoryItem[],     
+      key: 'uniqueCode' | 'sanketNo'
+  ): string => {
+      const fyClean = currentFy.replace('/', '');
+      const allRelevantItems = [...committedItems, ...draftItems]; // Combine existing and draft
+      const relevantCodes = allRelevantItems
+          .filter(item => item[key] && String(item[key]).startsWith(`${prefix}-${fyClean}-`))
+          .map(item => {
+              const code = String(item[key]);
+              const parts = code.split('-');
+              return parts.length > 2 ? parseInt(parts[2]) : 0;
+          })
+          .filter(num => !isNaN(num)); 
+      const maxNum = relevantCodes.length > 0 ? Math.max(...relevantCodes) : 0;
+      return `${prefix}-${fyClean}-${String(maxNum + 1).padStart(3, '0')}`;
+  }, [currentFiscalYear]); // Dependency: currentFiscalYear
+
+
   const handleBulkSave = (items: InventoryItem[], source: string, dateBs: string, dateAd: string, storeId: string, supplier: string, refNo: string, dakhilaNo: string, mode: 'opening' | 'add') => {
       const request: StockEntryRequest = {
           id: Date.now().toString(),
@@ -912,7 +987,7 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input type="text" placeholder="सामान, कोड खोज्नुहोस्..." className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-300 focus:border-indigo-500 outline-none text-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           </div>
-          <Select label="स्टोर फिल्टर" options={[{id: 'all', value: '', label: 'All Stores'}, ...storeOptions]} value={filterStore} onChange={e => setFilterStore(e.target.value)} placeholder="Filter by Store" icon={<StoreIcon size={16} />} />
+          <Select label="स्टور फिल्टर" options={[{id: 'all', value: '', label: 'All Stores'}, ...storeOptions]} value={filterStore} onChange={e => setFilterStore(e.target.value)} placeholder="Filter by Store" icon={<StoreIcon size={16} />} />
           <Select label="वर्गीकरण फिल्टर" options={[{id: 'all', value: '', label: 'All Classes'}, ...itemClassificationOptions]} value={filterClass} onChange={e => setFilterClass(e.target.value)} placeholder="Filter by Class" icon={<Tag size={16} />} />
       </div>
 
@@ -1006,7 +1081,7 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
       </div>
 
       {showEditModal && selectedItemForEdit && (<EditInventoryItemModal isOpen={showEditModal} item={selectedItemForEdit} onClose={() => { setShowEditModal(false); setSelectedItemForEdit(null); }} onSave={handleUpdateItem} storeOptions={storeOptions} itemClassificationOptions={itemClassificationOptions} />)}
-      {showBulkModal && (<BulkInventoryEntryModal mode={bulkMode} onClose={() => { setShowBulkModal(false); if (onClearPendingPoDakhila) onClearPendingPoDakhila(); }} onSave={handleBulkSave} inventoryItems={inventoryItems} currentFiscalYear={currentFiscalYear} storeOptions={storeOptions} receiptSourceOptions={receiptSourceOptions} itemClassificationOptions={itemClassificationOptions} onAddClassification={handleAddClassification} onAddReceiptSource={handleAddReceiptSource} initialData={pendingPoDakhila} />)}
+      {showBulkModal && (<BulkInventoryEntryModal mode={bulkMode} onClose={() => { setShowBulkModal(false); if (onClearPendingPoDakhila) onClearPendingPoDakhila(); }} onSave={handleBulkSave} committedInventoryItems={inventoryItems} currentFiscalYear={currentFiscalYear} storeOptions={storeOptions} receiptSourceOptions={receiptSourceOptions} itemClassificationOptions={itemClassificationOptions} onAddClassification={handleAddClassification} onAddReceiptSource={handleAddReceiptSource} initialData={pendingPoDakhila} generateNewSequentialCode={generateNewSequentialCode} onClearPendingPoDakhila={onClearPendingPoDakhila} />)}
       {selectedItemForView && (<ItemDetailsModal item={selectedItemForView} storeName={storeOptions.find(s => s.value === selectedItemForView.storeId)?.label || 'Unknown'} onClose={() => setSelectedItemForView(null)} />)}
     </div>
   );

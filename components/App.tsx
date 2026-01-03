@@ -253,7 +253,8 @@ const App: React.FC = () => {
           const orgPath = `orgData/${safeOrgName}`;
           const updates: Record<string, any> = {};
           updates[`${orgPath}/magForms/${f.id}`] = f;
-          if (f.status === 'Approved' && f.storeKeeper?.status === 'market') {
+          
+          if (f.status === 'Approved' && f.storeKeeper?.marketRequired) { 
               const poId = `PO-${f.id}`;
               const poSnap = await get(ref(db, `${orgPath}/purchaseOrders/${poId}`));
               if (!poSnap.exists()) {
@@ -267,9 +268,35 @@ const App: React.FC = () => {
                   };
               }
           }
+
+              // NEW: If inStock was checked, create an Issue Report
+              if (f.status === 'Approved' && f.storeKeeper?.inStock) {
+                  const issueReportId = `ISSUE-${f.id}`; // Link issue report to mag form ID
+                  const issueReportSnap = await get(ref(db, `${orgPath}/issueReports/${issueReportId}`));
+
+                  // Only create if it doesn't already exist to prevent duplicates on re-save
+                  if (!issueReportSnap.exists()) {
+                      const newIssueReport: IssueReportEntry = {
+                          id: issueReportId,
+                          magFormId: f.id,
+                          magFormNo: f.formNo,
+                          requestDate: f.date, // Use Mag Form's date
+                          items: f.items,
+                          status: 'Pending', // Initial status for Storekeeper to prepare
+                          fiscalYear: f.fiscalYear,
+                          itemType: f.issueItemType, // Crucial: use the type determined during verification
+                          selectedStoreId: f.selectedStoreId, // Crucial: store the selected store ID
+                          demandBy: f.demandBy,
+                          preparedBy: { name: '', designation: '', date: '' }, // To be filled by Storekeeper
+                          recommendedBy: { name: '', designation: '', date: '' }, // To be filled by Storekeeper/Approver
+                          approvedBy: { name: '', designation: '', date: '' }, // To be filled by Approver
+                      };
+                      updates[`${orgPath}/issueReports/${issueReportId}`] = newIssueReport;
+                  }
+              }
           await update(ref(db), updates);
       } catch (error) {
-          alert("माग फारम सुरक्षित गर्दा समस्या आयो।");
+          alert("माग फार form सुरक्षित गर्दा समस्या आयो।");
       }
   };
 
@@ -278,8 +305,128 @@ const App: React.FC = () => {
     try {
         await remove(ref(db, `orgData/${currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_")}/magForms/${formId}`));
     } catch (error) {
-        alert("माग फारम हटाउन सकिएन।");
+        alert("माग फार form हटाउन सकिएन।");
     }
+  };
+
+  const handleUpdateIssueReport = async (report: IssueReportEntry) => {
+      if (!currentUser) {
+          console.error("[handleUpdateIssueReport] Error: No current user for report ID:", report.id);
+          return;
+      }
+      
+      console.log(`[handleUpdateIssueReport] START for Report ID: ${report.id}, Status: ${report.status}`);
+      console.log(`[handleUpdateIssueReport] Report Data (Full Object):`, JSON.parse(JSON.stringify(report))); // Deep copy for inspection
+
+      try {
+          const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
+          const orgPath = `orgData/${safeOrgName}`;
+          const updates: Record<string, any> = {};
+          
+          // Always update the report status first
+          updates[`${orgPath}/issueReports/${report.id}`] = report;
+
+          // NEW LOGIC: Reduce stock when issue report is 'Issued', prioritizing earliest expiry
+          const isIssuedAndHasStoreInfo = report.status === 'Issued' && !!report.selectedStoreId && !!report.itemType;
+          console.log(`[handleUpdateIssueReport] Checking stock reduction condition:`);
+          console.log(`  - Status is 'Issued': ${report.status === 'Issued'}`);
+          console.log(`  - selectedStoreId is present: ${!!report.selectedStoreId} (Value: ${report.selectedStoreId})`);
+          console.log(`  - itemType is present: ${!!report.itemType} (Value: ${report.itemType})`);
+
+          if (isIssuedAndHasStoreInfo) {
+              console.log(`[handleUpdateIssueReport] Condition met: Proceeding with stock reduction.`);
+
+              const currentInvSnap = await get(ref(db, `${orgPath}/inventory`));
+              const currentInvData = currentInvSnap.val() || {};
+              const currentInvList: InventoryItem[] = Object.keys(currentInvData).map(k => ({ ...currentInvData[k], id: k }));
+              
+              const nowBs = new NepaliDate().format('YYYY-MM-DD');
+              const nowAd = new Date().toISOString().split('T')[0];
+
+              for (const issueItem of report.items) {
+                  let remainingIssuedQty = parseFloat(issueItem.quantity) || 0;
+                  console.log(`\n[handleUpdateIssueReport] Processing demand for item: "${issueItem.name}" (Code: ${issueItem.codeNo || 'N/A'}), Demanded Qty: ${issueItem.quantity}`);
+
+                  // Filter all potential inventory items that match the criteria
+                  let potentialInventoryItems = currentInvList.filter(inv => {
+                      const nameMatches = inv.itemName.trim().toLowerCase() === issueItem.name.trim().toLowerCase();
+                      const storeMatches = inv.storeId === report.selectedStoreId;
+                      const typeMatches = inv.itemType === report.itemType;
+                      const codeMatches = issueItem.codeNo ? (inv.uniqueCode === issueItem.codeNo || inv.sanketNo === issueItem.codeNo) : true;
+                      
+                      // Log individual match criteria for better debugging
+                      console.log(`  - Candidate Inv Item: ID=${inv.id}, Name="${inv.itemName}", Store="${inv.storeId}", Type="${inv.itemType}", Code="${inv.uniqueCode || inv.sanketNo}", Expiry="${inv.expiryDateAd || 'N/A'}"`);
+                      console.log(`    - Name Match (Demanded: "${issueItem.name}", Inventory: "${inv.itemName}"): ${nameMatches}`);
+                      console.log(`    - Store Match (Report: "${report.selectedStoreId}", Inventory: "${inv.storeId}"): ${storeMatches}`);
+                      console.log(`    - Type Match (Report: "${report.itemType}", Inventory: "${inv.itemType}"): ${typeMatches}`);
+                      console.log(`    - Code Match (Demanded: "${issueItem.codeNo}", Inventory: "${inv.uniqueCode || inv.sanketNo}"): ${codeMatches}`);
+                      return nameMatches && storeMatches && typeMatches && codeMatches;
+                  });
+                  console.log(`[handleUpdateIssueReport] Found ${potentialInventoryItems.length} matching inventory items for "${issueItem.name}" before sorting.`);
+
+                  if (potentialInventoryItems.length === 0) {
+                      console.warn(`[handleUpdateIssueReport] WARNING: No matching inventory items found in store "${report.selectedStoreId}" for demanded item "${issueItem.name}" with type "${report.itemType}". Stock cannot be reduced.`);
+                      continue; // Skip to next issue item
+                  }
+
+                  // Sort by expiryDateAd ascending. Items without expiryDateAd come last.
+                  potentialInventoryItems.sort((a, b) => {
+                      const dateA = a.expiryDateAd ? new Date(a.expiryDateAd).getTime() : Infinity;
+                      const dateB = b.expiryDateAd ? new Date(b.expiryDateAd).getTime() : Infinity;
+                      return dateA - dateB;
+                  });
+                  console.log(`[handleUpdateIssueReport] Sorted potential inventory items by expiry (earliest first):`, potentialInventoryItems.map(i => ({id: i.id, name: i.itemName, qty: i.currentQuantity, expiry: i.expiryDateAd})));
+
+                  for (const invItem of potentialInventoryItems) {
+                      if (remainingIssuedQty <= 0) {
+                          console.log(`[handleUpdateIssueReport] Demand for "${issueItem.name}" fully fulfilled. Breaking from inventory item loop.`);
+                          break; // All demand fulfilled
+                      }
+
+                      const availableQtyInInvItem = Number(invItem.currentQuantity) || 0;
+                      const qtyToDeduct = Math.min(remainingIssuedQty, availableQtyInInvItem);
+
+                      console.log(`  - Processing inventory item ID: ${invItem.id} (Name: "${invItem.itemName}", Expiry: ${invItem.expiryDateAd || 'N/A'})`);
+                      console.log(`    - Available Qty in Inv Item: ${availableQtyInInvItem}, Remaining Demanded Qty: ${remainingIssuedQty}`);
+                      console.log(`    - Quantity to Deduct from this Inv Item: ${qtyToDeduct}`);
+
+                      if (qtyToDeduct > 0) {
+                          const newQuantity = availableQtyInInvItem - qtyToDeduct;
+                          const newTotalAmount = (Number(invItem.totalAmount) || 0) - (qtyToDeduct * (Number(invItem.rate) || 0)); // Ensure rate is a number
+
+                          const updatedInvItem = {
+                              ...invItem,
+                              currentQuantity: Math.max(0, newQuantity), // Ensure quantity doesn't go below zero
+                              totalAmount: Math.max(0, newTotalAmount), // Ensure total doesn't go below zero
+                              lastUpdateDateBs: nowBs,
+                              lastUpdateDateAd: nowAd,
+                              receiptSource: 'Issued',
+                          };
+                          updates[`${orgPath}/inventory/${invItem.id}`] = updatedInvItem;
+                          console.log(`[handleUpdateIssueReport] Staging update for Inventory Item ID: ${invItem.id}, Old Qty: ${availableQtyInInvItem}, Deducted Qty: ${qtyToDeduct}, New Qty: ${updatedInvItem.currentQuantity}`);
+                          remainingIssuedQty -= qtyToDeduct;
+                      } else {
+                          console.log(`  - No quantity to deduct from item ID: ${invItem.id}. Available Qty (${availableQtyInInvItem}) is 0 or already insufficient.`);
+                      }
+                  }
+
+                  if (remainingIssuedQty > 0) {
+                      console.warn(`[handleUpdateIssueReport] WARNING: Insufficient total stock for item "${issueItem.name}" (remaining demanded: ${remainingIssuedQty}) after checking all matching batches and considering expiry dates in store "${report.selectedStoreId}".`);
+                      // Optionally, add a user-facing alert here
+                  }
+              }
+          } else {
+              console.log(`[handleUpdateIssueReport] Stock reduction condition NOT met. Status: ${report.status}, Store ID: ${report.selectedStoreId}, Item Type: ${report.itemType}. No inventory update performed.`);
+          }
+
+          console.log("[handleUpdateIssueReport] Final updates object to be sent to Firebase:", JSON.parse(JSON.stringify(updates))); // Deep copy for inspection
+          await update(ref(db), updates);
+          console.log(`[handleUpdateIssueReport] Successfully updated report ${report.id} and inventory (if applicable).`);
+
+      } catch (error) {
+          alert("निकासा प्रतिवेदन सुरक्षित गर्दा वा स्टक घटाउँदा समस्या आयो।");
+          console.error("[handleUpdateIssueReport] CRITICAL ERROR saving issue report or reducing stock:", error);
+      }
   };
 
   const handleDeleteInventoryItem = async (itemId: string) => {
@@ -456,11 +603,20 @@ const App: React.FC = () => {
               const currentInvList: InventoryItem[] = Object.keys(currentInvData).map(k => ({ ...currentInvData[k], id: k }));
 
               for (const returnedItem of entry.items) {
+                  // Only process non-expendable items for return to stock
+                  if (returnedItem.itemType !== 'Non-Expendable') {
+                      console.warn(`Skipping return for expendable item: ${returnedItem.name}`);
+                      continue; 
+                  }
+
                   const existingItem = currentInvList.find(i => 
-                      i.id === returnedItem.inventoryId || // Prefer matching by original inventory ID if available
+                      // Match by original inventory ID if available, otherwise by name, code, and importantly, itemType
+                      i.id === returnedItem.inventoryId || 
                       (i.itemName.trim().toLowerCase() === returnedItem.name.trim().toLowerCase() && 
                        (i.uniqueCode?.trim().toLowerCase() === returnedItem.codeNo?.trim().toLowerCase() ||
-                        i.sanketNo?.trim().toLowerCase() === returnedItem.codeNo?.trim().toLowerCase()))
+                        i.sanketNo?.trim().toLowerCase() === returnedItem.codeNo?.trim().toLowerCase()) &&
+                        i.itemType === returnedItem.itemType // Match on classification too
+                      )
                   );
 
                   if (existingItem) {
@@ -474,6 +630,7 @@ const App: React.FC = () => {
                           lastUpdateDateBs: entry.date, 
                           lastUpdateDateAd: new Date().toISOString().split('T')[0],
                           receiptSource: 'Returned'
+                          // existingItem.itemType and itemClassification are preserved
                       };
                   } else {
                       // If the item doesn't exist, create it as a new inventory item
@@ -484,9 +641,9 @@ const App: React.FC = () => {
                           uniqueCode: returnedItem.codeNo,
                           sanketNo: returnedItem.codeNo,
                           ledgerPageNo: "", // Can be filled later
-                          itemType: "Non-Expendable", // Assumed non-expendable for returns
-                          itemClassification: "", // Can be filled later
-                          specification: returnedItem.specification,
+                          itemType: returnedItem.itemType || "Non-Expendable", // Use returned item's type
+                          itemClassification: "", // Can be filled later, or passed from returnedItem if available
+                          specification: returnedItem.specification || "", // Use returned item's spec
                           unit: returnedItem.unit,
                           currentQuantity: returnedItem.quantity,
                           rate: returnedItem.rate,
@@ -533,7 +690,7 @@ const App: React.FC = () => {
           purchaseOrders={purchaseOrders}
           onUpdatePurchaseOrder={(o) => set(getOrgRef(`purchaseOrders/${o.id}`), o)}
           issueReports={issueReports}
-          onUpdateIssueReport={(r) => set(getOrgRef(`issueReports/${r.id}`), r)}
+          onUpdateIssueReport={handleUpdateIssueReport}
           rabiesPatients={rabiesPatients}
           onAddRabiesPatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}
           onUpdateRabiesPatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}

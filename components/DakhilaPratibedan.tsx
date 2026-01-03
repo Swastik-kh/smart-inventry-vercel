@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Archive, Printer, ArrowLeft, Eye, X, FileText, ClipboardCheck, ShieldCheck, Warehouse, User as UserIcon, CheckCircle2, Search, Clock } from 'lucide-react';
 import { DakhilaPratibedanEntry, User, StockEntryRequest, OrganizationSettings, Store, DakhilaItem, InventoryItem } from '../types';
@@ -10,7 +11,6 @@ interface DakhilaPratibedanProps {
     currentFiscalYear: string;
     currentUser: User;
     stockEntryRequests: StockEntryRequest[];
-    // Removed onApproveStockEntry and onRejectStockEntry as they are handled in StockEntryApproval
     generalSettings: OrganizationSettings;
     stores?: Store[];
     initialSelectedReportId?: string | null; // New prop for direct loading
@@ -41,7 +41,6 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
     currentFiscalYear, 
     currentUser, 
     stockEntryRequests,
-    // Removed onApproveStockEntry and onRejectStockEntry from destructuring
     generalSettings,
     stores = [],
     initialSelectedReportId, // Destructure new prop

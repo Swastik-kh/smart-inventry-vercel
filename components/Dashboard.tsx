@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
   LogOut, Menu, Calendar, Stethoscope, Package, FileText, Settings, LayoutDashboard, 
@@ -508,45 +509,45 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                       <div className="flex flex-col gap-1 text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
                           <div className="flex items-center justify-between">
                               <span className="font-bold text-orange-700 font-nepali">D0 खोप:</span>
-                              <span className="font-black text-orange-600">
-                                  <span className="text-base font-black text-orange-800">{rabiesDoseStats.d0ReceivedToday}</span>
+                              <span className="font-black">
+                                  <span className={`text-base font-black ${rabiesDoseStats.d0Progress === 100 ? 'text-green-800' : 'text-orange-800'}`}>{rabiesDoseStats.d0ReceivedToday}</span>
                                   <span className="text-xs text-orange-600"> / {rabiesDoseStats.d0TotalScheduledToday}</span>
                               </span>
                           </div>
                           <div className="w-full bg-orange-200 rounded-full h-1.5">
-                              <div className="bg-orange-600 h-1.5 rounded-full" style={{ width: `${rabiesDoseStats.d0Progress}%` }}></div>
+                              <div className={`${rabiesDoseStats.d0Progress === 100 ? 'bg-green-600' : 'bg-orange-600'} h-1.5 rounded-full`} style={{ width: `${rabiesDoseStats.d0Progress}%` }}></div>
                           </div>
-                          <span className="text-right text-[10px] text-orange-500">{rabiesDoseStats.d0Progress}% Complete</span>
+                          <span className={`text-right text-[10px] ${rabiesDoseStats.d0Progress === 100 ? 'text-green-500' : 'text-orange-500'}`}>{rabiesDoseStats.d0Progress}% Complete</span>
                       </div>
 
                       {/* D3 Dose */}
                       <div className="flex flex-col gap-1 text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
                           <div className="flex items-center justify-between">
                               <span className="font-bold text-orange-700 font-nepali">D3 खोप:</span>
-                              <span className="font-black text-orange-600">
-                                  <span className="text-base font-black text-orange-800">{rabiesDoseStats.d3ReceivedToday}</span>
+                              <span className="font-black">
+                                  <span className={`text-base font-black ${rabiesDoseStats.d3Progress === 100 ? 'text-green-800' : 'text-orange-800'}`}>{rabiesDoseStats.d3ReceivedToday}</span>
                                   <span className="text-xs text-orange-600"> / {rabiesDoseStats.d3TotalScheduledToday}</span>
                               </span>
                           </div>
                           <div className="w-full bg-orange-200 rounded-full h-1.5">
-                              <div className="bg-orange-600 h-1.5 rounded-full" style={{ width: `${rabiesDoseStats.d3Progress}%` }}></div>
+                              <div className={`${rabiesDoseStats.d3Progress === 100 ? 'bg-green-600' : 'bg-orange-600'} h-1.5 rounded-full`} style={{ width: `${rabiesDoseStats.d3Progress}%` }}></div>
                           </div>
-                          <span className="text-right text-[10px] text-orange-500">{rabiesDoseStats.d3Progress}% Complete</span>
+                          <span className={`text-right text-[10px] ${rabiesDoseStats.d3Progress === 100 ? 'text-green-500' : 'text-orange-500'}`}>{rabiesDoseStats.d3Progress}% Complete</span>
                       </div>
 
                       {/* D7 Dose */}
                       <div className="flex flex-col gap-1 text-xs bg-orange-100/50 p-2 rounded-lg border border-orange-200">
                           <div className="flex items-center justify-between">
                               <span className="font-bold text-orange-700 font-nepali">D7 खोप:</span>
-                              <span className="font-black text-orange-600">
-                                  <span className="text-base font-black text-orange-800">{rabiesDoseStats.d7ReceivedToday}</span>
+                              <span className="font-black">
+                                  <span className={`text-base font-black ${rabiesDoseStats.d7Progress === 100 ? 'text-green-800' : 'text-orange-800'}`}>{rabiesDoseStats.d7ReceivedToday}</span>
                                   <span className="text-xs text-orange-600"> / {rabiesDoseStats.d7TotalScheduledToday}</span>
                               </span>
                           </div>
                           <div className="w-full bg-orange-200 rounded-full h-1.5">
-                              <div className="bg-orange-600 h-1.5 rounded-full" style={{ width: `${rabiesDoseStats.d7Progress}%` }}></div>
+                              <div className={`${rabiesDoseStats.d7Progress === 100 ? 'bg-green-600' : 'bg-orange-600'} h-1.5 rounded-full`} style={{ width: `${rabiesDoseStats.d7Progress}%` }}></div>
                           </div>
-                          <span className="text-right text-[10px] text-orange-500">{rabiesDoseStats.d7Progress}% Complete</span>
+                          <span className={`text-right text-[10px] ${rabiesDoseStats.d7Progress === 100 ? 'text-green-500' : 'text-orange-500'}`}>{rabiesDoseStats.d7Progress}% Complete</span>
                       </div>
                     </div>
                 </div>
@@ -686,7 +687,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'rabies': return <RabiesRegistration currentFiscalYear={currentFiscalYear} patients={rabiesPatients} onAddPatient={onAddRabiesPatient} onUpdatePatient={onUpdateRabiesPatient} onDeletePatient={onDeletePatient} currentUser={currentUser} />;
       case 'report_rabies': return <RabiesReport currentFiscalYear={currentFiscalYear} currentUser={currentUser} patients={rabiesPatients} />;
       case 'mag_faram': return <MagFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} existingForms={magForms} onSave={onSaveMagForm} onDelete={onDeleteMagForm} inventoryItems={inventoryItems} stores={stores} generalSettings={generalSettings} />;
-      case 'kharid_adesh': return <KharidAdesh orders={purchaseOrders} currentFiscalYear={currentFiscalYear} onSave={onUpdatePurchaseOrder} currentUser={currentUser} firms={firms} quotations={quotations} onDakhilaClick={(po) => { setActiveItem('jinshi_maujdat'); setPendingPoDakhila(po); }} generalSettings={generalSettings} />;
+      case 'kharid_adesh': return <KharidAdesh orders={purchaseOrders} currentFiscalYear={currentFiscalYear} onSave={onUpdatePurchaseOrder} currentUser={currentUser} firms={firms} quotations={quotations} onDakhilaClick={(po) => { setActiveItem('jinshi_maujdat'); setPendingPoDakhila(po); }} generalSettings={generalSettings} inventoryItems={inventoryItems} />;
       case 'nikasha_pratibedan': return <NikashaPratibedan reports={issueReports} onSave={onUpdateIssueReport} currentUser={currentUser} currentFiscalYear={currentFiscalYear} generalSettings={generalSettings} />;
       case 'form_suchikaran': return <FirmListing currentFiscalYear={currentFiscalYear} firms={firms} onAddFirm={onAddFirm} />;
       case 'quotation': return <Quotation currentFiscalYear={currentFiscalYear} firms={firms} quotations={quotations} onAddQuotation={onAddQuotation} inventoryItems={inventoryItems} />;
@@ -823,7 +824,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                                             <span className="text-slate-600">{item.quantity} {item.unit}</span>
                                             <span className="text-slate-600 text-transparent bg-slate-200 rounded px-1 blur-sm select-none">रु. {item.rate.toFixed(2)}</span>
                                             <span className="text-indigo-600 font-bold text-transparent bg-indigo-200 rounded px-1 blur-sm select-none">रु. {item.totalAmount.toFixed(2)}</span>
-                                        </li>
+                                        </tr>
                                     ))}
                                     {selectedReportForDetailedView.items.length > 3 && (
                                         <li className="text-center text-slate-500 italic text-[10px] pt-1">

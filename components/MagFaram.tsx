@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Printer, Save, Calendar, CheckCircle2, Send, Clock, FileText, Eye, Search, X, AlertCircle, ChevronRight, ArrowLeft, Check, Square, Warehouse, Layers, ShieldCheck, Info } from 'lucide-react';
-import { User, MagItem, MagFormEntry, InventoryItem, Option, Store, OrganizationSettings } from '../types';
+import { User, MagItem, MagFormEntry, InventoryItem, Option, Store, OrganizationSettings, Signature } from '../types';
 import { SearchableSelect } from './SearchableSelect';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
+import { InsufficientStockModal } from './InsufficientStockModal'; // Import the new modal
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -28,7 +29,9 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
-  
+  const [successMessage, setSuccessMessage] = useState<string | null>(null); // NEW: State for success message
+  const [isSaved, setIsSaved] = useState(false); // NEW: State to control button for saving process
+
   // Rejection States
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -40,22 +43,26 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
       itemType: '' as 'Expendable' | 'Non-Expendable' | ''
   });
 
+  // Insufficient Stock Modal States
+  const [showInsufficientStockModal, setShowInsufficientStockModal] = useState(false);
+  const [insufficientStockItems, setInsufficientStockItems] = useState<Array<{ demandedItem: LocalMagItem; availableQuantity: number; }>>([]);
+
+
   const generateMagFormNo = (forms: MagFormEntry[], fy: string) => {
-    const fyForms = forms.filter(f => f.fiscalYear === fy);
-    if (fyForms.length === 0) return "0001-MF";
+    const fyClean = currentFiscalYear.replace('/', '');
+    const prefix = 'MF'; // For Mag Form
     
-    const maxNo = fyForms.reduce((max, f) => {
-        let val = 0;
-        if (typeof f.formNo === 'string') {
-            const parts = f.formNo.split('-');
-            val = parseInt(parts[0]);
-        } else if (typeof f.formNo === 'number') {
-            val = f.formNo;
-        }
-        return isNaN(val) ? max : Math.max(max, val);
+    // Filter forms only for the current fiscal year and get numeric part for sequential numbering
+    const formsInCurrentFY = forms.filter(f => f.fiscalYear === fy && f.formNo.startsWith(`${fyClean}-`));
+
+    const maxNum = formsInCurrentFY.reduce((max, f) => {
+        const parts = f.formNo.split('-');
+        const numPart = parts.length > 1 ? parseInt(parts[1]) : 0; // Assuming format is 'FY-NNN'
+        return isNaN(numPart) ? max : Math.max(max, numPart);
     }, 0);
     
-    return `${String(maxNo + 1).padStart(4, '0')}-MF`;
+    // Format: YYYY-NNN where YYYY is from fiscal year (e.g., 2082)
+    return `${fyClean}-${String(maxNum + 1).padStart(3, '0')}`;
   };
 
   const todayBS = useMemo(() => {
@@ -77,11 +84,16 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
     status: 'Pending',
     demandBy: { name: currentUser.fullName, designation: currentUser.designation, date: todayBS, purpose: '' },
     recommendedBy: { name: '', designation: '', date: '' },
-    storeKeeper: { status: 'stock', name: '' },
+    storeKeeper: { name: '', date: '', verified: false, marketRequired: false, inStock: false }, // Updated for checkboxes
     receiver: { name: '', designation: '', date: '' }, 
-    ledgerEntry: { name: '', date: '', },
-    approvedBy: { name: '', designation: '', date: '', },
-    isViewedByRequester: true
+    ledgerEntry: { name: '', designation: '', date: '' }, // Initialized with designation for consistency
+    approvedBy: { name: '', designation: '', date: '' },
+    selectedStoreId: '', // Initialized
+    issueItemType: 'Expendable', // Initialized with a default value
+    isViewedByRequester: true,
+    // Add decisionNo and decisionDate to MagFormEntry state for collection
+    decisionNo: '', 
+    decisionDate: '', 
   });
 
   useEffect(() => {
@@ -242,17 +254,27 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
     }
   }, []);
 
-  const updateStoreKeeperStatus = (status: string) => {
-      if (isViewOnly || !isVerifying) return;
-      setFormDetails(prev => ({
-          ...prev,
-          storeKeeper: { ...prev.storeKeeper, status, name: prev.storeKeeper?.name || currentUser.fullName }
-      }));
+  const handleStorekeeperCheckboxChange = (field: 'marketRequired' | 'inStock', value: boolean) => {
+    if (isViewOnly || !isVerifying) return; // Only editable if verifying and not in view-only
+    setFormDetails(prev => ({
+        ...prev,
+        storeKeeper: {
+            ...prev.storeKeeper,
+            [field]: value,
+            verified: true, // Mark as verified if any checkbox is changed
+            name: prev.storeKeeper?.name || currentUser.fullName, // Auto-fill name if not already set
+            date: prev.storeKeeper?.date || todayBS // Auto-fill date if not already set
+        }
+    }));
   };
 
   const handleLoadForm = (form: MagFormEntry, viewOnly: boolean = false) => {
       setEditingId(form.id);
       setIsViewOnly(viewOnly);
+      setSuccessMessage(null); // Clear messages on load
+      setValidationError(null); // Clear messages on load
+      setIsSaved(false); // Reset saved status
+
       // When loading, ensure items have a random ID for key stability if they came from DB without one
       setItems(form.items.map((item, idx) => {
           const matched = inventoryItems.some(i => i.itemName === item.name);
@@ -264,7 +286,26 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
           onSave(updatedForm);
           setFormDetails(updatedForm);
       } else {
-          setFormDetails({ ...form });
+          // Ensure all signature fields are properly initialized from loaded form data,
+          // providing defaults for new fields if not present in old data.
+          setFormDetails({
+            ...form,
+            storeKeeper: {
+                name: form.storeKeeper?.name || '',
+                date: form.storeKeeper?.date || '',
+                verified: form.storeKeeper?.verified || false,
+                marketRequired: form.storeKeeper?.marketRequired || false,
+                inStock: form.storeKeeper?.inStock || false,
+            },
+            demandBy: { ...form.demandBy || { name: '', designation: '', date: '', purpose: '' } },
+            recommendedBy: { ...form.recommendedBy || { name: '', designation: '', date: '' } },
+            approvedBy: { ...form.approvedBy || { name: '', designation: '', date: '' } },
+            receiver: { ...form.receiver || { name: '', designation: '', date: '' } },
+            ledgerEntry: { ...form.ledgerEntry || { name: '', designation: '', date: '' } }, // Ensure designation is handled
+            // Load decisionNo and decisionDate from the form being loaded
+            decisionNo: form.decisionNo || '',
+            decisionDate: form.decisionDate || '',
+          });
       }
       
       setValidationError(null);
@@ -278,7 +319,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
       }
   };
 
-  const handleSave = () => {
+  const handleSave = (extraData?: { storeId: string, itemType: 'Expendable' | 'Non-Expendable' }) => {
     setValidationError(null);
     if (!formDetails.date) { setValidationError("कृपया मिति भर्नुहोस्।"); return; }
     if (!formDetails.demandBy?.purpose) { setValidationError("कृपया प्रयोजन भर्नुहोस्।"); return; }
@@ -286,15 +327,45 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
     const validItems = items.filter(item => item.name && item.name.trim() !== '');
     if (validItems.length === 0) { setValidationError("कृपया कम्तिमा एउटा सामानको नाम भर्नुहोस्।"); return; }
 
-    // If Storekeeper is verifying
-    if (isVerifying) {
-        if (formDetails.storeKeeper?.status === 'stock') {
-            setShowVerifyPopup(true);
-            return;
+    // If Storekeeper is verifying and claims 'in stock'
+    if (isVerifying && formDetails.storeKeeper?.inStock) {
+        // Step 1: If we don't have storeId/itemType yet, show the popup to collect them.
+        if (!extraData?.storeId || !extraData?.itemType) {
+            setShowVerifyPopup(true); // Trigger the modal to get storeId and itemType
+            return; // Exit here; handleSave will be called from the modal's internal button
+        }
+
+        // Step 2: Now we have storeId and itemType from extraData. Perform stock validation.
+        const insufficient: { demandedItem: LocalMagItem; availableQuantity: number; }[] = [];
+        
+        validItems.forEach(demandedItem => {
+            const matchingInventory = inventoryItems.find(inv =>
+                inv.itemName.toLowerCase() === demandedItem.name.toLowerCase() &&
+                inv.storeId === extraData.storeId &&
+                inv.itemType === extraData.itemType
+            );
+
+            const requestedQty = parseFloat(demandedItem.quantity) || 0;
+            const availableQty = matchingInventory?.currentQuantity || 0;
+
+            if (requestedQty > availableQty) {
+                insufficient.push({
+                    demandedItem: demandedItem,
+                    availableQuantity: availableQty
+                });
+            }
+        });
+
+        if (insufficient.length > 0) {
+            setInsufficientStockItems(insufficient);
+            setShowInsufficientStockModal(true); // Show the new modal for insufficient stock
+            return; // Stop processing
         }
     }
-
-    finalizeSave();
+    
+    // If stock is sufficient (or not checking stock, e.g. marketRequired), proceed with save
+    setIsSaved(true); 
+    finalizeSave(extraData);
   };
 
   const handleReject = () => {
@@ -312,29 +383,49 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
       };
       
       onSave(newForm);
-      alert("माग फारम अस्वीकृत गरियो।");
+      setSuccessMessage("माग फारम अस्वीकृत गरियो! (Demand Form Rejected!)");
       setShowRejectModal(false);
-      handleReset();
+      
+      // Delay reset for success message visibility
+      setTimeout(() => {
+          handleReset();
+      }, 2000);
   };
 
   const finalizeSave = (extraData?: { storeId: string, itemType: 'Expendable' | 'Non-Expendable' }) => {
     let nextStatus = formDetails.status || 'Pending';
     let nextIsViewed = true;
+    let successMessageText = "माग फारम सुरक्षित भयो! (Demand Form Saved!)";
 
     // Track original signature objects
+    let updatedDemandBy = { ...formDetails.demandBy };
+    let updatedRecommendedBy = { ...formDetails.recommendedBy };
     let updatedStoreKeeper = { ...formDetails.storeKeeper };
+    let updatedReceiver = { ...formDetails.receiver };
+    let updatedLedgerEntry = { ...formDetails.ledgerEntry };
     let updatedApprovedBy = { ...formDetails.approvedBy };
+
 
     if (editingId && editingId !== 'new') {
         if (isVerifying) {
             nextStatus = 'Verified';
             nextIsViewed = false;
+            successMessageText = "माग फारम प्रमाणित भयो र स्वीकृतिको लागि पठाइयो! (Demand Form Verified & Sent for Approval!)";
             // Record who verified
             updatedStoreKeeper.name = currentUser.fullName;
+            updatedStoreKeeper.date = todayBS; // Set date for storekeeper verification
+            updatedStoreKeeper.verified = true; // Mark explicitly verified
+            
+            // If marketRequired is checked, clear inStock and set itemType for purchase
+            if (updatedStoreKeeper.marketRequired) {
+                updatedStoreKeeper.inStock = false;
+                extraData = { storeId: '', itemType: 'Expendable' }; // Default to Expendable for market purchase
+            }
         }
         else if (isApproving) {
             nextStatus = 'Approved';
             nextIsViewed = false;
+            successMessageText = "माग फारम सफलतापूर्वक स्वीकृत भयो! (Demand Form Successfully Approved!)";
             // Record who approved
             updatedApprovedBy = {
                 name: currentUser.fullName,
@@ -352,48 +443,63 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
         items: itemsToSave,
         status: nextStatus,
         isViewedByRequester: nextIsViewed,
+        demandBy: updatedDemandBy,
+        recommendedBy: updatedRecommendedBy,
         storeKeeper: updatedStoreKeeper,
+        receiver: updatedReceiver,
+        ledgerEntry: updatedLedgerEntry,
         approvedBy: updatedApprovedBy,
-        rejectionReason: "" 
+        rejectionReason: "", 
+        selectedStoreId: extraData?.storeId || formDetails.selectedStoreId || '', // Use the correct property
+        issueItemType: extraData?.itemType || formDetails.issueItemType || 'Expendable', // Use the correct property
+        // Save decisionNo and decisionDate from formDetails
+        decisionNo: formDetails.decisionNo, 
+        decisionDate: formDetails.decisionDate,
     };
 
-    const finalStoreId = extraData?.storeId || formDetails.selectedStoreId || '';
-    const finalItemType = extraData?.itemType || formDetails.issueItemType || '';
-
-    if (finalStoreId) newForm.selectedStoreId = finalStoreId;
-    if (finalItemType) newForm.issueItemType = finalItemType as any;
-
     onSave(newForm);
-    alert("माग फारम सुरक्षित भयो।");
+    setSuccessMessage(successMessageText);
     setShowVerifyPopup(false);
-    handleReset();
+    
+    // Always reset form after a short delay for any save action
+    setTimeout(() => {
+        handleReset();
+    }, 2000);
   };
 
   const handleReset = () => {
     setEditingId(null);
     setIsViewOnly(false);
     setValidationError(null);
+    setSuccessMessage(null); // Clear success message on reset
+    setIsSaved(false); // Reset saved status
     setShowVerifyPopup(false);
     setShowRejectModal(false);
     setRejectReason('');
     setVerificationData({ storeId: '', itemType: '' });
     setItems([{ id: Date.now() + Math.random(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }]);
-    setFormDetails({
+    setFormDetails(prev => ({
+        ...prev,
         id: '', items: [], fiscalYear: currentFiscalYear, 
         formNo: generateMagFormNo(existingForms, currentFiscalYear),
         date: todayBS, status: 'Pending',
         demandBy: { name: currentUser.fullName, designation: currentUser.designation, date: todayBS, purpose: '' },
-        recommendedBy: { name: '', designation: '', date: '', },
-        storeKeeper: { status: 'stock', name: '', },
-        receiver: { name: '', designation: '', date: '', }, 
-        ledgerEntry: { name: '', date: '', },
-        approvedBy: { name: '', designation: '', date: '', },
-        isViewedByRequester: true
-    });
+        recommendedBy: { name: '', designation: '', date: '' },
+        storeKeeper: { name: '', date: '', verified: false, marketRequired: false, inStock: false }, // Reset for checkboxes
+        receiver: { name: '', designation: '', date: '' }, 
+        ledgerEntry: { name: '', designation: '', date: '' }, // Reset to handle designation
+        approvedBy: { name: '', designation: '', date: '' },
+        isViewedByRequester: true,
+        selectedStoreId: '', // Reset new property
+        issueItemType: 'Expendable', // Reset new property
+        // Reset decisionNo and decisionDate
+        decisionNo: '', 
+        decisionDate: '',
+    }));
   };
 
-  const inputReadOnlyClass = "border-b border-dotted border-slate-800 flex-1 outline-none bg-slate-50 text-slate-500 cursor-not-allowed px-1 rounded-sm";
-  const inputEditableClass = "border-b border-dotted border-slate-800 flex-1 outline-none bg-white focus:bg-primary-50 px-1 rounded-sm";
+  const inputReadOnlyClass = "border-b border-dotted border-black flex-1 outline-none bg-slate-50 text-slate-500 cursor-not-allowed px-1 rounded-sm"; // Changed to border-black
+  const inputEditableClass = "border-b border-dotted border-black flex-1 outline-none bg-white focus:bg-primary-50 px-1 rounded-sm"; // Changed to border-black
 
   if (!editingId) {
     return (
@@ -497,7 +603,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
   return (
     <div className="space-y-6">
        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
               <button onClick={handleReset} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"><ArrowLeft size={20} /></button>
               <h2 className="font-bold text-slate-700 font-nepali text-lg">{isViewOnly ? 'माग फारम प्रिभ्यु' : 'माग फारम भर्नुहोस्'}</h2>
           </div>
@@ -509,8 +615,9 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                            <X size={18} /> अस्वीकार (Reject)
                         </button>
                     )}
-                    <button onClick={handleSave} className="flex items-center gap-2 px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium shadow-sm">
-                        <Save size={18} /> {isVerifying ? 'प्रमाणित गर्नुहोस्' : isApproving ? 'स्वीकृत गर्नुहोस्' : 'सुरक्षित गर्नुहोस्'}
+                    <button onClick={() => handleSave()} disabled={isSaved} className={`flex items-center gap-2 px-6 py-2 text-white rounded-lg font-medium shadow-sm ${isSaved ? 'bg-green-600 cursor-not-allowed' : 'bg-primary-600 hover:bg-primary-700'} transition-colors`}>
+                        {isSaved ? <CheckCircle2 size={18} /> : <Save size={18} />}
+                        {isSaved ? 'प्रक्रियामा...' : (isVerifying ? 'प्रमाणित गर्नुहोस्' : isApproving ? 'स्वीकृत गर्नुहोस्' : 'सुरक्षित गर्नुहोस्')}
                     </button>
                 </>
             )}
@@ -528,6 +635,17 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                     <p className="text-red-700 text-sm mt-1 font-nepali">{validationError}</p>
                 </div>
                 <button onClick={() => setValidationError(null)} className="text-red-400 hover:text-red-600"><X size={20} /></button>
+            </div>
+       )}
+
+       {successMessage && (
+            <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-xl shadow-sm flex items-center gap-3 animate-in slide-in-from-top-2 no-print mx-auto max-w-[210mm]">
+                <div className="text-green-500"><CheckCircle2 size={24} /></div>
+                <div className="flex-1">
+                   <h3 className="text-green-800 font-bold text-lg font-nepali">सफल भयो (Success)</h3>
+                   <p className="text-green-700 text-sm">{successMessage}</p>
+                </div>
+                <button onClick={() => setSuccessMessage(null)} className="text-green-400 hover:text-green-600"><X size={20} /></button>
             </div>
        )}
 
@@ -551,7 +669,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                   <div className="w-24 flex justify-start pt-1">
                       <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" alt="Nepal Emblem" className="h-20 w-20 object-contain" />
                   </div>
-                  <div className="flex-1 text-center">
+                  <div className="flex-1 text-center space-y-1">
                       <h1 className="text-lg font-bold">{generalSettings.orgNameNepali}</h1>
                       <h2 className="text-base font-bold">{generalSettings.subTitleNepali}</h2>
                       {generalSettings.subTitleNepali2 && <h3 className="text-sm font-bold">{generalSettings.subTitleNepali2}</h3>}
@@ -573,5 +691,384 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               </div>
           </div>
 
-          <div className="flex justify-end text-sm mb-4">
-              <div className="space
+          <div className="flex justify-between text-sm mb-4">
+              {/* REMOVED: Shree, Name, Address, Purpose from here as per request */}
+              {/* Invisible placeholder to maintain layout - should take up the same vertical space as the meta-info on the right. */}
+              <div className="space-y-1 w-1/2 opacity-0 select-none">
+                <div className="flex items-center gap-2">
+                    <span className="shrink-0">श्री:</span>
+                    <input className="border-b border-dotted border-black flex-1 outline-none bg-transparent px-1 rounded-sm"/>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="shrink-0">ठेगाना:</span>
+                    <input className="border-b border-dotted border-black flex-1 outline-none bg-transparent px-1 rounded-sm"/>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="shrink-0">प्रयोजन <span className="text-red-500">*</span>:</span>
+                    <input className="border-b border-dotted border-black flex-1 outline-none bg-transparent px-1 rounded-sm"/>
+                </div>
+              </div>
+              <div className="space-y-1 w-1/3 text-right">
+                <div className="flex items-center justify-end gap-2">
+                    <span className="shrink-0">आ.व. :</span>
+                    <input 
+                        value={formDetails.fiscalYear} 
+                        readOnly 
+                        className="border-b border-dotted border-black flex-1 outline-none w-24 text-center bg-transparent text-slate-500 cursor-not-allowed px-1 rounded-sm"
+                    />
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                    <span className="shrink-0">माग फारम नं :</span> {/* Changed label */}
+                    <input 
+                        value={formDetails.formNo} 
+                        readOnly 
+                        className="border-b border-dotted border-black flex-1 outline-none w-24 text-center bg-transparent text-red-600 font-bold cursor-not-allowed px-1 rounded-sm"
+                    />
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                    <span className="shrink-0">मिति <span className="text-red-500">*</span> :</span>
+                    <NepaliDatePicker 
+                        value={formDetails.date}
+                        onChange={val => setFormDetails(prev => ({...prev, date: val}))}
+                        format="YYYY/MM/DD"
+                        label=""
+                        hideIcon={true}
+                        inputClassName={`border-b border-dotted border-black flex-1 outline-none w-32 text-center bg-white font-bold placeholder:text-slate-400 placeholder:font-normal rounded-none px-0 py-0 h-auto focus:ring-0 focus:border-black ${validationError ? 'text-red-600' : ''}`}
+                        wrapperClassName="w-32"
+                        disabled={isViewOnly}
+                        popupAlign="right"
+                        minDate={todayBS}
+                        maxDate={todayBS}
+                        required
+                    />
+                </div>
+              </div>
+          </div>
+
+          <div className="mb-6">
+              <table className="w-full border-collapse border border-black text-center text-xs"> {/* Added text-xs, changed border-slate-900 to border-black */}
+                  <thead>
+                      <tr className="bg-slate-50">
+                          <th className="border border-black p-2 w-10" rowSpan={2}>क्र.सं.</th> {/* Changed border-slate-900 to border-black */}
+                          <th className="border border-black p-2" colSpan={2}>जिन्सी मालसामानको</th> {/* Changed border-slate-900 to border-black */}
+                          <th className="border border-black p-2" colSpan={2}>माग गरिएको</th> {/* Added colspan 2 for "माग गरिएको" */}
+                          <th className="border border-black p-2" rowSpan={2}>कैफियत</th> {/* Changed border-slate-900 to border-black */}
+                          <th className="border border-black p-2 w-8 no-print" rowSpan={2}></th> {/* Changed border-slate-900 to border-black */}
+                      </tr>
+                      <tr className="bg-slate-50">
+                          <th className="border border-black p-1">नाम <span className="text-red-500">*</span></th> {/* Changed border-slate-900 to border-black, ADDED ASTERISK */}
+                          <th className="border border-black p-1">स्पेसिफिकेसन</th> {/* Changed border-slate-900 to border-black */}
+                          <th className="border border-black p-1">एकाई</th> {/* New header for unit */}
+                          <th className="border border-black p-1">परिमाण</th> {/* New header for quantity */}
+                      </tr>
+                      <tr className="bg-slate-100 text-[10px]">
+                          <th className="border border-black p-1">१</th> {/* Changed border-slate-900 to border-black */}
+                          <th className="border border-black p-1">२</th> {/* Changed border-slate-900 to border-black */}
+                          <th className="border border-black p-1">३</th> {/* Changed border-slate-900 to border-black */}
+                          <th className="border border-black p-1">४</th> {/* New index */}
+                          <th className="border border-black p-1">५</th> {/* New index */}
+                          <th className="border border-black p-1">६</th> {/* Changed from 4 to 6 */}
+                          <th className="border border-black p-1 no-print"></th> {/* Changed border-slate-900 to border-black */}
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {items.map((item, index) => (
+                          <tr key={item.id}>
+                              <td className="border border-black p-1">{index + 1}</td> {/* Changed border-slate-900 to border-black */}
+                              <td className="border border-black p-1 text-left px-2"> {/* Changed border-slate-900 to border-black */}
+                                  {!isViewOnly ? (
+                                      <SearchableSelect
+                                          options={itemOptions}
+                                          value={item.name}
+                                          onChange={newName => handleItemNameChange(item.id, newName)} // Pass ID and new name
+                                          onSelect={(option) => handleItemSelect(item.id, option)}
+                                          placeholder="सामानको नाम खोज्नुहोस्"
+                                          className="!border-none !bg-transparent !p-0 !text-xs" // Added text-xs
+                                          label=""
+                                      />
+                                  ) : (
+                                      <span className="text-left block px-2">{item.name} {item.codeNo && `(${item.codeNo})`}</span>
+                                  )}
+                              </td>
+                              <td className="border border-black p-1"> {/* Changed border-slate-900 to border-black */}
+                                  <input 
+                                      value={item.specification} 
+                                      onChange={e => updateItem(item.id, 'specification', e.target.value)} 
+                                      className={isViewOnly ? inputReadOnlyClass : inputEditableClass + ' text-xs'} // Added text-xs
+                                      disabled={isViewOnly}
+                                      placeholder="Model/Brand/Details"
+                                  />
+                              </td>
+                              {/* Consolidated 'एकाई' and 'परिमाण' under "माग गरिएको" */}
+                              <td className="border border-black p-1"> {/* Changed border-slate-900 to border-black */}
+                                  <input 
+                                      value={item.unit} 
+                                      onChange={e => updateItem(item.id, 'unit', e.target.value)} 
+                                      className={isViewOnly ? inputReadOnlyClass : inputEditableClass + ' text-xs'} // Added text-xs
+                                      disabled={isViewOnly}
+                                      placeholder="एकाई"
+                                  />
+                              </td>
+                              <td className="border border-black p-1 font-bold"> {/* Changed border-slate-900 to border-black */}
+                                  <input 
+                                      type="number" 
+                                      value={item.quantity} 
+                                      onChange={e => updateItem(item.id, 'quantity', e.target.value)} 
+                                      className={isViewOnly ? `w-full text-center ${inputReadOnlyClass}` : `w-full text-center ${inputEditableClass} text-xs`} // Added text-xs
+                                      disabled={isViewOnly}
+                                      placeholder="परिमाण"
+                                  />
+                              </td>
+                              <td className="border border-black p-1"> {/* Changed border-slate-900 to border-black */}
+                                  <input 
+                                      value={item.remarks} 
+                                      onChange={e => updateItem(item.id, 'remarks', e.target.value)} 
+                                      className={isViewOnly ? inputReadOnlyClass : inputEditableClass + ' text-xs'} // Added text-xs
+                                      disabled={isViewOnly}
+                                      placeholder="कैफियत"
+                                  />
+                              </td>
+                              <td className="border border-black p-1 no-print"> {/* Changed border-slate-900 to border-black */}
+                                  {!isViewOnly && (
+                                      <button type="button" onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-700">
+                                          <Trash2 size={14}/>
+                                      </button>
+                                  )}
+                              </td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
+              {!isViewOnly && (
+                  <div className="mt-2 no-print">
+                      <button type="button" onClick={handleAddItem} className="flex items-center gap-1 text-primary-600 hover:text-primary-700 text-xs font-bold px-2 py-1 bg-primary-50 rounded">
+                          <Plus size={14} /> लहर थप्नुहोस् (Add Row)
+                      </button>
+                  </div>
+              )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-8 mt-12 text-[11px]"> {/* Changed text-sm to text-[11px] */}
+            {/* माग गर्नेको (Demander) */}
+            <div>
+                <div className="font-bold mb-4">माग गर्नेको:</div>
+                <div className="space-y-1">
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">नाम:</span>
+                        <input value={formDetails.demandBy?.name || ''} className={isViewOnly ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly} onChange={e => setFormDetails(prev => ({...prev, demandBy: {...prev.demandBy, name: e.target.value}}))}/>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">पद:</span>
+                        <input value={formDetails.demandBy?.designation || ''} className={isViewOnly ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly} onChange={e => setFormDetails(prev => ({...prev, demandBy: {...prev.demandBy, designation: e.target.value}}))}/>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">मिति:</span>
+                        <input value={formDetails.demandBy?.date || ''} className={isViewOnly ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly} onChange={e => setFormDetails(prev => ({...prev, demandBy: {...prev.demandBy, date: e.target.value}}))}/>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">प्रयोजन:</span>
+                        <input value={formDetails.demandBy?.purpose || ''} className={isViewOnly ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly} onChange={e => setFormDetails(prev => ({...prev, demandBy: {...prev.demandBy, purpose: e.target.value}}))}/>
+                    </div>
+                </div>
+            </div>
+
+            {/* सिफारिस गर्ने (Recommender) */}
+            <div>
+                <div className="font-bold mb-4">सिफारिस गर्ने:</div>
+                <div className="space-y-1">
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">नाम:</span>
+                        <input value={formDetails.recommendedBy?.name || ''} className={isViewOnly ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly} onChange={e => setFormDetails(prev => ({...prev, recommendedBy: {...prev.recommendedBy, name: e.target.value}}))}/>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">पद:</span>
+                        <input value={formDetails.recommendedBy?.designation || ''} className={isViewOnly ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly} onChange={e => setFormDetails(prev => ({...prev, recommendedBy: {...prev.recommendedBy, designation: e.target.value}}))}/>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">मिति:</span>
+                        <input value={formDetails.recommendedBy?.date || ''} className={isViewOnly ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly} onChange={e => setFormDetails(prev => ({...prev, recommendedBy: {...prev.recommendedBy, date: e.target.value}}))}/>
+                    </div>
+                </div>
+            </div>
+
+            {/* स्टोरकिपरले भर्ने (Storekeeper Section with Checkboxes) */}
+            <div>
+                <div className="font-bold mb-4">स्टोरकिपरले भर्ने:</div>
+                <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={formDetails.storeKeeper?.marketRequired || false}
+                            onChange={() => handleStorekeeperCheckboxChange('marketRequired', !formDetails.storeKeeper?.marketRequired)}
+                            disabled={isViewOnly || !isVerifying}
+                            className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="text-slate-700">क) बजारबाट खरिद गर्नुपर्ने</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={formDetails.storeKeeper?.inStock || false}
+                            onChange={() => handleStorekeeperCheckboxChange('inStock', !formDetails.storeKeeper?.inStock)}
+                            disabled={isViewOnly || !isVerifying}
+                            className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="text-slate-700">ख) मौज्दातमा रहेको</span>
+                    </label>
+                    <div className="flex flex-col gap-1 items-start mt-2"> {/* Changed to flex-col */}
+                        {/* The label for the signature itself, with dotted line */}
+                        <span className="w-full">स्टोरकिपरकाे दस्तखत:</span> 
+                        <input value={formDetails.storeKeeper?.name || ''} className={`w-full ${inputReadOnlyClass}`} disabled={true} />
+                        <input value={formDetails.storeKeeper?.date || ''} className={`w-full ${inputReadOnlyClass}`} disabled={true} />
+                    </div>
+                </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-8 mt-12 text-[11px]"> {/* Changed text-sm to text-[11px] */}
+            {/* मालसामान बुझिलिनेको (Receiver) */}
+            <div>
+                <div className="font-bold mb-4">मालसामान बुझिलिनेको:</div>
+                <div className="space-y-1">
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">नाम:</span>
+                        <input value={formDetails.receiver?.name || ''} className={isViewOnly ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly} onChange={e => setFormDetails(prev => ({...prev, receiver: {...prev.receiver, name: e.target.value}}))}/>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">पद:</span>
+                        <input value={formDetails.receiver?.designation || ''} className={isViewOnly ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly} onChange={e => setFormDetails(prev => ({...prev, receiver: {...prev.receiver, designation: e.target.value}}))}/>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">मिति:</span>
+                        <input value={formDetails.receiver?.date || ''} className={isViewOnly ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly} onChange={e => setFormDetails(prev => ({...prev, receiver: {...prev.receiver, date: e.target.value}}))}/>
+                    </div>
+                </div>
+            </div>
+
+            {/* खर्च निकासा खातामा चढाउने (Ledger Entry) */}
+            <div>
+                <div className="font-bold mb-4">खर्च निकासा खातामा चढाउने:</div>
+                <div className="space-y-1">
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">नाम:</span>
+                        <input value={formDetails.ledgerEntry?.name || ''} className={isViewOnly ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly} onChange={e => setFormDetails(prev => ({...prev, ledgerEntry: {...prev.ledgerEntry, name: e.target.value}}))}/>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">पद:</span>
+                        <input value={formDetails.ledgerEntry?.designation || ''} className={isViewOnly ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly} onChange={e => setFormDetails(prev => ({...prev, ledgerEntry: {...prev.ledgerEntry, designation: e.target.value}}))}/>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">मिति:</span>
+                        <input value={formDetails.ledgerEntry?.date || ''} className={isViewOnly ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly} onChange={e => setFormDetails(prev => ({...prev, ledgerEntry: {...prev.ledgerEntry, date: e.target.value}}))}/>
+                    </div>
+                </div>
+            </div>
+
+            {/* स्वीकृत गर्ने (Approver) */}
+            <div>
+                <div className="font-bold mb-4">स्वीकृत गर्ने:</div>
+                <div className="space-y-1">
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">नाम:</span>
+                        <input value={formDetails.approvedBy?.name || ''} className={isViewOnly || !canApprove ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly || !canApprove} onChange={e => setFormDetails(prev => ({...prev, approvedBy: {...prev.approvedBy, name: e.target.value}}))}/>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">पद:</span>
+                        <input value={formDetails.approvedBy?.designation || ''} className={isViewOnly || !canApprove ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly || !canApprove} onChange={e => setFormDetails(prev => ({...prev, approvedBy: {...prev.approvedBy, designation: e.target.value}}))}/>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        <span className="w-10">मिति:</span>
+                        <input value={formDetails.approvedBy?.date || ''} className={isViewOnly || !canApprove ? inputReadOnlyClass : inputEditableClass} disabled={isViewOnly || !canApprove} onChange={e => setFormDetails(prev => ({...prev, approvedBy: {...prev.approvedBy, date: e.target.value}}))}/>
+                    </div>
+                </div>
+            </div>
+          </div>
+       </div>
+
+        {/* Reject Confirmation Modal */}
+        {showRejectModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowRejectModal(false)}></div>
+                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                    <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-red-50/50">
+                        <h3 className="font-bold text-slate-800 text-lg font-nepali">अस्वीकृत गर्नुहोस् (Reject)</h3>
+                        <button onClick={() => setShowRejectModal(false)}><X size={20} /></button>
+                    </div>
+                    <div className="p-6 space-y-4">
+                        <label className="block text-sm font-medium text-slate-700">कारण (Reason)</label>
+                        <textarea
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                            rows={4}
+                            className="w-full rounded-lg border border-slate-300 p-3 text-sm focus:border-red-500 outline-none"
+                            required
+                        ></textarea>
+                    </div>
+                    <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+                        <button onClick={() => setShowRejectModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm">Cancel</button>
+                        <button onClick={handleReject} className="px-6 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg text-sm shadow-sm">Confirm Reject</button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Verification Modal (Storekeeper) */}
+        {showVerifyPopup && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowVerifyPopup(false)}></div>
+                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                    <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-primary-50/50">
+                        <div className="flex items-center gap-3">
+                            <ShieldCheck size={20} className="text-primary-600"/>
+                            <h3 className="font-bold text-slate-800 text-lg font-nepali">माग प्रमाणित गर्नुहोस्</h3>
+                        </div>
+                        <button onClick={() => setShowVerifyPopup(false)}><X size={20} /></button>
+                    </div>
+                    <div className="p-6 space-y-4">
+                        <p className="text-sm text-slate-600">यो माग कुन गोदामको लागि हो र कस्तो प्रकारको सामान माग गरिएको हो, छान्नुहोस्।</p>
+                        <Select
+                            label="गोदाम/स्टोर छान्नुहोस् *"
+                            options={storeOptions}
+                            value={verificationData.storeId}
+                            onChange={e => setVerificationData(prev => ({...prev, storeId: e.target.value}))}
+                            required
+                            icon={<Warehouse size={16} />}
+                        />
+                        <Select
+                            label="सामानको प्रकार छान्नुहोस् *"
+                            options={[
+                                {id: 'exp', value: 'Expendable', label: 'खर्च हुने (Expendable)'},
+                                {id: 'nonexp', value: 'Non-Expendable', label: 'खर्च नहुने (Non-Expendable)'}
+                            ]}
+                            value={verificationData.itemType}
+                            onChange={e => setVerificationData(prev => ({...prev, itemType: e.target.value as any}))}
+                            required
+                            icon={<Layers size={16} />}
+                        />
+                    </div>
+                    <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+                        <button onClick={() => setShowVerifyPopup(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm">रद्द</button>
+                        {/* Fix: Added type assertion to `verificationData` to satisfy `handleSave`'s parameter type. */}
+                        <button 
+                          onClick={() => handleSave(verificationData as { storeId: string, itemType: 'Expendable' | 'Non-Expendable' })} 
+                          disabled={!verificationData.storeId || !verificationData.itemType} // Added validation for itemType
+                          className="flex items-center gap-2 px-6 py-2 bg-primary-600 text-white hover:bg-primary-700 rounded-lg text-sm shadow-sm"
+                        >
+                            <Check size={16} /> प्रमाणित गर्नुहोस्
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Insufficient Stock Modal */}
+        {showInsufficientStockModal && (
+            <InsufficientStockModal
+                isOpen={showInsufficientStockModal}
+                onClose={() => setShowInsufficientStockModal(false)}
+                insufficientItems={insufficientStockItems}
+            />
+        )}
+    </div>
+  );
+};

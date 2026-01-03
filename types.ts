@@ -132,13 +132,13 @@ export interface GarbhawatiPatient {
   lmpAd: string; // Last Menstrual Period in AD
   eddBs: string; // Estimated Due Date in BS
   eddAd: string; // Estimated Due Date in AD
-  td1DateBs?: string; // TD1 vaccine date in BS
-  td1DateAd?: string; // TD1 vaccine date in AD
-  td2DateBs?: string; // TD2 vaccine date in BS
-  td2DateAd?: string; // TD2 vaccine date in AD
-  tdBoosterDateBs?: string; // TD Booster vaccine date in BS
-  tdBoosterDateAd?: string; // TD Booster vaccine date in AD
-  remarks?: string;
+  td1DateBs?: string | null; // TD1 vaccine date in BS
+  td1DateAd?: string | null; // TD1 vaccine date in AD
+  td2DateBs?: string | null; // TD2 vaccine date in BS
+  td2DateAd?: string | null; // TD2 vaccine date in AD
+  tdBoosterDateBs?: string | null; // TD Booster vaccine date in BS
+  tdBoosterDateAd?: string | null; // TD Booster vaccine date in AD
+  remarks?: string | null;
 }
 
 // NEW: Child Immunization Record Interface
@@ -146,8 +146,8 @@ export interface ChildImmunizationVaccine {
   name: string; // e.g., BCG, DPT-HepB-Hib-1, MR-1
   scheduledDateBs: string;
   scheduledDateAd: string;
-  givenDateBs?: string;
-  givenDateAd?: string;
+  givenDateBs?: string | null;
+  givenDateAd?: string | null;
   status: 'Pending' | 'Given' | 'Missed';
 }
 
@@ -185,12 +185,15 @@ export interface Signature {
   name: string;
   designation?: string;
   date?: string;
-  purpose?: string;
+  purpose?: string; // Added purpose to signature
 }
 
 export interface StoreKeeperSignature {
-  status: string; 
   name: string;
+  date?: string;
+  verified?: boolean; // True if verified by storekeeper
+  marketRequired?: boolean; // If checked "बजारबाट खरिद गर्नुपर्ने"
+  inStock?: boolean;      // If checked "मौज्दातमा रहेको"
 }
 
 export interface MagFormEntry {
@@ -207,9 +210,11 @@ export interface MagFormEntry {
   ledgerEntry?: Signature;
   approvedBy?: Signature;
   rejectionReason?: string; 
-  selectedStoreId?: string; 
-  issueItemType?: 'Expendable' | 'Non-Expendable';
+  selectedStoreId?: string; // Added for storekeeper verification
+  issueItemType?: 'Expendable' | 'Non-Expendable'; // Added for storekeeper verification
   isViewedByRequester?: boolean; 
+  decisionNo?: string; // NEW: Added decisionNo to MagFormEntry
+  decisionDate?: string; // NEW: Added decisionDate to MagFormEntry
 }
 
 export interface PurchaseOrderEntry {
@@ -227,6 +232,8 @@ export interface PurchaseOrderEntry {
     pan: string;
     phone: string;
   };
+  decisionNo?: string; // Added decisionNo
+  decisionDate?: string; // Added decisionDate
   budgetDetails?: {
     budgetSubHeadNo: string;
     expHeadNo: string;
@@ -248,7 +255,9 @@ export interface IssueReportEntry {
   items: MagItem[]; 
   status: 'Pending' | 'Pending Approval' | 'Issued' | 'Rejected'; 
   fiscalYear?: string; 
-  itemType?: 'Expendable' | 'Non-Expendable'; 
+  // Add selectedStoreId and itemType to IssueReportEntry
+  selectedStoreId?: string;
+  itemType?: 'Expendable' | 'Non-Expendable';
   demandBy?: Signature; 
   preparedBy?: Signature;      
   recommendedBy?: Signature;   
@@ -353,7 +362,6 @@ export interface DakhilaItem {
   otherExpenses: number; 
   finalTotal: number; 
   remarks: string;
-  // Added: itemType is passed from InventoryItem to DakhilaItem
   itemType?: 'Expendable' | 'Non-Expendable'; 
 }
 
@@ -368,13 +376,13 @@ export interface DakhilaPratibedanEntry {
   preparedBy?: Signature;
   recommendedBy?: Signature;
   approvedBy?: Signature;
-  storeId?: string; // Added storeId to DakhilaPratibedanEntry
+  storeId?: string; 
 }
 
 export interface ReturnItem {
   id: number;
-  inventoryId?: string; // Optional: Link to the original inventory item
-  kharchaNikasaNo: string; // From which issue report it was originally issued
+  inventoryId?: string; 
+  kharchaNikasaNo: string; 
   codeNo: string; 
   name: string;
   specification: string;
@@ -384,8 +392,9 @@ export interface ReturnItem {
   totalAmount: number; 
   vatAmount: number; 
   grandTotal: number; 
-  condition: string; 
+  reasonAndCondition: string; // Renamed from 'condition'
   remarks: string;
+  itemType?: 'Expendable' | 'Non-Expendable'; // ADDED: itemType for classification
 }
 
 export interface ReturnEntry {
@@ -394,12 +403,12 @@ export interface ReturnEntry {
   formNo: string; 
   date: string;
   items: ReturnItem[];
-  status?: 'Pending' | 'Approved' | 'Rejected'; 
+  status?: 'Pending' | 'Verified' | 'Approved' | 'Rejected'; // Added 'Verified'
   rejectionReason?: string;
-  returnedBy: Signature; 
-  preparedBy: Signature; 
+  returnedBy: Signature; // This is the person initiating the return
+  preparedBy: Signature; // This is the Storekeeper who "received" and verified the return
   recommendedBy: Signature; 
-  approvedBy: Signature; 
+  approvedBy: Signature; // This is the final approver
 }
 
 export interface MarmatItem {
@@ -448,7 +457,7 @@ export interface DhuliyaunaEntry {
   disposalType: 'Dhuliyauna' | 'Lilaam' | 'Minaha';
   items: DhuliyaunaItem[];
   preparedBy: Signature;
-    approvedBy: Signature;
+  approvedBy: Signature;
 }
 
 export interface LogBookEntry {
@@ -468,6 +477,36 @@ export interface LogBookEntry {
   remarks: string;
 }
 
+// Updated interface to match the image's detailed columns
+export interface PropertyUseRow {
+  id: string;
+  date: string; // मिति (Col 1)
+  magFormNo: string; // माग फारम नं (Col 2)
+  sanketNo: string; // सङ्केत नं. (Col 3)
+  name: string; // नाम (Col 4)
+  model: string; // मोडल (Col 5) - Placeholder for now
+  specification: string; // स्पेसिफिकेसन (Col 6)
+  idNo: string; // पहिचान नं. (Col 7) - Using uniqueCode/sanketNo/codeNo
+  estLife: string; // अनुमानित आयु (Col 8) - Placeholder for now
+  makeCountry: string; // निर्माण भएको देश/कम्पनी (Col 9) - Placeholder for now
+  source: string; // प्राप्तिको स्रोत (Col 10)
+  unit: string; // एकाई (Col 11)
+  quantity: number; // परिमाण (Col 12) - Issued quantity
+  totalCost: number; // जम्मा परल मूल्य (Col 13)
+
+  // फिर्ताको विवरण (Col 14, 15, 16)
+  returnedQuantity: number; // परिमाण
+  returnDates: string[]; // मिति
+  returnReceivers: string[]; // दस्तखत (ApprovedBy Name from ReturnEntry)
+
+  // बुझिलिनेको नाम र दस्तखत (Col 17) - This represents the final signature column, combining details
+  receiverName: string; // माग गर्नेको नाम
+  receiverDesignation: string; // माग गर्नेको पद
+  receiverSignatureDate: string; // माग गर्नेको मिति
+
+  isCleared: boolean; // Custom field to indicate if fully returned
+}
+
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
@@ -484,7 +523,7 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
 
 export interface DashboardProps {
   onLogout: () => void;
-  currentUser: User | null; // Fix: Allow currentUser to be null
+  currentUser: User | null; 
   currentFiscalYear: string;
   users: User[];
   onAddUser: (user: User) => void;
@@ -497,7 +536,7 @@ export interface DashboardProps {
 
   magForms: MagFormEntry[];
   onSaveMagForm: (form: MagFormEntry) => void;
-  onDeleteMagForm: (formId: string) => void; // Added for history deletion
+  onDeleteMagForm: (formId: string) => void; 
   
   purchaseOrders: PurchaseOrderEntry[];
   onUpdatePurchaseOrder: (order: PurchaseOrderEntry) => void; 
@@ -510,7 +549,7 @@ export interface DashboardProps {
   onUpdateRabiesPatient: (patient: RabiesPatient) => void;
   onDeletePatient: (patientId: string) => void; 
 
-  // Added TB Patient props
+  // Added TB related props
   tbPatients: TBPatient[];
   onAddTbPatient: (patient: TBPatient) => void;
   onUpdateTbPatient: (patient: TBPatient) => void;
@@ -537,11 +576,10 @@ export interface DashboardProps {
   inventoryItems: InventoryItem[];
   onAddInventoryItem: (item: InventoryItem) => void;
   onUpdateInventoryItem: (item: InventoryItem) => void;
-  onDeleteInventoryItem: (itemId: string) => void; // Added for single item deletion
+  onDeleteInventoryItem: (itemId: string) => void; 
 
   stockEntryRequests: StockEntryRequest[];
   onRequestStockEntry: (request: StockEntryRequest) => void;
-  // Fix: Updated onApproveStockEntry signature to include approverDesignation
   onApproveStockEntry: (requestId: string, approverName: string, approverDesignation: string) => void;
   onRejectStockEntry: (requestId: string, reason: string, approverName: string) => void;
 
