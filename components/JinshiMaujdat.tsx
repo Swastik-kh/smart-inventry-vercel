@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Package, Calendar, Plus, RotateCcw, Save, X, CheckCircle2, Search, 
@@ -9,7 +8,9 @@ import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
 import { EnglishDatePicker } from './EnglishDatePicker'; 
-import { InventoryItem, Option, Store, StockEntryRequest, User as UserType, PurchaseOrderEntry } from '../types';
+// Corrected import paths for InventoryItem, Option, Store, StockEntryRequest, User, PurchaseOrderEntry
+import { Option, User as UserType } from '../types/coreTypes';
+import { InventoryItem, Store, StockEntryRequest, PurchaseOrderEntry } from '../types/inventoryTypes';
 import { SearchableSelect } from './SearchableSelect'; 
 import { AddOptionModal } from './AddOptionModal'; 
 // @ts-ignore
@@ -987,7 +988,7 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input type="text" placeholder="सामान, कोड खोज्नुहोस्..." className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-300 focus:border-indigo-500 outline-none text-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           </div>
-          <Select label="स्टور फिल्टर" options={[{id: 'all', value: '', label: 'All Stores'}, ...storeOptions]} value={filterStore} onChange={e => setFilterStore(e.target.value)} placeholder="Filter by Store" icon={<StoreIcon size={16} />} />
+          <Select label="स्टोर फिल्टर" options={[{id: 'all', value: '', label: 'All Stores'}, ...storeOptions]} value={filterStore} onChange={e => setFilterStore(e.target.value)} placeholder="Filter by Store" icon={<StoreIcon size={16} />} />
           <Select label="वर्गीकरण फिल्टर" options={[{id: 'all', value: '', label: 'All Classes'}, ...itemClassificationOptions]} value={filterClass} onChange={e => setFilterClass(e.target.value)} placeholder="Filter by Class" icon={<Tag size={16} />} />
       </div>
 

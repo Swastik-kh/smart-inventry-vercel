@@ -8,7 +8,13 @@ import {
   Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, ArrowRightCircle, AlertTriangle, Pill, Scissors, Clock, Calculator, Trash2, UsersRound, CalendarCheck, UserPlus, Droplets, Info, TrendingUp, AlertOctagon, Timer, Printer, Eye, Baby
 } from 'lucide-react';
 import { APP_NAME, FISCAL_YEARS } from '../constants';
-import { DashboardProps, PurchaseOrderEntry, InventoryItem, DakhilaPratibedanEntry, GarbhawatiPatient, ChildImmunizationRecord } from '../types'; 
+import { DashboardProps } from '../types/dashboardTypes'; 
+import { 
+  PurchaseOrderEntry, DakhilaPratibedanEntry
+} from '../types/inventoryTypes'; // Corrected import path
+import { GarbhawatiPatient, ChildImmunizationRecord } from '../types/healthTypes'; // Corrected import path
+import { User } from '../types/coreTypes'; // Corrected import path
+
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -63,7 +69,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   onUpdateIssueReport, 
   rabiesPatients,
   onAddRabiesPatient,
-  onUpdateRabiesPatient,
+  onUpdatePatient, // Corrected prop name
   onDeletePatient,
   tbPatients, 
   onAddTbPatient, 
@@ -684,7 +690,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         onUpdatePatient={onUpdateTbPatient} 
         onDeletePatient={onDeleteTbPatient} 
       />;
-      case 'rabies': return <RabiesRegistration currentFiscalYear={currentFiscalYear} patients={rabiesPatients} onAddPatient={onAddRabiesPatient} onUpdatePatient={onUpdateRabiesPatient} onDeletePatient={onDeletePatient} currentUser={currentUser} />;
+      case 'rabies': return <RabiesRegistration currentFiscalYear={currentFiscalYear} patients={rabiesPatients} onAddPatient={onAddRabiesPatient} onUpdatePatient={onUpdatePatient} onDeletePatient={onDeletePatient} currentUser={currentUser} />;
       case 'report_rabies': return <RabiesReport currentFiscalYear={currentFiscalYear} currentUser={currentUser} patients={rabiesPatients} />;
       case 'mag_faram': return <MagFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} existingForms={magForms} onSave={onSaveMagForm} onDelete={onDeleteMagForm} inventoryItems={inventoryItems} stores={stores} generalSettings={generalSettings} />;
       case 'kharid_adesh': return <KharidAdesh orders={purchaseOrders} currentFiscalYear={currentFiscalYear} onSave={onUpdatePurchaseOrder} currentUser={currentUser} firms={firms} quotations={quotations} onDakhilaClick={(po) => { setActiveItem('jinshi_maujdat'); setPendingPoDakhila(po); }} generalSettings={generalSettings} inventoryItems={inventoryItems} />;
@@ -817,21 +823,36 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                                 <h4 className="text-sm font-bold text-slate-700 font-nepali flex items-center gap-2 mb-2">
                                     <Package size={16} className="text-indigo-600"/> दाखिला गरिएका सामानहरू (Items)
                                 </h4>
-                                <ul className="space-y-2 text-xs">
-                                    {selectedReportForDetailedView.items.slice(0, 3).map((item, idx) => ( 
-                                        <li key={idx} className="flex items-center gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                            <span className="font-medium text-slate-800 flex-1 truncate">{item.name}</span>
-                                            <span className="text-slate-600">{item.quantity} {item.unit}</span>
-                                            <span className="text-slate-600 text-transparent bg-slate-200 rounded px-1 blur-sm select-none">रु. {item.rate.toFixed(2)}</span>
-                                            <span className="text-indigo-600 font-bold text-transparent bg-indigo-200 rounded px-1 blur-sm select-none">रु. {item.totalAmount.toFixed(2)}</span>
-                                        </tr>
-                                    ))}
-                                    {selectedReportForDetailedView.items.length > 3 && (
-                                        <li className="text-center text-slate-500 italic text-[10px] pt-1">
-                                            र अन्य {selectedReportForDetailedView.items.length - 3} सामानहरू...
-                                        </li>
-                                    )}
-                                </ul>
+                                {/* FIX: Corrected JSX tags from ul/li to table/tbody/tr/td */}
+                                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                    <table className="w-full text-xs text-left">
+                                        <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                                            <tr>
+                                                <th className="px-4 py-2">सामानको नाम</th>
+                                                <th className="px-4 py-2 text-center">परिमाण</th>
+                                                <th className="px-4 py-2 text-right">दर</th>
+                                                <th className="px-4 py-2 text-right">जम्मा</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {selectedReportForDetailedView.items.slice(0, 3).map((item, idx) => ( 
+                                                <tr key={idx} className="hover:bg-slate-50">
+                                                    <td className="px-4 py-2 font-medium text-slate-800">{item.name}</td>
+                                                    <td className="px-4 py-2 text-center text-slate-600">{item.quantity} {item.unit}</td>
+                                                    <td className="px-4 py-2 text-right text-slate-600 text-transparent bg-slate-200 rounded px-1 blur-sm select-none">रु. {item.rate.toFixed(2)}</td>
+                                                    <td className="px-4 py-2 text-right text-indigo-600 font-bold text-transparent bg-indigo-200 rounded px-1 blur-sm select-none">रु. {item.totalAmount.toFixed(2)}</td>
+                                                </tr>
+                                            ))}
+                                            {selectedReportForDetailedView.items.length > 3 && (
+                                                <tr>
+                                                    <td colSpan={4} className="px-4 py-2 text-center text-slate-500 italic text-[10px] pt-1">
+                                                        र अन्य {selectedReportForDetailedView.items.length - 3} सामानहरू...
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                                 <p className="text-[10px] text-slate-500 italic mt-4 border-t pt-2">
                                     <Info size={12} className="inline-block mr-1"/> वित्तीय विवरणहरू सुरक्षाको लागि अस्पष्ट पारिएको छ।
                                 </p>
@@ -941,7 +962,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                                             <td className="px-3 py-3 text-center font-black border-r print:border-slate-800 print:text-black bg-slate-50/30 print:bg-transparent">
                                                 {item.currentQuantity} <span className="text-[9px] font-normal">{item.unit}</span>
                                             </td>
-                                            <td className="px-3 py-3 text-right font-medium print:text-black">{item.rate?.toFixed(2) || '-'}</td>
+                                            <td className="px-3 py-3 text-right print:text-black">{item.rate?.toFixed(2) || '-'}</td>
                                         </tr>
                                     ))}
                                 </tbody>

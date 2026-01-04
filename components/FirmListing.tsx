@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Save, RotateCcw, ClipboardList, FileDigit, Building2, Phone, MapPin, Search, Calendar, X, CheckCircle2, User } from 'lucide-react';
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
-import { FirmEntry } from '../types';
+// Corrected import path for FirmEntry
+import { FirmEntry } from '../types/inventoryTypes';
 
 interface FirmListingProps {
   currentFiscalYear: string;

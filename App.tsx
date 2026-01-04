@@ -1,15 +1,20 @@
-
 import React, { useState, useEffect } from 'react';
 import { LoginForm } from './components/LoginForm';
 import { Dashboard } from './components/Dashboard';
-import { APP_NAME, ORG_NAME } from './constants';
+import { APP_NAME } from './constants';
 import { Landmark, ShieldCheck } from 'lucide-react';
 import { 
-  User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, 
-  IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
-  DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
-  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord 
-} from './types';
+  User, OrganizationSettings, Signature
+} from './types/coreTypes';
+import { 
+  MagFormEntry, PurchaseOrderEntry, IssueReportEntry, FirmEntry, QuotationEntry, 
+  InventoryItem, Store, StockEntryRequest, DakhilaPratibedanEntry, ReturnEntry, 
+  MarmatEntry, DhuliyaunaEntry, LogBookEntry, DakhilaItem 
+} from './types/inventoryTypes';
+import { 
+  RabiesPatient, TBPatient, GarbhawatiPatient, ChildImmunizationRecord 
+} from './types/healthTypes';
+
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe } from "firebase/database";
 // @ts-ignore
@@ -39,7 +44,6 @@ const DEFAULT_ADMIN: User = {
     fullName: 'Administrator',
     designation: 'System Manager',
     phoneNumber: '98XXXXXXXX',
-    // UPDATED: Allowed menus include khop_sewa to access the new tabbed view
     allowedMenus: ['dashboard', 'inventory', 'settings', 'services', 'khop_sewa']
 };
 
@@ -61,11 +65,8 @@ const App: React.FC = () => {
   const [firms, setFirms] = useState<FirmEntry[]>([]);
   const [quotations, setQuotations] = useState<QuotationEntry[]>([]);
   const [rabiesPatients, setRabiesPatients] = useState<RabiesPatient[]>([]);
-  // Added state for TB Patients
   const [tbPatients, setTbPatients] = useState<TBPatient[]>([]); 
-  // NEW: State for Garbhawati Patients
   const [garbhawatiPatients, setGarbhawatiPatients] = useState<GarbhawatiPatient[]>([]);
-  // NEW: State for Child Immunization Records
   const [bachhaImmunizationRecords, setBachhaImmunizationRecords] = useState<ChildImmunizationRecord[]>([]);
   const [marmatEntries, setMarmatEntries] = useState<MarmatEntry[]>([]);
   const [dhuliyaunaEntries, setDhuliyaunaEntries] = useState<DhuliyaunaEntry[]>([]);
@@ -105,8 +106,7 @@ const App: React.FC = () => {
         setFirms([]);
         setQuotations([]);
         setRabiesPatients([]);
-        setTbPatients([]); // Clear TB patients on logout
-        // NEW: Clear Garbhawati & Child Immunization on logout
+        setTbPatients([]);
         setGarbhawatiPatients([]);
         setBachhaImmunizationRecords([]);
         setMarmatEntries([]);
@@ -148,8 +148,7 @@ const App: React.FC = () => {
     setupOrgListener('firms', setFirms);
     setupOrgListener('quotations', setQuotations);
     setupOrgListener('rabiesPatients', setRabiesPatients);
-    setupOrgListener('tbPatients', setTbPatients); // Setup listener for TB Patients
-    // NEW: Setup listeners for Garbhawati and Child Immunization
+    setupOrgListener('tbPatients', setTbPatients);
     setupOrgListener('garbhawatiPatients', setGarbhawatiPatients);
     setupOrgListener('bachhaImmunizationRecords', setBachhaImmunizationRecords);
     setupOrgListener('marmatEntries', setMarmatEntries);
@@ -177,11 +176,8 @@ const App: React.FC = () => {
           const updates: Record<string, any> = {};
 
           if (sectionId === 'inventory') {
-              // PRECISE MAPPING: From Excel Headers to InventoryItem fields
               data.forEach((row, idx) => {
                   const itemId = `ITEM-UPLOAD-${Date.now()}-${idx}`;
-                  
-                  // Helper: Convert AD Expiry to BS Expiry for consistency
                   let expiryBs = '';
                   const expiryAd = row['Expiry (AD)'];
                   if (expiryAd && expiryAd !== '-') {
@@ -190,9 +186,7 @@ const App: React.FC = () => {
                           if (!isNaN(adDate.getTime())) {
                               expiryBs = new NepaliDate(adDate).format('YYYY-MM-DD');
                           }
-                      } catch(e) {
-                          console.warn("Expiry date conversion failed for row", idx);
-                      }
+                      } catch(e) {}
                   }
 
                   const qty = Number(row['Qty']) || 0;
@@ -227,7 +221,6 @@ const App: React.FC = () => {
                   updates[`${orgPath}/inventory/${itemId}`] = newItem;
               });
           } else {
-              // Generic save for other sections (Firms, Users, etc)
               data.forEach((row, idx) => {
                   const entryId = `${sectionId.toUpperCase()}-${Date.now()}-${idx}`;
                   updates[`${orgPath}/${sectionId}/${entryId}`] = row;
@@ -262,38 +255,36 @@ const App: React.FC = () => {
                       id: poId, magFormId: f.id, magFormNo: f.formNo, requestDate: f.date, items: f.items,
                       status: 'Pending', fiscalYear: f.fiscalYear,
                       preparedBy: { name: '', designation: '', date: '' },
-                      recommendedBy: { name: '', designation: '', date: '' },
-                      financeBy: { name: '', designation: '', date: '' },
-                      approvedBy: { name: '', designation: '', date: '' }
+                      recommendedBy: { name: '', designation: '', date: '', purpose: '' }, 
+                      financeBy: { name: '', designation: '', date: '', purpose: '' },       
+                      approvedBy: { name: '', designation: '', date: '', purpose: '' }      
                   };
               }
           }
 
-              // NEW: If inStock was checked, create an Issue Report
-              if (f.status === 'Approved' && f.storeKeeper?.inStock) {
-                  const issueReportId = `ISSUE-${f.id}`; // Link issue report to mag form ID
-                  const issueReportSnap = await get(ref(db, `${orgPath}/issueReports/${issueReportId}`));
+          if (f.status === 'Approved' && f.storeKeeper?.inStock) {
+              const issueReportId = `ISSUE-${f.id}`;
+              const issueReportSnap = await get(ref(db, `${orgPath}/issueReports/${issueReportId}`));
 
-                  // Only create if it doesn't already exist to prevent duplicates on re-save
-                  if (!issueReportSnap.exists()) {
-                      const newIssueReport: IssueReportEntry = {
-                          id: issueReportId,
-                          magFormId: f.id,
-                          magFormNo: f.formNo,
-                          requestDate: f.date, // Use Mag Form's date
-                          items: f.items,
-                          status: 'Pending', // Initial status for Storekeeper to prepare
-                          fiscalYear: f.fiscalYear,
-                          itemType: f.issueItemType, // Crucial: use the type determined during verification
-                          selectedStoreId: f.selectedStoreId, // Crucial: store the selected store ID
-                          demandBy: f.demandBy,
-                          preparedBy: { name: '', designation: '', date: '' }, // To be filled by Storekeeper
-                          recommendedBy: { name: '', designation: '', date: '' }, // To be filled by Storekeeper/Approver
-                          approvedBy: { name: '', designation: '', date: '' }, // To be filled by Approver
-                      };
-                      updates[`${orgPath}/issueReports/${issueReportId}`] = newIssueReport;
-                  }
+              if (!issueReportSnap.exists()) {
+                  const newIssueReport: IssueReportEntry = {
+                      id: issueReportId,
+                      magFormId: f.id,
+                      magFormNo: f.formNo,
+                      requestDate: f.date,
+                      items: f.items,
+                      status: 'Pending',
+                      fiscalYear: f.fiscalYear,
+                      itemType: f.issueItemType,
+                      selectedStoreId: f.selectedStoreId,
+                      demandBy: f.demandBy,
+                      preparedBy: { name: '', designation: '', date: '', purpose: '' }, 
+                      recommendedBy: { name: '', designation: '', date: '', purpose: '' }, 
+                      approvedBy: { name: '', designation: '', date: '', purpose: '' }, 
+                  };
+                  updates[`${orgPath}/issueReports/${issueReportId}`] = newIssueReport;
               }
+          }
           await update(ref(db), updates);
       } catch (error) {
           alert("माग फारम सुरक्षित गर्दा समस्या आयो।");
@@ -310,32 +301,14 @@ const App: React.FC = () => {
   };
 
   const handleUpdateIssueReport = async (report: IssueReportEntry) => {
-      if (!currentUser) {
-          console.error("[handleUpdateIssueReport] Error: No current user for report ID:", report.id);
-          return;
-      }
-      
-      console.log(`[handleUpdateIssueReport] START for Report ID: ${report.id}, Status: ${report.status}`);
-      console.log(`[handleUpdateIssueReport] Report Data (Full Object):`, JSON.parse(JSON.stringify(report))); // Deep copy for inspection
-
+      if (!currentUser) return;
       try {
           const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
           const orgPath = `orgData/${safeOrgName}`;
           const updates: Record<string, any> = {};
-          
-          // Always update the report status first
           updates[`${orgPath}/issueReports/${report.id}`] = report;
 
-          // NEW LOGIC: Reduce stock when issue report is 'Issued', prioritizing earliest expiry
-          const isIssuedAndHasStoreInfo = report.status === 'Issued' && !!report.selectedStoreId && !!report.itemType;
-          console.log(`[handleUpdateIssueReport] Checking stock reduction condition:`);
-          console.log(`  - Status is 'Issued': ${report.status === 'Issued'}`);
-          console.log(`  - selectedStoreId is present: ${!!report.selectedStoreId} (Value: ${report.selectedStoreId})`);
-          console.log(`  - itemType is present: ${!!report.itemType} (Value: ${report.itemType})`);
-
-          if (isIssuedAndHasStoreInfo) {
-              console.log(`[handleUpdateIssueReport] Condition met: Proceeding with stock reduction.`);
-
+          if (report.status === 'Issued' && !!report.selectedStoreId && !!report.itemType) {
               const currentInvSnap = await get(ref(db, `${orgPath}/inventory`));
               const currentInvData = currentInvSnap.val() || {};
               const currentInvList: InventoryItem[] = Object.keys(currentInvData).map(k => ({ ...currentInvData[k], id: k }));
@@ -345,87 +318,44 @@ const App: React.FC = () => {
 
               for (const issueItem of report.items) {
                   let remainingIssuedQty = parseFloat(issueItem.quantity) || 0;
-                  console.log(`\n[handleUpdateIssueReport] Processing demand for item: "${issueItem.name}" (Code: ${issueItem.codeNo || 'N/A'}), Demanded Qty: ${issueItem.quantity}`);
-
-                  // Filter all potential inventory items that match the criteria
                   let potentialInventoryItems = currentInvList.filter(inv => {
                       const nameMatches = inv.itemName.trim().toLowerCase() === issueItem.name.trim().toLowerCase();
                       const storeMatches = inv.storeId === report.selectedStoreId;
                       const typeMatches = inv.itemType === report.itemType;
                       const codeMatches = issueItem.codeNo ? (inv.uniqueCode === issueItem.codeNo || inv.sanketNo === issueItem.codeNo) : true;
-                      
-                      // Log individual match criteria for better debugging
-                      console.log(`  - Candidate Inv Item: ID=${inv.id}, Name="${inv.itemName}", Store="${inv.storeId}", Type="${inv.itemType}", Code="${inv.uniqueCode || inv.sanketNo}", Expiry="${inv.expiryDateAd || 'N/A'}"`);
-                      console.log(`    - Name Match (Demanded: "${issueItem.name}", Inventory: "${inv.itemName}"): ${nameMatches}`);
-                      console.log(`    - Store Match (Report: "${report.selectedStoreId}", Inventory: "${inv.storeId}"): ${storeMatches}`);
-                      console.log(`    - Type Match (Report: "${report.itemType}", Inventory: "${inv.itemType}"): ${typeMatches}`);
-                      console.log(`    - Code Match (Demanded: "${issueItem.codeNo}", Inventory: "${inv.uniqueCode || inv.sanketNo}"): ${codeMatches}`);
                       return nameMatches && storeMatches && typeMatches && codeMatches;
                   });
-                  console.log(`[handleUpdateIssueReport] Found ${potentialInventoryItems.length} matching inventory items for "${issueItem.name}" before sorting.`);
 
-                  if (potentialInventoryItems.length === 0) {
-                      console.warn(`[handleUpdateIssueReport] WARNING: No matching inventory items found in store "${report.selectedStoreId}" for demanded item "${issueItem.name}" with type "${report.itemType}". Stock cannot be reduced.`);
-                      continue; // Skip to next issue item
-                  }
-
-                  // Sort by expiryDateAd ascending. Items without expiryDateAd come last.
                   potentialInventoryItems.sort((a, b) => {
                       const dateA = a.expiryDateAd ? new Date(a.expiryDateAd).getTime() : Infinity;
                       const dateB = b.expiryDateAd ? new Date(b.expiryDateAd).getTime() : Infinity;
                       return dateA - dateB;
                   });
-                  console.log(`[handleUpdateIssueReport] Sorted potential inventory items by expiry (earliest first):`, potentialInventoryItems.map(i => ({id: i.id, name: i.itemName, qty: i.currentQuantity, expiry: i.expiryDateAd})));
 
                   for (const invItem of potentialInventoryItems) {
-                      if (remainingIssuedQty <= 0) {
-                          console.log(`[handleUpdateIssueReport] Demand for "${issueItem.name}" fully fulfilled. Breaking from inventory item loop.`);
-                          break; // All demand fulfilled
-                      }
-
+                      if (remainingIssuedQty <= 0) break;
                       const availableQtyInInvItem = Number(invItem.currentQuantity) || 0;
                       const qtyToDeduct = Math.min(remainingIssuedQty, availableQtyInInvItem);
 
-                      console.log(`  - Processing inventory item ID: ${invItem.id} (Name: "${invItem.itemName}", Expiry: ${invItem.expiryDateAd || 'N/A'})`);
-                      console.log(`    - Available Qty in Inv Item: ${availableQtyInInvItem}, Remaining Demanded Qty: ${remainingIssuedQty}`);
-                      console.log(`    - Quantity to Deduct from this Inv Item: ${qtyToDeduct}`);
-
                       if (qtyToDeduct > 0) {
                           const newQuantity = availableQtyInInvItem - qtyToDeduct;
-                          const newTotalAmount = (Number(invItem.totalAmount) || 0) - (qtyToDeduct * (Number(invItem.rate) || 0)); // Ensure rate is a number
-
-                          const updatedInvItem = {
+                          const newTotalAmount = (Number(invItem.totalAmount) || 0) - (qtyToDeduct * (Number(invItem.rate) || 0));
+                          updates[`${orgPath}/inventory/${invItem.id}`] = {
                               ...invItem,
-                              currentQuantity: Math.max(0, newQuantity), // Ensure quantity doesn't go below zero
-                              totalAmount: Math.max(0, newTotalAmount), // Ensure total doesn't go below zero
+                              currentQuantity: Math.max(0, newQuantity),
+                              totalAmount: Math.max(0, newTotalAmount),
                               lastUpdateDateBs: nowBs,
                               lastUpdateDateAd: nowAd,
                               receiptSource: 'Issued',
                           };
-                          updates[`${orgPath}/inventory/${invItem.id}`] = updatedInvItem;
-                          console.log(`[handleUpdateIssueReport] Staging update for Inventory Item ID: ${invItem.id}, Old Qty: ${availableQtyInInvItem}, Deducted Qty: ${qtyToDeduct}, New Qty: ${updatedInvItem.currentQuantity}`);
                           remainingIssuedQty -= qtyToDeduct;
-                      } else {
-                          console.log(`  - No quantity to deduct from item ID: ${invItem.id}. Available Qty (${availableQtyInInvItem}) is 0 or already insufficient.`);
                       }
                   }
-
-                  if (remainingIssuedQty > 0) {
-                      console.warn(`[handleUpdateIssueReport] WARNING: Insufficient total stock for item "${issueItem.name}" (remaining demanded: ${remainingIssuedQty}) after checking all matching batches and considering expiry dates in store "${report.selectedStoreId}".`);
-                      // Optionally, add a user-facing alert here
-                  }
               }
-          } else {
-              console.log(`[handleUpdateIssueReport] Stock reduction condition NOT met. Status: ${report.status}, Store ID: ${report.selectedStoreId}, Item Type: ${report.itemType}. No inventory update performed.`);
           }
-
-          console.log("[handleUpdateIssueReport] Final updates object to be sent to Firebase:", JSON.parse(JSON.stringify(updates))); // Deep copy for inspection
           await update(ref(db), updates);
-          console.log(`[handleUpdateIssueReport] Successfully updated report ${report.id} and inventory (if applicable).`);
-
       } catch (error) {
-          alert("निकासा प्रतिवेदन सुरक्षित गर्दा वा स्टक घटाउँदा समस्या आयो।");
-          console.error("[handleUpdateIssueReport] CRITICAL ERROR saving issue report or reducing stock:", error);
+          alert("निकासा प्रतिवेदन सुरक्षित गर्दा समस्या आयो।");
       }
   };
 
@@ -483,8 +413,8 @@ const App: React.FC = () => {
           updates[`${orgPath}/dakhilaReports/${formalDakhilaId}`] = {
               id: formalDakhilaId, fiscalYear: request.fiscalYear, dakhilaNo: request.dakhilaNo || formalDakhilaId,
               date: request.requestDateBs, orderNo: request.refNo || 'BULK-ENTRY', items: dakhilaItems, status: 'Final',
-              preparedBy: { name: request.requesterName || request.requestedBy, designation: request.requesterDesignation || 'Staff', date: request.requestDateBs },
-              approvedBy: { name: approverName, designation: approverDesignation, date: request.requestDateBs },
+              preparedBy: { name: request.requesterName || request.requestedBy, designation: request.requesterDesignation || 'Staff', date: request.requestDateBs, purpose: '' },
+              approvedBy: { name: approverName, designation: approverDesignation, date: request.requestDateBs, purpose: '' },
               storeId: request.storeId 
           };
           await update(ref(db), updates);
@@ -493,172 +423,85 @@ const App: React.FC = () => {
       }
   };
 
-  // TB Patient CRUD operations
   const handleAddTbPatient = async (patient: TBPatient) => {
     if (!currentUser) return;
-    try {
-        await set(getOrgRef(`tbPatients/${patient.id}`), patient);
-    } catch (error) {
-        alert("TB बिरामी दर्ता गर्दा समस्या आयो।");
-        console.error("Error adding TB patient:", error);
-    }
+    try { await set(getOrgRef(`tbPatients/${patient.id}`), patient); } catch (e) {}
   };
 
   const handleUpdateTbPatient = async (patient: TBPatient) => {
     if (!currentUser) return;
-    try {
-        await set(getOrgRef(`tbPatients/${patient.id}`), patient); // set replaces the entire object
-    } catch (error) {
-        alert("TB बिरामी अपडेट गर्दा समस्या आयो।");
-        console.error("Error updating TB patient:", error);
-    }
+    try { await set(getOrgRef(`tbPatients/${patient.id}`), patient); } catch (e) {}
   };
 
   const handleDeleteTbPatient = async (patientId: string) => {
     if (!currentUser) return;
-    try {
-        await remove(getOrgRef(`tbPatients/${patientId}`));
-    } catch (error) {
-        alert("TB बिरामी हटाउन सकिएन।");
-        console.error("Error deleting TB patient:", error);
-    }
+    try { await remove(getOrgRef(`tbPatients/${patientId}`)); } catch (e) {}
   };
 
-  // NEW: Garbhawati Patient CRUD operations
   const handleAddGarbhawatiPatient = async (patient: GarbhawatiPatient) => {
       if (!currentUser) return;
-      try {
-          await set(getOrgRef(`garbhawatiPatients/${patient.id}`), patient);
-      } catch (error) {
-          alert("गर्भवती बिरामी दर्ता गर्दा समस्या आयो।");
-          console.error("Error adding Garbhawati patient:", error);
-      }
+      try { await set(getOrgRef(`garbhawatiPatients/${patient.id}`), patient); } catch (e) {}
   };
 
   const handleUpdateGarbhawatiPatient = async (patient: GarbhawatiPatient) => {
       if (!currentUser) return;
-      try {
-          await set(getOrgRef(`garbhawatiPatients/${patient.id}`), patient);
-      } catch (error) {
-          alert("गर्भवती बिरामी अपडेट गर्दा समस्या आयो।");
-          console.error("Error updating Garbhawati patient:", error);
-      }
+      try { await set(getOrgRef(`garbhawatiPatients/${patient.id}`), patient); } catch (e) {}
   };
 
   const handleDeleteGarbhawatiPatient = async (patientId: string) => {
       if (!currentUser) return;
-      try {
-          await remove(getOrgRef(`garbhawatiPatients/${patientId}`));
-      } catch (error) {
-          alert("गर्भवती बिरामी हटाउन सकिएन।");
-          console.error("Error deleting Garbhawati patient:", error);
-      }
+      try { await remove(getOrgRef(`garbhawatiPatients/${patientId}`)); } catch (e) {}
   };
 
-  // NEW: Child Immunization Record CRUD operations
   const handleAddBachhaImmunizationRecord = async (record: ChildImmunizationRecord) => {
       if (!currentUser) return;
-      try {
-          await set(getOrgRef(`bachhaImmunizationRecords/${record.id}`), record);
-      } catch (error) {
-          alert("बच्चाको खोप रेकर्ड दर्ता गर्दा समस्या आयो।");
-          console.error("Error adding Child Immunization record:", error);
-      }
+      try { await set(getOrgRef(`bachhaImmunizationRecords/${record.id}`), record); } catch (e) {}
   };
 
   const handleUpdateBachhaImmunizationRecord = async (record: ChildImmunizationRecord) => {
       if (!currentUser) return;
-      try {
-          await set(getOrgRef(`bachhaImmunizationRecords/${record.id}`), record);
-      } catch (error) {
-          alert("बच्चाको खोप रेकर्ड अपडेट गर्दा समस्या आयो।");
-          console.error("Error updating Child Immunization record:", error);
-      }
+      try { await set(getOrgRef(`bachhaImmunizationRecords/${record.id}`), record); } catch (e) {}
   };
 
   const handleDeleteBachhaImmunizationRecord = async (recordId: string) => {
       if (!currentUser) return;
-      try {
-          await remove(getOrgRef(`bachhaImmunizationRecords/${recordId}`));
-      } catch (error) {
-          alert("बच्चाको खोप रेकर्ड हटाउन सकिएन।");
-          console.error("Error deleting Child Immunization record:", error);
-      }
+      try { await remove(getOrgRef(`bachhaImmunizationRecords/${recordId}`)); } catch (e) {}
   };
 
-  // Return Entry CRUD operations
   const handleSaveReturnEntry = async (entry: ReturnEntry) => {
       if (!currentUser) return;
       try {
           const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
           const orgPath = `orgData/${safeOrgName}`;
           const updates: Record<string, any> = {};
-          
           updates[`${orgPath}/returnEntries/${entry.id}`] = entry;
 
-          // If the return is approved, update inventory quantities
           if (entry.status === 'Approved') {
               const invAllSnap = await get(ref(db, `${orgPath}/inventory`));
               const currentInvData = invAllSnap.val() || {};
               const currentInvList: InventoryItem[] = Object.keys(currentInvData).map(k => ({ ...currentInvData[k], id: k }));
 
               for (const returnedItem of entry.items) {
+                  if (returnedItem.itemType !== 'Non-Expendable') continue; 
                   const existingItem = currentInvList.find(i => 
-                      i.id === returnedItem.inventoryId || // Prefer matching by original inventory ID if available
-                      (i.itemName.trim().toLowerCase() === returnedItem.name.trim().toLowerCase() && 
-                       (i.uniqueCode?.trim().toLowerCase() === returnedItem.codeNo?.trim().toLowerCase() ||
-                        i.sanketNo?.trim().toLowerCase() === returnedItem.codeNo?.trim().toLowerCase()))
+                      i.id === returnedItem.inventoryId || 
+                      (i.itemName.trim().toLowerCase() === returnedItem.name.trim().toLowerCase() && i.itemType === returnedItem.itemType)
                   );
 
                   if (existingItem) {
-                      const newQty = (Number(existingItem.currentQuantity) || 0) + (Number(returnedItem.quantity) || 0);
-                      const newTotalAmount = (Number(existingItem.totalAmount) || 0) + (Number(returnedItem.totalAmount) || 0);
-
                       updates[`${orgPath}/inventory/${existingItem.id}`] = { 
                           ...existingItem, 
-                          currentQuantity: newQty, 
-                          totalAmount: newTotalAmount, 
+                          currentQuantity: (Number(existingItem.currentQuantity) || 0) + (Number(returnedItem.quantity) || 0), 
+                          totalAmount: (Number(existingItem.totalAmount) || 0) + (Number(returnedItem.totalAmount) || 0), 
                           lastUpdateDateBs: entry.date, 
-                          lastUpdateDateAd: new Date().toISOString().split('T')[0],
                           receiptSource: 'Returned'
-                      };
-                  } else {
-                      // If the item doesn't exist, create it as a new inventory item
-                      const newInventoryId = returnedItem.inventoryId || `ITEM-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-                      updates[`${orgPath}/inventory/${newInventoryId}`] = {
-                          id: newInventoryId,
-                          itemName: returnedItem.name,
-                          uniqueCode: returnedItem.codeNo,
-                          sanketNo: returnedItem.codeNo,
-                          ledgerPageNo: "", // Can be filled later
-                          itemType: "Non-Expendable", // Assumed non-expendable for returns
-                          itemClassification: "", // Can be filled later
-                          specification: returnedItem.specification,
-                          unit: returnedItem.unit,
-                          currentQuantity: returnedItem.quantity,
-                          rate: returnedItem.rate,
-                          tax: 0, // Assuming 0 for returned items unless specified
-                          totalAmount: returnedItem.totalAmount,
-                          batchNo: "",
-                          expiryDateAd: "",
-                          expiryDateBs: "",
-                          lastUpdateDateAd: new Date().toISOString().split('T')[0],
-                          lastUpdateDateBs: entry.date,
-                          fiscalYear: entry.fiscalYear,
-                          receiptSource: 'Returned',
-                          remarks: `Returned via form ${entry.formNo}. Original remarks: ${returnedItem.remarks}`,
-                          storeId: "" // Store ID for returned item not explicitly captured in form, needs to be from config or input
                       };
                   }
               }
           }
           await update(ref(db), updates);
-      } catch (error) {
-          alert("जिन्सी फिर्ता सुरक्षित गर्दा समस्या आयो।");
-          console.error("Error saving return entry:", error);
-      }
+      } catch (error) {}
   };
-
 
   return (
     <>
@@ -683,20 +526,20 @@ const App: React.FC = () => {
           onUpdateIssueReport={handleUpdateIssueReport}
           rabiesPatients={rabiesPatients}
           onAddRabiesPatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}
-          onUpdateRabiesPatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}
+          onUpdatePatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}
           onDeletePatient={(id) => remove(getOrgRef(`rabiesPatients/${id}`))}
-          tbPatients={tbPatients} // Pass TB patients
-          onAddTbPatient={handleAddTbPatient} // Pass TB add handler
-          onUpdateTbPatient={handleUpdateTbPatient} // Pass TB update handler
-          onDeleteTbPatient={handleDeleteTbPatient} // Pass TB delete handler
-          garbhawatiPatients={garbhawatiPatients} // Pass Garbhawati patients
-          onAddGarbhawatiPatient={handleAddGarbhawatiPatient} // Pass Garbhawati add handler
-          onUpdateGarbhawatiPatient={handleUpdateGarbhawatiPatient} // Pass Garbhawati update handler
-          onDeleteGarbhawatiPatient={handleDeleteGarbhawatiPatient} // Pass Garbhawati delete handler
-          bachhaImmunizationRecords={bachhaImmunizationRecords} // Pass Child immunization records
-          onAddBachhaImmunizationRecord={handleAddBachhaImmunizationRecord} // Pass Child immunization add handler
-          onUpdateBachhaImmunizationRecord={handleUpdateBachhaImmunizationRecord} // Pass Child immunization update handler
-          onDeleteBachhaImmunizationRecord={handleDeleteBachhaImmunizationRecord} // Pass Child immunization delete handler
+          tbPatients={tbPatients}
+          onAddTbPatient={handleAddTbPatient}
+          onUpdateTbPatient={handleUpdateTbPatient}
+          onDeleteTbPatient={handleDeleteTbPatient}
+          garbhawatiPatients={garbhawatiPatients}
+          onAddGarbhawatiPatient={handleAddGarbhawatiPatient}
+          onUpdateGarbhawatiPatient={handleUpdateGarbhawatiPatient}
+          onDeleteGarbhawatiPatient={handleDeleteGarbhawatiPatient}
+          bachhaImmunizationRecords={bachhaImmunizationRecords}
+          onAddBachhaImmunizationRecord={handleAddBachhaImmunizationRecord}
+          onUpdateBachhaImmunizationRecord={handleUpdateBachhaImmunizationRecord}
+          onDeleteBachhaImmunizationRecord={handleDeleteBachhaImmunizationRecord}
           firms={firms}
           onAddFirm={(f) => set(getOrgRef(`firms/${f.id}`), f)}
           quotations={quotations}
@@ -716,7 +559,7 @@ const App: React.FC = () => {
           dakhilaReports={dakhilaReports}
           onSaveDakhilaReport={(r) => set(getOrgRef(`dakhilaReports/${r.id}`), r)}
           returnEntries={returnEntries}
-          onSaveReturnEntry={handleSaveReturnEntry} // Pass return entry handler
+          onSaveReturnEntry={handleSaveReturnEntry}
           marmatEntries={marmatEntries}
           onSaveMarmatEntry={(e) => set(getOrgRef(`marmatEntries/${e.id}`), e)}
           dhuliyaunaEntries={dhuliyaunaEntries}
@@ -727,44 +570,26 @@ const App: React.FC = () => {
           onUploadData={handleUploadDatabase}
         />
       ) : (
-        <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
-          <div className="w-full max-w-[440px] animate-in fade-in zoom-in-95 duration-500">
-            <div className="bg-white rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.08)] overflow-hidden border border-slate-100">
-              <div className="bg-primary-600 p-12 text-center text-white relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-                    <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <path d="M0 100 C 20 0 50 0 100 100 Z" fill="currentColor"></path>
-                    </svg>
+        <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6">
+          <div className="w-full max-w-[440px]">
+            <div className="bg-white rounded-[32px] shadow-lg border border-slate-100 overflow-hidden">
+              <div className="bg-primary-600 p-12 text-center text-white relative">
+                <div className="bg-white/20 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 backdrop-blur-md border border-white/30">
+                    <Landmark className="w-10 h-10 text-white" />
                 </div>
-                <div className="relative z-10">
-                    <div className="bg-white/20 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 backdrop-blur-md shadow-inner border border-white/30">
-                        <Landmark className="w-10 h-10 text-white" />
-                    </div>
-                    <h1 className="text-4xl font-extrabold font-nepali tracking-tight mb-2">{APP_NAME}</h1>
-                    <p className="text-primary-100 font-semibold tracking-wide uppercase text-xs">जिन्सी व्यवस्थापन पोर्टल</p>
-                </div>
+                <h1 className="text-4xl font-extrabold font-nepali tracking-tight mb-2">{APP_NAME}</h1>
+                <p className="text-primary-100 font-semibold tracking-wide uppercase text-xs">जिन्सी व्यवस्थापन पोर्टल</p>
               </div>
               <div className="p-10">
-                <LoginForm 
-                    users={allUsers} 
-                    onLoginSuccess={handleLoginSuccess} 
-                    initialFiscalYear={'2082/083'} 
-                />
+                <LoginForm users={allUsers} onLoginSuccess={handleLoginSuccess} initialFiscalYear={'2082/083'} />
               </div>
-              <div className="bg-slate-50 p-5 text-center border-t border-slate-100 flex items-center justify-center gap-3">
-                 <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-full shadow-sm border border-slate-200">
-                    <span className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-green-50 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-50 animate-pulse'}`}></span>
-                    <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">{isDbConnected ? 'System Online' : 'System Offline'}</span>
-                 </div>
-                 <div className="flex items-center gap-1.5 text-slate-400">
-                    <ShieldCheck size={14} />
-                    <span className="text-[11px] font-medium">Secure Access</span>
+              <div className="bg-slate-50 p-5 text-center border-t flex items-center justify-center gap-3">
+                 <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-full border">
+                    <span className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                    <span className="text-[11px] text-slate-600 font-bold uppercase">{isDbConnected ? 'Online' : 'Offline'}</span>
                  </div>
               </div>
             </div>
-            <p className="text-center mt-8 text-slate-400 text-xs font-medium uppercase tracking-widest">
-                &copy; {new Date().getFullYear()} Smart Inventory Solutions
-            </p>
           </div>
         </div>
       )}

@@ -5,7 +5,8 @@ import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
 import { EnglishDatePicker } from './EnglishDatePicker';
-import { Option, ChildImmunizationRecord, ChildImmunizationVaccine } from '../types';
+import { Option } from '../types/coreTypes'; // Changed import
+import { ChildImmunizationRecord, ChildImmunizationVaccine } from '../types/healthTypes'; // Changed import
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -284,7 +285,7 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
 
     if (editingRecordId) {
       onUpdateRecord(recordToSave);
-      setSuccessMessage('बच्चाको खोप रेकर्ड सफलतापूर्वक अपडेट भयो!');
+      setSuccessMessage('बच्चाको खोप रेkर्ड सफलतापूर्वक अपडेट भयो!');
     } else {
       onAddRecord(recordToSave);
       setSuccessMessage('बच्चाको खोप रेकर्ड सफलतापूर्वक दर्ता भयो!');

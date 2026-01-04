@@ -1,7 +1,9 @@
 
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Printer, Save, Calendar, CheckCircle2, Send, Clock, FileText, Eye, Search, X, AlertCircle, ChevronRight, ArrowLeft, Check, Square, Warehouse, Layers, ShieldCheck, Info } from 'lucide-react';
-import { User, MagItem, MagFormEntry, InventoryItem, Option, Store, OrganizationSettings, Signature } from '../types';
+import { User, Option, OrganizationSettings, Signature } from '../types/coreTypes';
+import { MagItem, MagFormEntry, InventoryItem, Store, StoreKeeperSignature } from '../types/inventoryTypes';
 import { SearchableSelect } from './SearchableSelect';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
@@ -103,7 +105,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
             formNo: generateMagFormNo(existingForms, currentFiscalYear)
         }));
     }
-  }, [editingId, existingForms, currentFiscalYear]);
+  }, [editingId, existingForms, currentFiscalYear, formDetails.id]); // Added formDetails.id to dependency array
 
   // STRICTOR ROLE DEFINITIONS for action filtering
   const isStrictStoreKeeper = currentUser.role === 'STOREKEEPER';
@@ -166,7 +168,9 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
   const storeOptions: Option[] = useMemo(() => stores.map(s => ({ id: s.id, value: s.id, label: s.name })), [stores]);
 
   const handleAddItem = () => {
+    if (isViewOnly) return; // Prevent adding if in view-only mode
     if (items.length < 14) {
+      // Fix: Ensured the id property is explicitly handled in the object literal
       setItems([...items, { id: Date.now() + Math.random(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }]);
     } else {
       alert("अधिकतम १४ वटा सामान मात्र माग गर्न सकिन्छ।");
@@ -180,17 +184,18 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
         const filtered = prevItems.filter(i => i.id !== id);
         // Ensure at least one empty row remains if everything is deleted
         if (filtered.length === 0) {
+            // Fix: Ensured the id property is explicitly handled in the object literal
             return [{ id: Date.now() + Math.random(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }];
         }
         return filtered;
     });
   };
   
-  const updateItem = useCallback((id: number, field: keyof LocalMagItem, value: any) => {
+  const updateItem = useCallback((id: number, field: keyof MagItem | 'isFromInventory', value: any) => {
     setItems(prevItems => prevItems.map(item => {
         if (item.id === id) {
+            // Fix: Cast `field` to `keyof MagItem` if it's not 'isFromInventory'
             const updated = { ...item, [field]: value };
-            // if (field === 'name') updated.isFromInventory = false; // Moved to handleItemNameChange
             return updated;
         }
         return item;
@@ -200,7 +205,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
   const handleItemNameChange = useCallback((id: number, newName: string) => {
     setItems(prevItems => prevItems.map(item => {
         if (item.id === id) {
-            let updatedItem = { ...item, name: newName };
+            let updatedItem: LocalMagItem = { ...item, name: newName }; // Explicitly type updatedItem
             const otherDraftItems = prevItems.filter(i => i.id !== id);
 
             // Find an existing inventory item matching the new name, in any store
@@ -264,7 +269,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
             verified: true, // Mark as verified if any checkbox is changed
             name: prev.storeKeeper?.name || currentUser.fullName, // Auto-fill name if not already set
             date: prev.storeKeeper?.date || todayBS // Auto-fill date if not already set
-        }
+        } as StoreKeeperSignature // Explicitly cast to StoreKeeperSignature
     }));
   };
 
@@ -278,7 +283,8 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
       // When loading, ensure items have a random ID for key stability if they came from DB without one
       setItems(form.items.map((item, idx) => {
           const matched = inventoryItems.some(i => i.itemName === item.name);
-          return { ...item, id: item.id || (Date.now() + idx + Math.random()), isFromInventory: matched };
+          // Fix: Ensure the object literal explicitly matches LocalMagItem
+          return { ...item, id: item.id || (Date.now() + idx + Math.random()), isFromInventory: matched } as LocalMagItem;
       }));
       
       if (viewOnly && form.isViewedByRequester === false && form.demandBy?.name === currentUser.fullName) {
@@ -296,7 +302,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                 verified: form.storeKeeper?.verified || false,
                 marketRequired: form.storeKeeper?.marketRequired || false,
                 inStock: form.storeKeeper?.inStock || false,
-            },
+            } as StoreKeeperSignature, // Explicitly cast
             demandBy: { ...form.demandBy || { name: '', designation: '', date: '', purpose: '' } },
             recommendedBy: { ...form.recommendedBy || { name: '', designation: '', date: '' } },
             approvedBy: { ...form.approvedBy || { name: '', designation: '', date: '' } },
@@ -400,7 +406,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
     // Track original signature objects
     let updatedDemandBy = { ...formDetails.demandBy };
     let updatedRecommendedBy = { ...formDetails.recommendedBy };
-    let updatedStoreKeeper = { ...formDetails.storeKeeper };
+    let updatedStoreKeeper = { ...formDetails.storeKeeper } as StoreKeeperSignature; // Explicitly cast
     let updatedReceiver = { ...formDetails.receiver };
     let updatedLedgerEntry = { ...formDetails.ledgerEntry };
     let updatedApprovedBy = { ...formDetails.approvedBy };
@@ -477,6 +483,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
     setShowRejectModal(false);
     setRejectReason('');
     setVerificationData({ storeId: '', itemType: '' });
+    // Fix: Ensure id property is explicitly handled in the object literal
     setItems([{ id: Date.now() + Math.random(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }]);
     setFormDetails(prev => ({
         ...prev,
@@ -485,7 +492,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
         date: todayBS, status: 'Pending',
         demandBy: { name: currentUser.fullName, designation: currentUser.designation, date: todayBS, purpose: '' },
         recommendedBy: { name: '', designation: '', date: '' },
-        storeKeeper: { name: '', date: '', verified: false, marketRequired: false, inStock: false }, // Reset for checkboxes
+        storeKeeper: { name: '', date: '', verified: false, marketRequired: false, inStock: false } as StoreKeeperSignature, // Reset for checkboxes and explicitly cast
         receiver: { name: '', designation: '', date: '' }, 
         ledgerEntry: { name: '', designation: '', date: '' }, // Reset to handle designation
         approvedBy: { name: '', designation: '', date: '' },

@@ -1,7 +1,10 @@
 
+
 import React, { useState } from 'react';
 import { CheckCircle2, X, Eye, ClipboardCheck, AlertCircle, Calendar, Store as StoreIcon, Package, Clock, HelpCircle, ShieldCheck } from 'lucide-react';
-import { StockEntryRequest, User, Store } from '../types';
+// Corrected import paths for StockEntryRequest, User, Store
+import { User } from '../types/coreTypes';
+import { StockEntryRequest, Store } from '../types/inventoryTypes';
 
 interface StockEntryApprovalProps {
   requests: StockEntryRequest[];
@@ -337,12 +340,11 @@ export const StockEntryApproval: React.FC<StockEntryApprovalProps> = ({
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowRejectModal(false)}></div>
               <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
-                  <div className="px-6 py-4 border-b border-slate-100 bg-red-50 text-red-800 flex justify-between items-center">
+                  <div className="px-6 py-4 border-b bg-red-50 text-red-800 flex justify-between items-center">
                       <h3 className="font-bold font-nepali">अस्वीकार गर्नुको कारण (Reason)</h3>
                       <button onClick={() => setShowRejectModal(false)} className="p-1 hover:bg-white/50 rounded-full"><X size={20}/></button>
                   </div>
                   <div className="p-6 space-y-4">
-                      <p className="text-sm text-slate-600">कृपया यो स्टक प्रविष्टि अनुरोध अस्वीकार गर्नुको स्पष्ट कारण खुलाउनुहोस्।</p>
                       <textarea 
                           className="w-full border border-slate-300 rounded-xl p-4 text-sm focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none min-h-[120px] transition-all" 
                           placeholder="Rejection reason here..." 

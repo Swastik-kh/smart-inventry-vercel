@@ -1,9 +1,12 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Save, RotateCcw, FileSpreadsheet, Building2, Package, Search, Calendar, X, CheckCircle2, DollarSign } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
-import { FiscalYear, FirmEntry, QuotationEntry, Option, InventoryItem } from '../types';
+// Corrected import paths for FiscalYear, FirmEntry, QuotationEntry, Option, InventoryItem
+import { FiscalYear, Option } from '../types/coreTypes';
+import { FirmEntry, QuotationEntry, InventoryItem } from '../types/inventoryTypes';
 import { FISCAL_YEARS } from '../constants';
 import { SearchableSelect } from './SearchableSelect';
 

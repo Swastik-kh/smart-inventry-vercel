@@ -1,7 +1,10 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Archive, Printer, ArrowLeft, Eye, X, FileText, ClipboardCheck, ShieldCheck, Warehouse, User as UserIcon, CheckCircle2, Search, Clock } from 'lucide-react';
-import { DakhilaPratibedanEntry, User, StockEntryRequest, OrganizationSettings, Store, DakhilaItem, InventoryItem } from '../types';
+// Corrected import paths for DakhilaPratibedanEntry, User, StockEntryRequest, OrganizationSettings, Store, DakhilaItem, InventoryItem
+import { User, OrganizationSettings } from '../types/coreTypes';
+import { DakhilaPratibedanEntry, StockEntryRequest, Store, DakhilaItem, InventoryItem } from '../types/inventoryTypes';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 

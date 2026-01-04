@@ -1,8 +1,11 @@
 
+
 import React, { useState, useMemo } from 'react';
-import { User, InventoryItem, IssueReportEntry, ReturnEntry, OrganizationSettings, DakhilaPratibedanEntry, PropertyUseRow } from '../types';
 import { SearchableSelect } from './SearchableSelect';
 import { Printer, BookOpen, User as UserIcon, CheckCircle2, AlertCircle } from 'lucide-react';
+// Corrected import paths for User, InventoryItem, IssueReportEntry, ReturnEntry, OrganizationSettings, DakhilaPratibedanEntry, PropertyUseRow
+import { User, OrganizationSettings } from '../types/coreTypes';
+import { InventoryItem, IssueReportEntry, ReturnEntry, DakhilaPratibedanEntry, PropertyUseRow } from '../types/inventoryTypes';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -12,9 +15,9 @@ interface SahayakJinshiKhataProps {
   inventoryItems: InventoryItem[];
   issueReports: IssueReportEntry[];
   dakhilaReports: DakhilaPratibedanEntry[];
-  users: User[];
   returnEntries: ReturnEntry[];
   generalSettings: OrganizationSettings;
+  users: User[]; // Added to fix prop type error
 }
 
 export const SahayakJinshiKhata: React.FC<SahayakJinshiKhataProps> = ({
@@ -73,7 +76,7 @@ export const SahayakJinshiKhata: React.FC<SahayakJinshiKhataProps> = ({
             report.items.forEach(item => {
                 // Find the original inventory item details for more context
                 const invItem = inventoryItems.find(i => 
-                    i.id === item.id || // Prioritize matching by original inventory ID from item.id if MagItem carries it
+                    (item.id !== undefined && i.id === String(item.id)) || // FIX: Convert item.id (number) to string for comparison with i.id (string)
                     (i.itemName.trim().toLowerCase() === item.name.trim().toLowerCase() && 
                      (item.codeNo ? (i.uniqueCode === item.codeNo || i.sanketNo === item.codeNo) : true)) // Fallback to name/code
                 );
@@ -237,7 +240,7 @@ export const SahayakJinshiKhata: React.FC<SahayakJinshiKhataProps> = ({
                         <th className="border border-slate-900 p-1" colSpan={7}>सम्पत्तिको विवरण (जिन्सी मालसामानको विवरण)</th>
                         <th className="border border-slate-900 p-1" colSpan={4}>सम्पत्ति बुझिलिनेको विवरण</th>
                         <th className="border border-slate-900 p-1" colSpan={3}>सम्पत्ति फिर्ताको विवरण</th>
-                        <th className="border border-slate-900 p-1 w-[90px]" rowSpan={2}>बुझिलिनेको नाम र दस्तखत <br/> (Col 17)</th>
+                        <th className="border border-slate-900 p-1 w-[90px]" rowSpan={2}>बुझilिनेको नाम र दस्तखत <br/> (Col 17)</th>
                     </tr>
                     <tr className="bg-slate-50 print:bg-slate-100">
                         <th className="border border-slate-900 p-1 w-[55px]">सङ्केत नं. <br/> (Col 3)</th>

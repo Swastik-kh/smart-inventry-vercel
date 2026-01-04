@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Wrench, Plus, Trash2, Printer, Save, ArrowLeft, Clock, CheckCircle2, Send, Eye } from 'lucide-react';
-import { User, MarmatEntry, MarmatItem, InventoryItem, OrganizationSettings } from '../types';
+import { User, OrganizationSettings } from '../types/coreTypes';
+import { MarmatEntry, MarmatItem, InventoryItem } from '../types/inventoryTypes';
 import { SearchableSelect } from './SearchableSelect';
 import { NepaliDatePicker } from './NepaliDatePicker';
 // @ts-ignore
@@ -51,6 +52,9 @@ export const MarmatAdesh: React.FC<MarmatAdeshProps> = ({
       }
   }, []);
 
+  // Determine Roles
+  const canApprove = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'APPROVAL';
+
   // Filter Lists
   const pendingRequests = useMemo(() => 
     marmatEntries.filter(e => e.status === 'Pending').sort((a, b) => parseInt(b.formNo) - parseInt(a.formNo)),
@@ -63,9 +67,6 @@ export const MarmatAdesh: React.FC<MarmatAdeshProps> = ({
   const allHistory = useMemo(() =>
     marmatEntries.filter(e => e.status !== 'Pending').sort((a, b) => parseInt(b.formNo) - parseInt(a.formNo)),
   [marmatEntries]);
-
-  // Determine Roles
-  const canApprove = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'APPROVAL';
 
   // 1. Prepare Item Options (Filtered by Non-Expendable & Sorted Alphabetically)
   const itemOptions = useMemo(() => {
@@ -86,9 +87,9 @@ export const MarmatAdesh: React.FC<MarmatAdeshProps> = ({
     if (!formDetails.id) {
         const entriesInFY = marmatEntries.filter(e => e.fiscalYear === currentFiscalYear);
         const maxNo = entriesInFY.reduce((max, e) => Math.max(max, parseInt(e.formNo || '0')), 0);
-        setFormDetails(prev => ({ ...prev, formNo: (maxNo + 1).toString() }));
+        setFormDetails(prev => ({ ...prev, formNo: (maxNo + 1).toString(), date: todayBS, requestedBy: {...prev.requestedBy, date: todayBS} })); // FIX: pre-fill date
     }
-  }, [currentFiscalYear, marmatEntries, formDetails.id]);
+  }, [currentFiscalYear, marmatEntries, formDetails.id, todayBS]);
 
   const handleAddItem = () => {
     setItems([...items, { id: Date.now(), name: '', codeNo: '', details: '', quantity: 0, unit: '', remarks: '' }]);
@@ -144,9 +145,9 @@ export const MarmatAdesh: React.FC<MarmatAdeshProps> = ({
         id: '',
         fiscalYear: currentFiscalYear,
         formNo: '1', 
-        date: '',
+        date: todayBS, // FIX: pre-fill date
         status: 'Pending',
-        requestedBy: { name: currentUser.fullName, designation: currentUser.designation, date: '' },
+        requestedBy: { name: currentUser.fullName, designation: currentUser.designation, date: todayBS }, // FIX: pre-fill date
         recommendedBy: { name: '', designation: '', date: '' },
         approvedBy: { name: '', designation: '', date: '' },
       });
@@ -558,7 +559,7 @@ export const MarmatAdesh: React.FC<MarmatAdeshProps> = ({
                   <tbody className="divide-y divide-slate-100">
                       {allHistory.map(req => (
                           <tr key={req.id} className="hover:bg-slate-50">
-                              <td className="px-6 py-3 font-mono font-medium">{req.formNo}</td>
+                              <td className="px-6 py-3 font-mono font-medium text-orange-600">{req.formNo}</td>
                               <td className="px-6 py-3 font-nepali">{req.date}</td>
                               <td className="px-6 py-3">{req.requestedBy.name}</td>
                               <td className="px-6 py-3">

@@ -1,13 +1,13 @@
-
-
 import { GoogleGenAI } from "@google/genai";
 
 /**
- * AI Initialization
- * process.env.API_KEY Vercel को Environment Variables बाट प्राप्त हुन्छ।
+ * Gemini AI Interaction logic.
+ * Strictly adheres to @google/genai initialization rules using process.env.API_KEY.
  */
 export const askGemini = async (prompt: string) => {
-  // नयाँ इन्स्टेन्स बनाएर सुरक्षित तरिकाले कल गर्ने
+  // Use new GoogleGenAI({ apiKey: process.env.API_KEY }) as per system requirements.
+  // The value is injected/mapped via the vite.config.ts 'define' block.
+  // @ts-ignore - handled by vite define
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   try {
@@ -16,9 +16,10 @@ export const askGemini = async (prompt: string) => {
       contents: prompt,
     });
 
-    return response.text;
+    // Access .text property directly as per latest SDK guidelines
+    return response.text || "No response received.";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "AI सँग जडान हुन सकेन। कृपया इन्टरनेट र API Key जाँच गर्नुहोस्।";
+    return "AI सँग जडान हुन सकेन। कृपया इन्टरनेट र सेटिङ जाँच गर्नुहोस्।";
   }
 };

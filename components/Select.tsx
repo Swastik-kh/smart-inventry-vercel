@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { SelectProps } from '../types';
+import { SelectProps, Option, FiscalYear } from '../types/coreTypes'; // Updated import
 import { ChevronDown } from 'lucide-react';
 
 export interface SelectExtendedProps extends SelectProps {

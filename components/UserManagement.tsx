@@ -1,7 +1,9 @@
 
+
 import React, { useState, useMemo } from 'react'; // Added useMemo
-import { User, UserManagementProps, UserRole, Option } from '../types';
-import { Plus, Trash2, Shield, User as UserIcon, Building2, Save, X, Phone, Briefcase, IdCard, Users, Pencil, CheckSquare, Square, ChevronDown, ChevronRight, CornerDownRight, Store } from 'lucide-react';
+import { User, UserRole, Option } from '../types/coreTypes'; // Corrected import path
+import { UserManagementProps } from '../types/dashboardTypes'; // Corrected import path
+import { Plus, Trash2, Shield, User as UserIcon, Building2, Save, X, Phone, Briefcase, IdCard, Users, Pencil, CheckSquare, Square, ChevronDown, ChevronRight, CornerDownRight } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
 

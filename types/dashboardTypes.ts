@@ -1,0 +1,116 @@
+
+import { User, OrganizationSettings } from './coreTypes';
+import { 
+  MagFormEntry, PurchaseOrderEntry, IssueReportEntry, FirmEntry, QuotationEntry, 
+  InventoryItem, Store, StockEntryRequest, DakhilaPratibedanEntry, ReturnEntry, 
+  MarmatEntry, DhuliyaunaEntry, LogBookEntry
+} from './inventoryTypes';
+import { RabiesPatient, TBPatient, GarbhawatiPatient, ChildImmunizationRecord } from './healthTypes';
+
+export interface LoginFormProps {
+  users: User[];
+  onLoginSuccess: (user: User, fiscalYear: string) => void;
+  initialFiscalYear: string;
+}
+
+export interface UserManagementProps {
+  currentUser: User;
+  users: User[];
+  onAddUser: (user: User) => void;
+  onUpdateUser: (user: User) => void;
+  onDeleteUser: (userId: string) => void;
+}
+
+// Added users: User[] to SahayakJinshiKhataProps to fix prop type error
+export interface SahayakJinshiKhataProps {
+  currentFiscalYear: string;
+  currentUser: User;
+  inventoryItems: InventoryItem[];
+  issueReports: IssueReportEntry[];
+  dakhilaReports: DakhilaPratibedanEntry[];
+  returnEntries: ReturnEntry[];
+  generalSettings: OrganizationSettings;
+  users: User[]; // Added to fix prop type error
+}
+
+export interface DashboardProps {
+  onLogout: () => void;
+  currentUser: User | null; 
+  currentFiscalYear: string;
+  users: User[];
+  onAddUser: (user: User) => void;
+  onUpdateUser: (user: User) => void;
+  onDeleteUser: (userId: string) => void;
+  onChangePassword: (userId: string, newPassword: string) => void;
+  
+  generalSettings: OrganizationSettings;
+  onUpdateGeneralSettings: (settings: OrganizationSettings) => void;
+
+  magForms: MagFormEntry[];
+  onSaveMagForm: (form: MagFormEntry) => void;
+  onDeleteMagForm: (formId: string) => void; 
+  
+  purchaseOrders: PurchaseOrderEntry[];
+  onUpdatePurchaseOrder: (order: PurchaseOrderEntry) => void; 
+
+  issueReports: IssueReportEntry[];
+  onUpdateIssueReport: (report: IssueReportEntry) => void; 
+
+  rabiesPatients: RabiesPatient[];
+  onAddRabiesPatient: (patient: RabiesPatient) => void;
+  onUpdatePatient: (patient: RabiesPatient) => void; // Corrected to match RabiesRegistration.tsx
+  onDeletePatient: (patientId: string) => void; 
+
+  tbPatients: TBPatient[];
+  onAddTbPatient: (patient: TBPatient) => void;
+  onUpdateTbPatient: (patient: TBPatient) => void;
+  onDeleteTbPatient: (patientId: string) => void;
+
+  garbhawatiPatients: GarbhawatiPatient[];
+  onAddGarbhawatiPatient: (patient: GarbhawatiPatient) => void;
+  onUpdateGarbhawatiPatient: (patient: GarbhawatiPatient) => void;
+  onDeleteGarbhawatiPatient: (patientId: string) => void;
+
+  bachhaImmunizationRecords: ChildImmunizationRecord[];
+  onAddBachhaImmunizationRecord: (record: ChildImmunizationRecord) => void;
+  onUpdateBachhaImmunizationRecord: (record: ChildImmunizationRecord) => void;
+  onDeleteBachhaImmunizationRecord: (recordId: string) => void;
+
+  firms: FirmEntry[];
+  onAddFirm: (firm: FirmEntry) => void;
+
+  quotations: QuotationEntry[];
+  onAddQuotation: (quotation: QuotationEntry) => void;
+
+  inventoryItems: InventoryItem[];
+  onAddInventoryItem: (item: InventoryItem) => void;
+  onUpdateInventoryItem: (item: InventoryItem) => void;
+  onDeleteInventoryItem: (itemId: string) => void; 
+
+  stockEntryRequests: StockEntryRequest[];
+  onRequestStockEntry: (request: StockEntryRequest) => void;
+  onApproveStockEntry: (requestId: string, approverName: string, approverDesignation: string) => void;
+  onRejectStockEntry: (requestId: string, reason: string, approverName: string) => void;
+
+  stores: Store[];
+  onAddStore: (store: Store) => void;
+  onUpdateStore: (store: Store) => void;
+  onDeleteStore: (storeId: string) => void;
+
+  dakhilaReports: DakhilaPratibedanEntry[];
+  onSaveDakhilaReport: (report: DakhilaPratibedanEntry) => void;
+
+  returnEntries: ReturnEntry[];
+  onSaveReturnEntry: (entry: ReturnEntry) => void;
+
+  marmatEntries: MarmatEntry[];
+  onSaveMarmatEntry: (entry: MarmatEntry) => void;
+
+  dhuliyaunaEntries: DhuliyaunaEntry[];
+  onSaveDhuliyaunaEntry: (entry: DhuliyaunaEntry) => void;
+
+  logBookEntries: LogBookEntry[];
+  onSaveLogBookEntry: (entry: LogBookEntry) => void;
+
+  onClearData: (sectionId: string) => void; 
+}

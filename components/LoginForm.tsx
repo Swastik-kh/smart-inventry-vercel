@@ -4,7 +4,8 @@ import { Calendar, User, Lock, LogIn, Eye, EyeOff, Loader2, AlertCircle, Info, C
 import { Input } from './Input';
 import { Select } from './Select';
 import { FISCAL_YEARS } from '../constants';
-import { LoginFormData, LoginFormProps } from '../types';
+import { LoginFormData } from '../types/coreTypes'; // Updated import
+import { LoginFormProps } from '../types/dashboardTypes'; // Updated import
 
 export const LoginForm: React.FC<LoginFormProps> = ({ users, onLoginSuccess, initialFiscalYear }) => {
   const [formData, setFormData] = useState<LoginFormData>({

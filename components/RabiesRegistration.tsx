@@ -1,11 +1,12 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 /* Added AlertTriangle to the imports */
 import { Save, RotateCcw, Syringe, Calendar, FileDigit, User, Phone, MapPin, CalendarRange, Clock, CheckCircle2, Search, X, AlertCircle, Trash2, Pencil, Check, Info, AlertTriangle, Bone } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
-import { RabiesPatient, VaccinationDose, Option, User as UserType } from '../types';
+import { Option, User as UserType } from '../types/coreTypes'; // Corrected import path
+import { RabiesPatient, VaccinationDose } from '../types/healthTypes'; // Corrected import path
+
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -611,6 +612,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                           </div>
                       )}
 
+                      {/* FIX: Corrected value prop from modalGivenDateBs to modalDateBs */}
                       <NepaliDatePicker 
                           label="खोप दिएको मिति (Given Date - BS)" 
                           value={modalDateBs} 

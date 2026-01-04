@@ -262,9 +262,10 @@ const App: React.FC = () => {
                       id: poId, magFormId: f.id, magFormNo: f.formNo, requestDate: f.date, items: f.items,
                       status: 'Pending', fiscalYear: f.fiscalYear,
                       preparedBy: { name: '', designation: '', date: '' },
-                      recommendedBy: { name: '', designation: '', date: '' },
-                      financeBy: { name: '', designation: '', date: '' },
-                      approvedBy: { name: '', designation: '', date: '' }
+                      // Ensure purpose is explicitly set, even if empty, for consistency with Signature type
+                      recommendedBy: { name: '', designation: '', date: '', purpose: '' }, 
+                      financeBy: { name: '', designation: '', date: '', purpose: '' },       
+                      approvedBy: { name: '', designation: '', date: '', '', purpose: '' }      
                   };
               }
           }
@@ -287,16 +288,17 @@ const App: React.FC = () => {
                           itemType: f.issueItemType, // Crucial: use the type determined during verification
                           selectedStoreId: f.selectedStoreId, // Crucial: store the selected store ID
                           demandBy: f.demandBy,
-                          preparedBy: { name: '', designation: '', date: '' }, // To be filled by Storekeeper
-                          recommendedBy: { name: '', designation: '', date: '' }, // To be filled by Storekeeper/Approver
-                          approvedBy: { name: '', designation: '', date: '' }, // To be filled by Approver
+                          // Ensure purpose is explicitly set, even if empty, for consistency with Signature type
+                          preparedBy: { name: '', designation: '', date: '', purpose: '' }, 
+                          recommendedBy: { name: '', designation: '', date: '', purpose: '' }, 
+                          approvedBy: { name: '', designation: '', date: '', purpose: '' }, 
                       };
                       updates[`${orgPath}/issueReports/${issueReportId}`] = newIssueReport;
                   }
               }
           await update(ref(db), updates);
       } catch (error) {
-          alert("माग फार form सुरक्षित गर्दा समस्या आयो।");
+          alert("माग फारम सुरक्षित गर्दा समस्या आयो।");
       }
   };
 
@@ -305,7 +307,7 @@ const App: React.FC = () => {
     try {
         await remove(ref(db, `orgData/${currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_")}/magForms/${formId}`));
     } catch (error) {
-        alert("माग फार form हटाउन सकिएन।");
+        alert("माग फारम हटाउन सकिएन।");
     }
   };
 
@@ -483,8 +485,8 @@ const App: React.FC = () => {
           updates[`${orgPath}/dakhilaReports/${formalDakhilaId}`] = {
               id: formalDakhilaId, fiscalYear: request.fiscalYear, dakhilaNo: request.dakhilaNo || formalDakhilaId,
               date: request.requestDateBs, orderNo: request.refNo || 'BULK-ENTRY', items: dakhilaItems, status: 'Final',
-              preparedBy: { name: request.requesterName || request.requestedBy, designation: request.requesterDesignation || 'Staff', date: request.requestDateBs },
-              approvedBy: { name: approverName, designation: approverDesignation, date: request.requestDateBs },
+              preparedBy: { name: request.requesterName || request.requestedBy, designation: request.requesterDesignation || 'Staff', date: request.requestDateBs, purpose: '' }, // Added purpose to signature
+              approvedBy: { name: approverName, designation: approverDesignation, date: request.requestDateBs, purpose: '' }, // Added purpose to signature
               storeId: request.storeId 
           };
           await update(ref(db), updates);
@@ -603,7 +605,8 @@ const App: React.FC = () => {
               const currentInvList: InventoryItem[] = Object.keys(currentInvData).map(k => ({ ...currentInvData[k], id: k }));
 
               for (const returnedItem of entry.items) {
-                  // Only process non-expendable items for return to stock
+                  // NEW: Only process non-expendable items for return to stock
+                  // Assuming expendable items are not returned to 'inventory' for re-use
                   if (returnedItem.itemType !== 'Non-Expendable') {
                       console.warn(`Skipping return for expendable item: ${returnedItem.name}`);
                       continue; 
@@ -615,7 +618,7 @@ const App: React.FC = () => {
                       (i.itemName.trim().toLowerCase() === returnedItem.name.trim().toLowerCase() && 
                        (i.uniqueCode?.trim().toLowerCase() === returnedItem.codeNo?.trim().toLowerCase() ||
                         i.sanketNo?.trim().toLowerCase() === returnedItem.codeNo?.trim().toLowerCase()) &&
-                        i.itemType === returnedItem.itemType // Match on classification too
+                        i.itemType === returnedItem.itemType // ADDED: Match on itemType
                       )
                   );
 
@@ -640,14 +643,14 @@ const App: React.FC = () => {
                           itemName: returnedItem.name,
                           uniqueCode: returnedItem.codeNo,
                           sanketNo: returnedItem.codeNo,
-                          ledgerPageNo: "", // Can be filled later
-                          itemType: returnedItem.itemType || "Non-Expendable", // Use returned item's type
-                          itemClassification: "", // Can be filled later, or passed from returnedItem if available
-                          specification: returnedItem.specification || "", // Use returned item's spec
+                          ledgerPageNo: "", 
+                          itemType: returnedItem.itemType || "Non-Expendable", // Use returned item's type, default if somehow missing
+                          itemClassification: returnedItem.itemClassification || "", // Use returned item's classification
+                          specification: returnedItem.specification || "", // Use returned item's specification
                           unit: returnedItem.unit,
                           currentQuantity: returnedItem.quantity,
                           rate: returnedItem.rate,
-                          tax: 0, // Assuming 0 for returned items unless specified
+                          tax: 0, 
                           totalAmount: returnedItem.totalAmount,
                           batchNo: "",
                           expiryDateAd: "",
@@ -657,7 +660,7 @@ const App: React.FC = () => {
                           fiscalYear: entry.fiscalYear,
                           receiptSource: 'Returned',
                           remarks: `Returned via form ${entry.formNo}. Original remarks: ${returnedItem.remarks}`,
-                          storeId: "" // Store ID for returned item not explicitly captured in form, needs to be from config or input
+                          storeId: "" 
                       };
                   }
               }

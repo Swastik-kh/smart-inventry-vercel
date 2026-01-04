@@ -5,7 +5,8 @@ import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
 import { EnglishDatePicker } from './EnglishDatePicker';
-import { Option, GarbhawatiPatient } from '../types';
+import { Option } from '../types/coreTypes'; // Corrected import path
+import { GarbhawatiPatient } from '../types/healthTypes'; // Corrected import path
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 

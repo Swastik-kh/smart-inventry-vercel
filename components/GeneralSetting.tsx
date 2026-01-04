@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Save, Building2, Globe, Phone, Mail, FileText, Percent, Calendar, RotateCcw, Image, CheckCircle2, Lock } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
 import { FISCAL_YEARS } from '../constants';
-import { OrganizationSettings, User as UserType } from '../types';
+import { OrganizationSettings, User as UserType } from '../types/coreTypes'; // Changed import
 
 interface GeneralSettingProps {
     currentUser: UserType;

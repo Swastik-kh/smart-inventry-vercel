@@ -1,8 +1,10 @@
 
+
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom'; // Import createPortal
 import { ChevronDown, Search, X } from 'lucide-react';
-import { Option } from '../types';
+// Corrected import path for Option
+import { Option } from '../types/coreTypes';
 
 interface SearchableSelectProps {
   label?: string;

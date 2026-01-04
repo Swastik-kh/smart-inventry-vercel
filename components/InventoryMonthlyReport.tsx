@@ -1,9 +1,12 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { Printer, Calendar, FileText, Filter, Package, FilePlus, Save, CheckCircle2 } from 'lucide-react';
 import { Select } from './Select';
 import { FISCAL_YEARS } from '../constants';
-import { InventoryItem, User, MagFormEntry, OrganizationSettings, Store } from '../types';
+// Corrected import paths for InventoryItem, User, MagFormEntry, OrganizationSettings, Store
+import { User, OrganizationSettings } from '../types/coreTypes';
+import { InventoryItem, MagFormEntry, Store } from '../types/inventoryTypes';
 
 // Removed missing stores property to fix type mismatch error in Dashboard.tsx
 interface InventoryMonthlyReportProps {

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Save, RotateCcw, Activity, UserPlus, List, Phone, MapPin, 
@@ -9,8 +10,9 @@ import {
 import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
-// Imported TBPatient and TBReport from types.ts
-import { Option, TBPatient, TBReport } from '../types'; 
+import { Option } from '../types/coreTypes'; // Corrected import path
+import { TBPatient, TBReport } from '../types/healthTypes'; // Corrected import path
+
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -160,7 +162,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
     
     // Basic validation
     if (!formData.name.trim()) { alert("कृपया बिरामीको नाम भर्नुहोस्।"); return; }
-    if (!formData.age.trim()) { alert("कृपया बिरामीको उमेर भर्नुहोस्।"); return; }
+    if (!formData.age.trim()) { alert(" कृपया बिरामीको उमेर भर्नुहोस्।"); return; }
     if (!formData.address.trim()) { alert(" कृपया बिरामीको ठेगाना भर्नुहोस्।"); return; }
     if (!formData.regType.trim()) { alert(" कृपया दर्ता प्रकार छान्नुहोस्।"); return; }
     if (!formData.registrationDate.trim()) { alert("कृपया दर्ता मिति भर्नुहोस्।"); return; }
@@ -526,7 +528,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
                       </div>
 
                       <div className="space-y-2">
-                          <label className="text-sm font-bold text-slate-700">नतिजा</label>
+                          <label className="block text-sm font-bold text-slate-700">नतिजा</label>
                           <div className="grid grid-cols-2 gap-2">
                               <button type="button" onClick={() => setLabFormData({...labFormData, result: 'Negative'})} className={`py-3 rounded-xl border-2 font-bold transition-all ${labFormData.result === 'Negative' ? 'bg-green-50 border-green-500 text-green-700' : 'bg-white border-slate-100 text-slate-400'}`}>Negative</button>
                               <button type="button" onClick={() => setLabFormData({...labFormData, result: 'Positive'})} className={`py-3 rounded-xl border-2 font-bold transition-all ${labFormData.result === 'Positive' ? 'bg-red-50 border-red-500 text-red-700' : 'bg-white border-slate-100 text-slate-400'}`}>Positive</button>

@@ -1,5 +1,5 @@
 
-import { FiscalYear } from './types';
+import { FiscalYear } from './types/coreTypes';
 
 // Nepali Fiscal Years in Devanagari script
 export const FISCAL_YEARS: FiscalYear[] = [

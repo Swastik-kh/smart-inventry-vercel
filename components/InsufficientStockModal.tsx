@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { X, AlertTriangle, Info } from 'lucide-react';
-import { MagItem } from '../types'; 
+import { MagItem } from '../types/inventoryTypes'; 
 
 interface InsufficientStockModalProps {
   isOpen: boolean;

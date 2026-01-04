@@ -1,7 +1,9 @@
 
+
 import React, { useState, useMemo, useCallback } from 'react';
 import { ShoppingCart, FilePlus, ChevronRight, ArrowLeft, Printer, Save, Calculator, CheckCircle2, Send, ShieldCheck, CheckCheck, Eye, FileText, Clock, Archive, AlertCircle, X, Maximize2, Minimize2 } from 'lucide-react';
-import { PurchaseOrderEntry, MagItem, User, FirmEntry, Option, QuotationEntry, OrganizationSettings, InventoryItem } from '../types';
+import { User, Option, OrganizationSettings } from '../types/coreTypes';
+import { PurchaseOrderEntry, MagItem, FirmEntry, QuotationEntry, InventoryItem } from '../types/inventoryTypes';
 import { FISCAL_YEARS } from '../constants';
 import { SearchableSelect } from './SearchableSelect';
 import { NepaliDatePicker } from './NepaliDatePicker';

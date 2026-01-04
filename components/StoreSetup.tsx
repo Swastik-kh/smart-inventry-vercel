@@ -1,10 +1,13 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, Pencil, Save, X, Building2, User, Phone, MapPin, Search, Calendar, CheckCircle2, Store as StoreIcon, AlertCircle, RefreshCcw, FileDigit, SlidersHorizontal, BarChart4, Lock } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
-import { Store, InventoryItem, User as UserType } from '../types';
+// Corrected import paths for Store, InventoryItem, User
+import { User as UserType } from '../types/coreTypes';
+import { Store, InventoryItem } from '../types/inventoryTypes';
 
 interface StoreSetupProps {
   currentUser: UserType;

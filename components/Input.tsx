@@ -1,6 +1,6 @@
 
 import React, { forwardRef } from 'react';
-import { InputProps } from '../types';
+import { InputProps } from '../types/coreTypes'; // Updated import
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(({ 
   label, 

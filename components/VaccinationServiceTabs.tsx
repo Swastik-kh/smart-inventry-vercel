@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Baby, Droplets, Stethoscope } from 'lucide-react';
-import { GarbhawatiPatient, ChildImmunizationRecord } from '../types';
+import { GarbhawatiPatient, ChildImmunizationRecord } from '../types/healthTypes'; // Changed import
 import { GarbhawatiTDRegistration } from './GarbhawatiTDRegistration'; // NEW IMPORT
 import { ChildImmunizationRegistration } from './ChildImmunizationRegistration';
 

@@ -1,10 +1,11 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Scroll, Plus, Save, RotateCcw, Printer, Search, Car, Cog } from 'lucide-react';
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
 import { SearchableSelect } from './SearchableSelect';
-import { User, LogBookEntry, InventoryItem } from '../types';
+// Fix: Corrected imports to point to specific type files since index/barrel file is missing or empty
+import { User } from '../types/coreTypes';
+import { LogBookEntry, InventoryItem } from '../types/inventoryTypes';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 

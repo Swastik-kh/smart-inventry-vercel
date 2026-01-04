@@ -1,7 +1,7 @@
 
 
 import React, { useState, useMemo } from 'react';
-import { User } from '../types';
+import { User } from '../types/coreTypes'; // Corrected import path
 import { Input } from './Input';
 import { Select } from './Select';
 import { KeyRound, Save, AlertCircle, CheckCircle2, Lock, UserCog, ShieldAlert } from 'lucide-react';
@@ -73,7 +73,7 @@ export const ChangePassword: React.FC<ChangePasswordProps> = ({ currentUser, use
     }
 
     if (formData.newPassword.length < 4) {
-        setError('पासवर्ड कम्तिमा ४ अक्षरको हुनुपर्छ');
+        setError('पासवर्ड कम्तिमा ४ अक्षरको हुनुपर्sछ');
         return;
     }
 
