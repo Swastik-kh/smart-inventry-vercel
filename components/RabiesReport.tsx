@@ -159,8 +159,8 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
                 margin: 0.5cm; /* Reduced margin for tighter fit */
             }
             th, td {
-                padding: 5px !important; /* Increased padding for print */
-                font-size: 8px !important; /* Slightly increased font for print readability */
+                padding: 8px !important; /* Increased padding for print */
+                font-size: 9px !important; /* Slightly increased font for print readability */
                 line-height: 1.2 !important; /* Tighter line height */
                 border-color: black !important; /* Ensure black border for print */
             }
