@@ -159,71 +159,80 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
                 margin: 0.5cm; /* Reduced margin for tighter fit */
             }
             th, td {
-                padding: 2px !important; /* Smaller padding for print */
-                font-size: 8px !important; /* Smaller font for print */
+                padding: 1px !important; /* Smaller padding for print */
+                font-size: 7px !important; /* Smaller font for print */
                 line-height: 1.2 !important; /* Tighter line height */
+                border-color: black !important; /* Ensure black border for print */
             }
             .report-header-section h1, .report-header-section h2, .report-header-section p {
-                font-size: 10px !important; /* Adjusted for overall header size */
+                font-size: 9px !important; /* Adjusted for overall header size */
                 line-height: 1.2;
                 margin-top: 0;
                 margin-bottom: 0;
             }
             .report-header-org-name {
-                font-size: 11px !important;
+                font-size: 10px !important;
                 font-weight: bold;
                 text-decoration: underline;
                 margin-top: 5px;
             }
             .report-title-main {
-                font-size: 12px !important;
+                font-size: 11px !important;
                 font-weight: bold;
                 margin-top: 5px;
             }
             .report-meta-info {
-                font-size: 9px !important;
+                font-size: 8px !important;
                 margin-top: 2px;
             }
             .report-footer-section {
-                font-size: 8px !important;
-                margin-top: 15px !important;
+                font-size: 7px !important;
+                margin-top: 10px !important;
             }
             .report-footer-signature-line {
-                margin-top: 10px !important;
+                margin-top: 5px !important;
             }
             .no-print {
                 display: none !important;
             }
             .ng-moh {
-                font-size: 10px !important;
+                font-size: 9px !important;
                 font-weight: bold;
-                text-align: center; /* Ensure NG/MOH is centered */
-            }
-            .main-header-info-row { /* Renamed from main-header-flex */
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-end; /* Align month/year to bottom of name line */
-                width: 100%;
-                margin-top: 0 !important; /* Removed margin-top to bring it closer to NG/MOH */
-            }
-            .main-header-info-row > div {
-                white-space: nowrap; /* Prevent wrapping for month/year */
-                flex-shrink: 0; /* Don't shrink month/year if space is tight */
-            }
-            .main-header-info-row > div:nth-child(2) { /* Middle element (Month) */
-                flex-grow: 1; /* Allow month to take up available space for centering */
                 text-align: center;
             }
-            /* NEW: Print styles for Input fields in the dose table */
+            .main-header-info-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+                width: 100%;
+                margin-top: 0 !important;
+            }
+            .main-header-info-row > div {
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            .main-header-info-row > div:nth-child(2) {
+                flex-grow: 1;
+                text-align: center;
+            }
             .dose-input-cell input {
                 border: none !important;
                 background: none !important;
                 padding: 0 !important;
                 text-align: center !important;
-                font-size: 8px !important;
+                font-size: 7px !important;
                 font-weight: bold !important;
                 color: inherit !important;
                 width: 100% !important;
+            }
+            .report-main-header-block h3 {
+                font-size: 9px !important;
+                margin-top: 0px !important;
+                margin-bottom: 0px !important;
+            }
+            table {
+              table-layout: auto !important; /* Use auto layout for better column distribution */
+              width: 100% !important;
             }
         }
       ` }} />
@@ -267,59 +276,59 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
         </div>
 
         {/* Table 1: Source of Exposure to Rabies Animals */}
-        <table className="w-full border-collapse border border-slate-900 text-xs mb-8 print:mb-4">
+        <table className="w-full border-collapse border border-black text-xs mb-8 print:mb-4">
           <thead>
             <tr className="bg-slate-100">
-              <th className="border border-slate-900 p-2" rowSpan={2}>Description</th>
-              <th className="border border-slate-900 p-2" colSpan={10}>Source of Exposure to Rabies Animals</th>
-              <th className="border border-slate-900 p-2" rowSpan={2}>Total cases</th>
+              <th className="border border-black p-2 w-[15%]" rowSpan={2}>Description</th>
+              <th className="border border-black p-2" colSpan={10}>Source of Exposure to Rabies Animals</th>
+              <th className="border border-black p-2 w-[15%]" rowSpan={2}>Total cases</th>
             </tr>
             <tr className="bg-slate-100">
-              <th className="border border-slate-900 p-2">Dog bite</th>
-              <th className="border border-slate-900 p-2">Monkey bite</th>
-              <th className="border border-slate-900 p-2">Cat bite</th>
-              <th className="border border-slate-900 p-2">Cattle bite</th>
-              <th className="border border-slate-900 p-2">Rodent bite</th>
-              <th className="border border-slate-900 p-2">Jackal bite</th>
-              <th className="border border-slate-900 p-2">Tiger bite</th>
-              <th className="border border-slate-900 p-2">Bear bite</th>
-              <th className="border border-slate-900 p-2">Saliva contact</th>
-              <th className="border border-slate-900 p-2">Other specify</th>
+              <th className="border border-black p-2 w-[7%]">Dog bite</th>
+              <th className="border border-black p-2 w-[7%]">Monkey bite</th>
+              <th className="border border-black p-2 w-[7%]">Cat bite</th>
+              <th className="border border-black p-2 w-[7%]">Cattle bite</th>
+              <th className="border border-black p-2 w-[7%]">Rodent bite</th>
+              <th className="border border-black p-2 w-[7%]">Jackal bite</th>
+              <th className="border border-black p-2 w-[7%]">Tiger bite</th>
+              <th className="border border-black p-2 w-[7%]">Bear bite</th>
+              <th className="border border-black p-2 w-[7%]">Saliva contact</th>
+              <th className="border border-black p-2 w-[7%]">Other specify</th>
             </tr>
           </thead>
           <tbody>
             {Object.entries(reportSummary.categories).map(([category, data]: [string, AnimalStats], index) => (
               <tr key={index}>
-                <td className="border border-slate-900 p-2 font-bold">{category}</td>
-                <td className="border border-slate-900 p-2 text-center">{data.dog}</td>
-                <td className="border border-slate-900 p-2 text-center">{data.monkey}</td>
-                <td className="border border-slate-900 p-2 text-center">{data.cat}</td>
-                <td className="border border-slate-900 p-2 text-center">{data.cattle}</td>
-                <td className="border border-slate-900 p-2 text-center">{data.rodent}</td>
-                <td className="border border-slate-900 p-2 text-center">{data.jackal}</td>
-                <td className="border border-slate-900 p-2 text-center">{data.tiger}</td>
-                <td className="border border-slate-900 p-2 text-center">{data.bear}</td>
-                <td className="border border-slate-900 p-2 text-center">{data.saliva}</td>
-                <td className="border border-slate-900 p-2 text-center">{data.other}</td>
-                <td className="border border-slate-900 p-2 text-center font-bold">{data.total}</td>
+                <td className="border border-black p-2 font-bold">{category}</td>
+                <td className="border border-black p-2 text-center">{data.dog}</td>
+                <td className="border border-black p-2 text-center">{data.monkey}</td>
+                <td className="border border-black p-2 text-center">{data.cat}</td>
+                <td className="border border-black p-2 text-center">{data.cattle}</td>
+                <td className="border border-black p-2 text-center">{data.rodent}</td>
+                <td className="border border-black p-2 text-center">{data.jackal}</td>
+                <td className="border border-black p-2 text-center">{data.tiger}</td>
+                <td className="border border-black p-2 text-center">{data.bear}</td>
+                <td className="border border-black p-2 text-center">{data.saliva}</td>
+                <td className="border border-black p-2 text-center">{data.other}</td>
+                <td className="border border-black p-2 text-center font-bold">{data.total}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
         {/* Table 2: Vaccine Dose Statistics (Editable Inputs) */}
-        <table className="w-full border-collapse border border-slate-900 text-xs mb-8 print:mb-4">
+        <table className="w-full border-collapse border border-black text-xs mb-8 print:mb-4">
             <thead>
                 <tr className="bg-slate-100">
-                    <th className="border border-slate-900 p-2 w-1/4">Previous month opening</th>
-                    <th className="border border-slate-900 p-2 w-1/4">Received dose</th>
-                    <th className="border border-slate-900 p-2 w-1/4">Expenditure dose</th>
-                    <th className="border border-slate-900 p-2 w-1/4">Balance dose</th>
+                    <th className="border border-black p-2 w-1/4">Previous month opening</th>
+                    <th className="border border-black p-2 w-1/4">Received dose</th>
+                    <th className="border border-black p-2 w-1/4">Expenditure dose</th>
+                    <th className="border border-black p-2 w-1/4">Balance dose</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td className="border border-slate-900 p-1 text-center dose-input-cell">
+                    <td className="border border-black p-1 text-center dose-input-cell">
                         <Input 
                             type="number" 
                             value={doseInputs.previousOpening} 
@@ -328,7 +337,7 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
                             label="" // Hide default label
                         />
                     </td>
-                    <td className="border border-slate-900 p-1 text-center dose-input-cell">
+                    <td className="border border-black p-1 text-center dose-input-cell">
                         <Input 
                             type="number" 
                             value={doseInputs.receivedDose} 
@@ -337,7 +346,7 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
                             label="" // Hide default label
                         />
                     </td>
-                    <td className="border border-slate-900 p-1 text-center dose-input-cell">
+                    <td className="border border-black p-1 text-center dose-input-cell">
                         <Input 
                             type="number" 
                             value={doseInputs.expenditureDose} 
@@ -346,7 +355,7 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
                             label="" // Hide default label
                         />
                     </td>
-                    <td className="border border-slate-900 p-2 text-center font-bold">
+                    <td className="border border-black p-2 text-center font-bold">
                         {balanceDose}
                     </td>
                 </tr>
@@ -356,18 +365,18 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
         {/* Table 3: IF Hydrophobia cases reported (Empty/Placeholder data) */}
         <div className="mb-8 print:mb-4">
             <h3 className="font-bold text-base mb-2 print:text-sm">IF Hydrophobia cases reported</h3>
-            <table className="w-full border-collapse border border-slate-900 text-xs">
+            <table className="w-full border-collapse border border-black text-xs">
                 <thead>
                     <tr className="bg-slate-100">
-                        <th className="border border-slate-900 p-2">Name</th>
-                        <th className="border border-slate-900 p-2">Address</th>
-                        <th className="border border-slate-900 p-2">Age</th>
-                        <th className="border border-slate-900 p-2">Sex</th>
-                        <th className="border border-slate-900 p-2">Biting Animal</th>
-                        <th className="border border-slate-900 p-2">Date of Bite</th>
-                        <th className="border border-slate-900 p-2">Site of Bite</th>
-                        <th className="border border-slate-900 p-2">Date of Death</th>
-                        <th className="border border-slate-900 p-2">Remarks</th>
+                        <th className="border border-black p-2 w-[15%]">Name</th>
+                        <th className="border border-black p-2 w-[15%]">Address</th>
+                        <th className="border border-black p-2 w-[5%]">Age</th>
+                        <th className="border border-black p-2 w-[5%]">Sex</th>
+                        <th className="border border-black p-2 w-[15%]">Biting Animal</th>
+                        <th className="border border-black p-2 w-[10%]">Date of Bite</th>
+                        <th className="border border-black p-2 w-[15%]">Site of Bite</th>
+                        <th className="border border-black p-2 w-[10%]">Date of Death</th>
+                        <th className="border border-black p-2 w-[10%]">Remarks</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -375,20 +384,20 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
                     {reportSummary.hydrophobiaCases.length > 0 ? (
                         reportSummary.hydrophobiaCases.map((caseItem, idx) => (
                             <tr key={idx}>
-                                <td className="border border-slate-900 p-2">{caseItem.name}</td>
-                                <td className="border border-slate-900 p-2">{caseItem.address}</td>
-                                <td className="border border-slate-900 p-2 text-center">{caseItem.age}</td>
-                                <td className="border border-slate-900 p-2 text-center">{caseItem.sex.charAt(0)}</td>
-                                <td className="border border-slate-900 p-2">{caseItem.bitingAnimal}</td>
-                                <td className="border border-slate-900 p-2">{caseItem.dateOfBite}</td>
-                                <td className="border border-slate-900 p-2">{caseItem.siteOfBite}</td>
-                                <td className="border border-slate-900 p-2">{caseItem.dateOfDeath}</td>
-                                <td className="border border-slate-900 p-2">{caseItem.remarks}</td>
+                                <td className="border border-black p-2">{caseItem.name}</td>
+                                <td className="border border-black p-2">{caseItem.address}</td>
+                                <td className="border border-black p-2 text-center">{caseItem.age}</td>
+                                <td className="border border-black p-2 text-center">{caseItem.sex.charAt(0)}</td>
+                                <td className="border border-black p-2">{caseItem.bitingAnimal}</td>
+                                <td className="border border-black p-2">{caseItem.dateOfBite}</td>
+                                <td className="border border-black p-2">{caseItem.siteOfBite}</td>
+                                <td className="border border-black p-2">{caseItem.dateOfDeath}</td>
+                                <td className="border border-black p-2">{caseItem.remarks}</td>
                             </tr>
                         ))
                     ) : (
                         <tr>
-                            <td colSpan={9} className="border border-slate-900 p-4 text-center text-slate-400 italic">कुनै हाइड्रोफोबिया केस रिपोर्ट गरिएको छैन।</td>
+                            <td colSpan={9} className="border border-black p-4 text-center text-slate-400 italic">कुनै हाइड्रोफोबिया केस रिपोर्ट गरिएको छैन।</td>
                         </tr>
                     )}
                 </tbody>
