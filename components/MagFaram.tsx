@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Printer, Save, Calendar, CheckCircle2, Send, Clock, FileText, Eye, Search, X, AlertCircle, ChevronRight, ArrowLeft, Check, Square, Warehouse, Layers, ShieldCheck, Info } from 'lucide-react';
 import { User, Option, OrganizationSettings, Signature } from '../types/coreTypes';
@@ -763,10 +761,10 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                           <th className="border border-black p-2 w-8 no-print" rowSpan={2}></th> {/* Changed border-slate-900 to border-black */}
                       </tr>
                       <tr className="bg-slate-50">
-                          <th className="border border-black p-1">नाम <span className="text-red-500">*</span></th> {/* Changed border-slate-900 to border-black, ADDED ASTERISK */}
-                          <th className="border border-black p-1">स्पेसिफिकेसन</th> {/* Changed border-slate-900 to border-black */}
-                          <th className="border border-black p-1">एकाई</th> {/* New header for unit */}
-                          <th className="border border-black p-1">परिमाण</th> {/* New header for quantity */}
+                          <th className="border border-black p-1 w-[30%]">नाम <span className="text-red-500">*</span></th> {/* Changed border-slate-900 to border-black, ADDED ASTERISK, ADJUSTED WIDTH */}
+                          <th className="border border-black p-1 w-[20%]">स्पेसिफिकेसन</th> {/* Changed border-slate-900 to border-black, ADJUSTED WIDTH */}
+                          <th className="border border-black p-1 w-[10%]">एकाई</th> {/* New header for unit, ADJUSTED WIDTH */}
+                          <th className="border border-black p-1 w-[10%]">परिमाण</th> {/* New header for quantity, ADJUSTED WIDTH */}
                       </tr>
                       <tr className="bg-slate-100 text-[10px]">
                           <th className="border border-black p-1">१</th> {/* Changed border-slate-900 to border-black */}
