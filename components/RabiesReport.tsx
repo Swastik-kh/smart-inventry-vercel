@@ -159,76 +159,61 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
                 margin: 0.5cm; /* Reduced margin for tighter fit */
             }
             th, td {
-                padding: 8px !important; /* Increased padding for print */
-                font-size: 9px !important; /* Slightly increased font for print readability */
+                padding: 12px !important; /* Increased padding for print */
+                font-size: 12px !important; /* Increased font for print readability */
                 line-height: 1.2 !important; /* Tighter line height */
                 border-color: black !important; /* Ensure black border for print */
             }
-            .report-header-section h1, .report-header-section h2, .report-header-section p {
-                font-size: 9px !important; /* Adjusted for overall header size */
-                line-height: 1.2;
-                margin-top: 0;
-                margin-bottom: 0;
+            /* Adjust header font sizes */
+            .report-main-header-block .ng-moh {
+                font-size: 14px !important; /* Adjusted for overall header size */
             }
-            .report-header-org-name {
-                font-size: 10px !important;
-                font-weight: bold;
-                text-decoration: underline;
-                margin-top: 5px;
-            }
-            .report-title-main {
-                font-size: 11px !important;
-                font-weight: bold;
-                margin-top: 5px;
-            }
-            .report-meta-info {
-                font-size: 8px !important;
-                margin-top: 2px;
-            }
-            .report-footer-section {
-                font-size: 7px !important;
-                margin-top: 10px !important;
-            }
-            .report-footer-signature-line {
+            .report-main-header-block h3 {
+                font-size: 16px !important; /* Adjusted for readability */
                 margin-top: 5px !important;
-            }
-            .no-print {
-                display: none !important;
-            }
-            .ng-moh {
-                font-size: 9px !important;
-                font-weight: bold;
-                text-align: center;
+                margin-bottom: 5px !important;
             }
             .main-header-info-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-end;
-                width: 100%;
-                margin-top: 0 !important;
+                font-size: 14px !important;
             }
             .main-header-info-row > div {
-                white-space: nowrap;
-                flex-shrink: 0;
+                font-size: 12px !important;
             }
-            .main-header-info-row > div:nth-child(2) {
-                flex-grow: 1;
-                text-align: center;
+
+            /* Adjust footer font sizes */
+            .report-footer-section {
+                font-size: 12px !important; /* Adjusted for readability */
+                margin-top: 18px !important; /* Increased margin-top */
+            }
+            .report-footer-signature-line {
+                margin-top: 10px !important; /* Increased margin-top */
+            }
+            
+            .no-print {
+                display: none !important;
             }
             .dose-input-cell input {
                 border: none !important;
                 background: none !important;
                 padding: 0 !important;
                 text-align: center !important;
-                font-size: 8px !important; /* Adjusted for readability */
+                font-size: 12px !important; /* Adjusted for readability */
                 font-weight: bold !important;
                 color: inherit !important;
                 width: 100% !important;
             }
             .report-main-header-block h3 {
-                font-size: 10px !important; /* Adjusted for readability */
+                font-size: 16px !important; /* Adjusted for readability */
                 margin-top: 0px !important;
                 margin-bottom: 0px !important;
+            }
+            .hydrophobia-header {
+                font-size: 14px !important; /* Adjusted for readability */
+                margin-bottom: 5px !important;
+            }
+            .prepared-by-section {
+                text-align: left !important; /* Left-align Prepared By section */
+                padding-left: 12px !important; /* Align with table content start */
             }
             table {
               table-layout: auto !important; /* Use auto layout for better column distribution */
@@ -365,7 +350,7 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
 
         {/* Table 3: IF Hydrophobia cases reported (Empty/Placeholder data) */}
         <div className="mb-8 print:mb-4">
-            <h3 className="font-bold text-base mb-2 print:text-sm">IF Hydrophobia cases reported</h3>
+            <h3 className="font-bold text-base mb-2 hydrophobia-header print:text-sm">IF Hydrophobia cases reported</h3>
             <table className="w-full border-collapse border border-black text-xs">
                 <thead>
                     <tr className="bg-slate-100">
@@ -407,7 +392,7 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
 
         {/* Footer Signatures */}
         <div className="grid grid-cols-2 gap-16 mt-20 text-sm report-footer-section print:gap-8 print:mt-10">
-          <div className="text-center">
+          <div className="text-center prepared-by-section"> {/* Added class for left align */}
             <p>Prepared By:</p>
             <p className="font-bold mt-4 report-footer-signature-line">{currentUser.fullName}</p>
             <p className="report-footer-signature-line">{currentUser.designation}</p>
