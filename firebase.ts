@@ -6,8 +6,8 @@ import { getDatabase } from "firebase/database";
  * We use the provided configuration as fallbacks to ensure the app never fails
  * even if the environment loading is inconsistent in the browser.
  */
-// Fixed: Explicitly cast env to any to avoid "Property does not exist on type {}" errors when accessing environment variables.
-const env: any = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+// Fixed: Cast import.meta to any to bypass TypeScript property check for .env when Vite types are not explicitly globally declared.
+const env: any = (typeof import.meta !== 'undefined' && (import.meta as any).env) ? (import.meta as any).env : {};
 
 const firebaseConfig = {
   apiKey: env.VITE_FIREBASE_API_KEY || "AIzaSyBNgp4ZKBq_sHjVC0OGwSidhzCOtoGYR4k",
