@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
   LogOut, Menu, Calendar, Stethoscope, Package, FileText, Settings, LayoutDashboard, 
@@ -40,6 +41,8 @@ import { LogBook } from './LogBook';
 import { GeneralSetting } from './GeneralSetting';
 // NEW: Import the new tabbed component
 import { VaccinationServiceTabs } from './VaccinationServiceTabs';
+// NEW: Import ImmunizationTracking component
+import { ImmunizationTracking } from './ImmunizationTracking';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -427,7 +430,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       subItems: [
         { id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग (TB/Leprosy)', icon: <Activity size={16} /> }, 
         { id: 'khop_sewa', label: 'खोप सेवा (Vaccination Service)', icon: <Baby size={16} /> }, // Now a direct menu item for tabbed view
-        { id: 'rabies', label: 'रेबिज़ खोप क्लिनिक (Rabies Vaccine)', icon: <Syringe size={16} /> }
+        { id: 'rabies', label: 'रेबिज़ खोप क्लिनिक (Rabies Vaccine)', icon: <Syringe size={16} /> },
+        // NEW: Immunization Tracking
+        { id: 'immunization_tracking', label: 'खोप अनुगमन (Immunization Tracking)', icon: <Baby size={16} /> }
       ] 
     },
     { id: 'inventory', label: 'जिन्सी व्यवस्थापन (Inventory)', icon: <Package size={20} />, subItems: [{ id: 'stock_entry_approval', label: 'स्टक प्रविष्टि अनुरोध', icon: <ClipboardCheck size={16} />, badgeCount: pendingStockRequestsCount }, { id: 'jinshi_maujdat', label: 'जिन्सी मौज्दात (Stock)', icon: <Warehouse size={16} /> }, { id: 'form_suchikaran', label: 'फर्म सुचीकरण (Firms)', icon: <ClipboardList size={16} /> }, { id: 'quotation', label: 'कोटेशन (Quotation)', icon: <FileSpreadsheet size={16} /> }, { id: 'mag_faram', label: 'माग फारम (Demand)', icon: <FilePlus size={16} />, badgeCount: magFaramBadgeCount }, { id: 'kharid_adesh', label: 'खरिद आदेश (PO)', icon: <ShoppingCart size={16} />, badgeCount: kharidAdeshBadgeCount }, { id: 'nikasha_pratibedan', label: 'निकासा प्रतिवेदन (Issue)', icon: <FileOutput size={16} />, badgeCount: nikashaPratibedanBadgeCount }, { id: 'sahayak_jinshi_khata', label: 'सहायक जिन्सी खाता', icon: <BookOpen size={16} /> }, { id: 'jinshi_khata', label: 'जिन्सी खाता (Ledger)', icon: <Book size={16} /> }, { id: 'dakhila_pratibedan', label: 'दाखिला प्रतिवेदन', icon: <Archive size={16} />, badgeCount: dakhilaPratibedanBadgeCount }, { id: 'jinshi_firta_khata', label: 'जिन्सी फिर्ता खाता', icon: <RotateCcw size={16} />, badgeCount: jinshiFirtaBadgeCount }, { id: 'marmat_adesh', label: 'मर्मत आवेदन/आदेश', icon: <Wrench size={16} />, badgeCount: marmatAdeshBadgeCount }, { id: 'dhuliyauna_faram', label: 'लिलाम / धुल्याउने', icon: <Trash2 size={16} />, badgeCount: dhuliyaunaFaramBadgeCount }, { id: 'log_book', label: 'लग बुक (Log Book)', icon: <Scroll size={16} /> }] },
@@ -570,10 +575,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
             </div>
 
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                <div className="flex items-center justify-between mb-4">
-                    <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Vaccine Logistics</p><h3 className="text-sm font-bold text-slate-700 font-nepali">खोप पूर्वानुमान</h3></div>
-                    <div className="bg-cyan-100 p-3 rounded-xl text-cyan-600 shadow-inner"><Calculator size={24} /></div>
-                </div>
+                <div className="flex items-center justify-between mb-4"><div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Vaccine Logistics</p><h3 className="text-sm font-bold text-slate-700 font-nepali">खोप पूर्वानुमान</h3></div><div className="bg-cyan-100 p-3 rounded-xl text-cyan-600 shadow-inner"><Calculator size={24} /></div></div>
                 <div className="space-y-4">
                     <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <div className="flex justify-between items-center mb-2">
@@ -678,6 +680,13 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
           onAddBachhaImmunizationRecord={onAddBachhaImmunizationRecord}
           onUpdateBachhaImmunizationRecord={onUpdateBachhaImmunizationRecord}
           onDeleteBachhaImmunizationRecord={onDeleteBachhaImmunizationRecord}
+        />
+      );
+      // NEW: Render the ImmunizationTracking component
+      case 'immunization_tracking': return (
+        <ImmunizationTracking
+          currentFiscalYear={currentFiscalYear}
+          records={bachhaImmunizationRecords}
         />
       );
       case 'user_management': return <UserManagement currentUser={currentUser} users={users} onAddUser={onAddUser} onUpdateUser={onUpdateUser} onDeleteUser={onDeleteUser} />;
