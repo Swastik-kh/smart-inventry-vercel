@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Save, RotateCcw, Activity, UserPlus, List, Phone, MapPin, 
@@ -57,6 +56,14 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
     return `${prefix}-${fyClean}-${random}`;
   };
 
+  const todayBs = useMemo(() => {
+    try {
+      return new NepaliDate().format('YYYY-MM-DD');
+    } catch (e) {
+      return '';
+    }
+  }, []);
+
   const [formData, setFormData] = useState<TBPatient>({
     id: '', // Will be set on submit or edit load
     patientId: generateId('TB'),
@@ -67,7 +74,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
     regType: '',
     classification: '',
     leprosyType: undefined, 
-    registrationDate: new Date().toISOString().split('T')[0],
+    registrationDate: todayBs, // Initialize with today's Nepali date
     serviceType: 'TB', // Default to TB
     completedSchedule: [],
     newReportAvailable: false,
@@ -93,6 +100,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
     { id: 'new', label: 'नयाँ (New)', value: 'New' },
     { id: 'relapse', label: 'दोहोरिएको (Relapse)', value: 'Relapse' },
     { id: 'transfer_in', label: 'सरुवा भई आएको (Transferred In)', value: 'Transferred In' },
+    { id: 'loss_to_followup', label: 'उपचार पछि हराएको (Treatment after Loss to Follow-up)', value: 'Treatment after Loss to Follow-up' },
   ];
 
   const tbClassification: Option[] = [
@@ -216,7 +224,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
         regType: '',
         classification: '',
         leprosyType: activeTab === 'Leprosy' ? 'PB' : undefined, // Reset based on activeTab
-        registrationDate: new Date().toISOString().split('T')[0],
+        registrationDate: todayBs, // Reset to today's Nepali date
         serviceType: activeTab,
         completedSchedule: [],
         newReportAvailable: false,
@@ -340,7 +348,13 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
                 placeholder="-- प्रकार छान्नुहोस् --"
               />
           )}
-          <NepaliDatePicker label="दर्ता मिति" value={formData.registrationDate} onChange={val => setFormData({...formData, registrationDate: val})} required />
+          <NepaliDatePicker 
+            label="दर्ता मिति" 
+            value={formData.registrationDate} 
+            onChange={val => setFormData({...formData, registrationDate: val})} 
+            required 
+            // Removed minDate and maxDate restrictions
+          />
 
           <div className="md:col-span-2 pt-4 border-t flex justify-end gap-3">
               <button type="button" onClick={handleReset} className="flex items-center gap-2 px-6 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all font-bold text-sm"><RotateCcw size={16}/> {editingPatientId ? 'रद्द' : 'रिसेट'}</button>
