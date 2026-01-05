@@ -159,8 +159,8 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
                 margin: 0.5cm; /* Reduced margin for tighter fit */
             }
             th, td {
-                padding: 1px !important; /* Smaller padding for print */
-                font-size: 7px !important; /* Smaller font for print */
+                padding: 5px !important; /* Increased padding for print */
+                font-size: 8px !important; /* Slightly increased font for print readability */
                 line-height: 1.2 !important; /* Tighter line height */
                 border-color: black !important; /* Ensure black border for print */
             }
@@ -220,19 +220,20 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
                 background: none !important;
                 padding: 0 !important;
                 text-align: center !important;
-                font-size: 7px !important;
+                font-size: 8px !important; /* Adjusted for readability */
                 font-weight: bold !important;
                 color: inherit !important;
                 width: 100% !important;
             }
             .report-main-header-block h3 {
-                font-size: 9px !important;
+                font-size: 10px !important; /* Adjusted for readability */
                 margin-top: 0px !important;
                 margin-bottom: 0px !important;
             }
             table {
               table-layout: auto !important; /* Use auto layout for better column distribution */
               width: 100% !important;
+              height: auto !important; /* Allow table to grow vertically */
             }
         }
       ` }} />
