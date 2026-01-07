@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,14 +8,7 @@
     
     <!-- Professional App Icon (Favicon) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230ea5e9'/%3E%3Cpath d='M256 120l-140 80v160l140 80 140-80V200l-140-80zm-20 255v-120l-100-57v114l120 63zm140-63l-100 57V255l120-63v114zm-120-80l-100-57 120-63 100 57-120 63z' fill='white'/%3E%3C/svg%3E" />
-    <link rel="shortcut icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230ea5e9'/%3E%3Cpath d='M256 120l-140 80v160l140 80 140-80V200l-140-80zm-20 255v-120l-100-57v114l120 63zm140-63l-100 57V255l120-63v114zm-120-80l-100-57 120-63 100 57-120 63z' fill='white'/%3E%3C/svg%3E" />
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230ea5e9'/%3E%3Cpath d='M256 120l-140 80v160l140 80 140-80V200l-140-80zm-20 255v-120l-100-57v114l120 63zm140-63l-100 57V255l120-63v114zm-120-80l-100-57 120-63 100 57-120 63z' fill='white'/%3E%3C/svg%3E" />
     
-    <!-- Web App Manifest for Search Engines -->
-    <link rel="manifest" href="./manifest.json" />
-    <meta name="theme-color" content="#0ea5e9" />
-    <meta name="description" content="A next-generation smart inventory management system for healthcare and business organizations." />
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -49,21 +42,21 @@
     <style>
       body {
         font-family: 'Inter', sans-serif;
+        height: 100%;
+        margin: 0;
+        /* Removed overflow-hidden from body */
       }
       .font-nepali { font-family: 'Mukta', sans-serif; }
       
       @media print {
         .no-print { display: none !important; }
-        body { background: white !important; padding: 0 !important; margin: 0 !important; }
-        #root { padding: 0 !important; margin: 0 !important; }
-        main { padding: 0 !important; margin: 0 !important; overflow: visible !important; }
+        body { background: white !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; }
+        #root { height: auto !important; overflow: visible !important; }
         .print-full-width { 
             width: 100% !important; 
             max-width: none !important; 
             margin: 0 !important; 
             padding: 0 !important; 
-            border: none !important; 
-            box-shadow: none !important;
         }
         @page {
           size: A4;
@@ -93,8 +86,8 @@
 }
 </script>
 </head>
-  <body class="bg-slate-50 text-slate-900 antialiased">
-    <div id="root"></div>
+  <body class="bg-slate-50 text-slate-900 antialiased h-full">
+    <div id="root" class="h-full"></div>
   <script type="module" src="./index.tsx"></script>
 </body>
 </html>

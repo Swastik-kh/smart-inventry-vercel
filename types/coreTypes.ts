@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { InventoryItem } from './inventoryTypes';
 
@@ -13,7 +12,7 @@ export interface Option {
   id: string;
   label: string;
   value: string;
-  itemData?: InventoryItem; // Replaced 'any' with 'InventoryItem' for type safety
+  itemData?: InventoryItem; 
 }
 
 export interface LoginFormData {
@@ -51,6 +50,8 @@ export interface OrganizationSettings {
   activeFiscalYear: string;
   enableEnglishDate: string;
   logoUrl: string;
+  vaccinationSessions?: number[]; 
+  vaccinationCenters?: string[]; // Added for managing centers
 }
 
 export interface Signature {
@@ -60,14 +61,12 @@ export interface Signature {
   purpose?: string;
 }
 
-// Props for generic Input component
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
   icon?: React.ReactNode;
 }
 
-// Props for generic Select component
 export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label: string;
   options: Option[] | FiscalYear[];

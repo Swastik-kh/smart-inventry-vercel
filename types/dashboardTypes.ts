@@ -33,6 +33,17 @@ export interface SahayakJinshiKhataProps {
   users: User[]; // Added to fix prop type error
 }
 
+export interface JinshiKhataProps {
+  currentFiscalYear: string;
+  inventoryItems: InventoryItem[];
+  issueReports: IssueReportEntry[];
+  dakhilaReports: DakhilaPratibedanEntry[];
+  returnEntries: ReturnEntry[];
+  stockEntryRequests: StockEntryRequest[];
+  generalSettings: OrganizationSettings;
+  stores: Store[]; // Added to DashboardProps.tsx
+}
+
 export interface DashboardProps {
   onLogout: () => void;
   currentUser: User | null; 

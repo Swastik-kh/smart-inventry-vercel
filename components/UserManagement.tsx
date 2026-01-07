@@ -69,7 +69,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [expandedPermissions, setExpandedPermissions] = useState<string[]>(['services', 'inventory', 'report', 'settings']);
+  // Initialized with empty array to hide all menu permissions by default
+  const [expandedPermissions, setExpandedPermissions] = useState<string[]>([]);
 
   const allCreatableRoles: Option[] = [
     { id: 'admin', value: 'ADMIN', label: 'एडमिन (Admin)' },

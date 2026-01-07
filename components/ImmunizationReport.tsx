@@ -1,10 +1,11 @@
 
 import React, { useState, useMemo } from 'react';
-import { Printer, Calendar, Filter, BarChart, Download, Baby, Droplets, Users, UsersRound } from 'lucide-react';
+import { Printer, Calendar, Filter, BarChart, Download, Baby, Droplets, Users, UsersRound, MapPinned } from 'lucide-react';
 import { Select } from './Select';
 import { FISCAL_YEARS } from '../constants';
 import { ChildImmunizationRecord, GarbhawatiPatient } from '../types/healthTypes';
-import { OrganizationSettings } from '../types/coreTypes';
+import { Option, OrganizationSettings } from '../types/coreTypes';
+import { NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE } from './ChildImmunizationRegistration'; // Import the template
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -47,28 +48,40 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
 }) => {
   const [selectedMonth, setSelectedMonth] = useState('01');
   const [selectedFiscalYear, setSelectedFiscalYear] = useState(currentFiscalYear);
+  const [filterCenter, setFilterCenter] = useState(''); // New state for filter by vaccination center
+
+  const centerOptions: Option[] = useMemo(() => 
+    (generalSettings.vaccinationCenters || ['मुख्य अस्पताल']).map(c => ({ id: c, value: c, label: c })),
+    [generalSettings.vaccinationCenters]
+  );
 
   const reportStats = useMemo(() => {
+    // Initialize child vaccine counts dynamically for all vaccines in the template
+    const initialChildVaccineCounts: Record<string, number> = {};
+    NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE.forEach(vax => {
+        // Sanitize name to be a valid object key
+        const key = vax.name.replace(/[^a-zA-Z0-9]/g, '');
+        initialChildVaccineCounts[key] = 0;
+    });
+
     const stats = {
       child: {
-        bcg: 0, dpt1: 0, dpt2: 0, dpt3: 0, opv1: 0, opv2: 0, opv3: 0,
-        pcv1: 0, pcv2: 0, pcv3: 0, rota1: 0, rota2: 0, mr1: 0, mr2: 0, je: 0, fipv: 0, typhoid: 0, total: 0
+        ...initialChildVaccineCounts, // All vaccines from template
+        total: 0
       },
       maternal: {
         td1: 0, td2: 0, tdBooster: 0, total: 0
       },
-      // Total unique children who received at least one dose this month
       uniqueChildrenVax: { male: 0, female: 0, other: 0, total: 0 },
-      // Ethnic & Gender wise fully immunized stats
       ethnicFIC: Object.keys(jatLabels).reduce((acc, code) => {
         acc[code] = { male: 0, female: 0, total: 0 };
         return acc;
       }, {} as Record<string, { male: number, female: number, total: number }>)
     };
 
-    // Aggregate Child Vaccines & FIC
     bachhaRecords
       .filter(r => r.fiscalYear === selectedFiscalYear)
+      .filter(r => filterCenter ? r.vaccinationCenter === filterCenter : true) // Filter by center
       .forEach(record => {
         let isFullyImmunized = false;
         let lastVaccineMonth = '';
@@ -78,31 +91,15 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
           if (v.status === 'Given' && v.givenDateBs) {
             const m = v.givenDateBs.split('-')[1];
             
-            // Core vaccine counts for the selected month
             if (m === selectedMonth) {
               receivedDoseThisMonth = true;
-              const name = v.name.toLowerCase();
-              if (name.includes('bcg')) stats.child.bcg++;
-              else if (name.includes('dpt-hepb-hib-1')) stats.child.dpt1++;
-              else if (name.includes('dpt-hepb-hib-2')) stats.child.dpt2++;
-              else if (name.includes('dpt-hepb-hib-3')) stats.child.dpt3++;
-              else if (name.includes('opv-1')) stats.child.opv1++;
-              else if (name.includes('opv-2')) stats.child.opv2++;
-              else if (name.includes('opv-3')) stats.child.opv3++;
-              else if (name.includes('pcv-1')) stats.child.pcv1++;
-              else if (name.includes('pcv-2')) stats.child.pcv2++;
-              else if (name.includes('pcv-3')) stats.child.pcv3++;
-              else if (name.includes('rota-1')) stats.child.rota1++;
-              else if (name.includes('rota-2')) stats.child.rota2++;
-              else if (name.includes('fipv')) stats.child.fipv++;
-              else if (name.includes('mr-1')) stats.child.mr1++;
-              else if (name.includes('mr-2')) stats.child.mr2++;
-              else if (name.includes('je')) stats.child.je++;
-              else if (name.includes('typhoid')) stats.child.typhoid++;
+              const nameKey = v.name.replace(/[^a-zA-Z0-9]/g, ''); // Use sanitized key
+              if (stats.child[nameKey] !== undefined) {
+                stats.child[nameKey]++;
+              }
               stats.child.total++;
             }
 
-            // Check if fully immunized (MR2 or Typhoid milestone at 15 months)
             if (v.name.toLowerCase().includes('mr-2') || v.name.toLowerCase().includes('typhoid')) {
                 isFullyImmunized = true;
                 lastVaccineMonth = v.givenDateBs.split('-')[1];
@@ -110,7 +107,6 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
           }
         });
 
-        // Count unique children vaccinated in the selected month
         if (receivedDoseThisMonth) {
             const gender = record.gender.toLowerCase();
             if (gender === 'male') stats.uniqueChildrenVax.male++;
@@ -119,7 +115,6 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
             stats.uniqueChildrenVax.total++;
         }
 
-        // If the child became FIC in the selected month, add to ethnic stats
         if (isFullyImmunized && lastVaccineMonth === selectedMonth) {
             const code = record.jatCode || '06'; 
             const gender = record.gender === 'Female' ? 'female' : 'male';
@@ -130,9 +125,9 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
         }
       });
 
-    // Aggregate Maternal Vaccines
     maternalRecords
       .filter(r => r.fiscalYear === selectedFiscalYear)
+      .filter(r => filterCenter ? (r.remarks?.includes(filterCenter) || r.address?.includes(filterCenter)) : true) // Basic filter for maternal records
       .forEach(p => {
         if (p.td1DateBs?.split('-')[1] === selectedMonth) stats.maternal.td1++;
         if (p.td2DateBs?.split('-')[1] === selectedMonth) stats.maternal.td2++;
@@ -141,174 +136,106 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
     stats.maternal.total = stats.maternal.td1 + stats.maternal.td2 + stats.maternal.tdBooster;
 
     return stats;
-  }, [bachhaRecords, maternalRecords, selectedFiscalYear, selectedMonth]);
+  }, [bachhaRecords, maternalRecords, selectedFiscalYear, selectedMonth, filterCenter]);
 
   const currentMonthLabel = nepaliMonthOptions.find(m => m.value === selectedMonth)?.label || '';
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-      {/* Controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
         <div className="flex flex-wrap gap-4">
-          <div className="w-40">
-            <Select label="आर्थिक वर्ष" options={FISCAL_YEARS} value={selectedFiscalYear} onChange={(e) => setSelectedFiscalYear(e.target.value)} icon={<Calendar size={18} />} />
-          </div>
+          <div className="w-40"><Select label="आर्थिक वर्ष" options={FISCAL_YEARS} value={selectedFiscalYear} onChange={(e) => setSelectedFiscalYear(e.target.value)} icon={<Calendar size={18} />} /></div>
+          <div className="w-48"><Select label="महिना" options={nepaliMonthOptions} value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} icon={<Filter size={18} />} /></div>
           <div className="w-48">
-            <Select label="महिना" options={nepaliMonthOptions} value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} icon={<Filter size={18} />} />
+            <Select 
+                label="खोप केन्द्र" 
+                options={[{id: '', value: '', label: '-- सबै केन्द्रहरू --'}, ...centerOptions]} 
+                value={filterCenter} 
+                onChange={(e) => setFilterCenter(e.target.value)} 
+                icon={<MapPinned size={18} />} 
+            />
           </div>
         </div>
-        <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 text-white rounded-lg font-medium shadow-sm"><Printer size={18} /> प्रिन्ट गर्नुहोस्</button>
+        <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 text-white rounded-lg font-medium shadow-sm"><Printer size={18} /> प्रिन्ट</button>
       </div>
 
-      {/* Report Area */}
-      <div className="bg-white p-10 rounded-2xl shadow-xl border border-slate-100 max-w-[210mm] mx-auto print:shadow-none print:border-none print:p-0">
-        <div className="text-center mb-8 border-b-2 border-slate-900 pb-6">
-            <div className="flex items-center justify-center gap-4 mb-4">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" alt="Emblem" className="h-16 w-16 object-contain" />
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900 uppercase">{generalSettings.orgNameNepali}</h1>
-            <h2 className="text-lg font-bold text-slate-700">{generalSettings.subTitleNepali}</h2>
-            <h3 className="text-xl font-black mt-4 underline underline-offset-8 decoration-2 font-nepali">खोप कार्यक्रमको मासिक प्रतिवेदन</h3>
-            <div className="flex justify-between mt-6 text-sm font-bold text-slate-600">
+      <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-100 max-w-[210mm] mx-auto print:shadow-none print:p-0">
+        <div className="text-center mb-6 border-b-2 border-slate-900 pb-4">
+            <h1 className="text-xl font-bold text-slate-900">{generalSettings.orgNameNepali}</h1>
+            <h3 className="text-lg font-black mt-2 underline font-nepali">खोप कार्यक्रमको मासिक प्रतिवेदन</h3>
+            <div className="flex justify-between mt-4 text-xs font-bold text-slate-600">
                 <span>आ.व.: {selectedFiscalYear}</span>
                 <span>महिना: {currentMonthLabel}</span>
-                <span>प्रिन्ट मिति: {new NepaliDate().format('YYYY-MM-DD')}</span>
+                <span>केन्द्र: {filterCenter || 'सबै'}</span>
             </div>
         </div>
 
-        {/* 1. Vaccinated Children Summary (Unique Count) */}
-        <div className="mb-10">
-            <h4 className="text-lg font-bold text-green-800 mb-4 flex items-center gap-2 bg-green-50 p-2 rounded-lg border-l-4 border-green-600 font-nepali">
-                <UsersRound size={20}/> १. खोप सेवा पाएका जम्मा बच्चाहरूको विवरण (Unique Children)
-            </h4>
-            <div className="grid grid-cols-3 gap-4">
-                <div className="p-3 border rounded-xl bg-white shadow-sm text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">बालक (Male)</p>
-                    <p className="text-2xl font-black text-blue-600">{reportStats.uniqueChildrenVax.male}</p>
-                </div>
-                <div className="p-3 border rounded-xl bg-white shadow-sm text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">बालिका (Female)</p>
-                    <p className="text-2xl font-black text-pink-600">{reportStats.uniqueChildrenVax.female}</p>
-                </div>
-                <div className="p-3 border rounded-xl bg-green-600 text-white shadow-md text-center">
-                    <p className="text-[10px] font-bold text-green-100 uppercase">जम्मा (Total)</p>
-                    <p className="text-2xl font-black">{reportStats.uniqueChildrenVax.total}</p>
-                </div>
+        <div className="mb-6">
+            <h4 className="text-base font-bold text-indigo-800 mb-2 font-nepali">१. खोप मात्रा अनुसारको तथ्याङ्क</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE.map((vax, i) => {
+                    const nameKey = vax.name.replace(/[^a-zA-Z0-9]/g, '');
+                    return (
+                        <div key={i} className="flex justify-between p-1.5 border rounded text-xs">
+                            <span className="text-slate-600">{vax.name}:</span>
+                            <span className="font-bold">{reportStats.child[nameKey] !== undefined ? reportStats.child[nameKey] : 0}</span>
+                        </div>
+                    );
+                })}
+            </div>
+            <div className="mt-4 p-2 border-t border-slate-200 text-sm flex justify-between font-bold">
+              <span>कुल बालबालिका जसले यो महिना खोप लगाए:</span>
+              <span>{reportStats.uniqueChildrenVax.total}</span>
             </div>
         </div>
 
-        {/* 2. Child Immunization Section (Dose-wise) */}
-        <div className="mb-10">
-            <h4 className="text-lg font-bold text-indigo-800 mb-4 flex items-center gap-2 bg-indigo-50 p-2 rounded-lg border-l-4 border-indigo-600 font-nepali">
-                <Baby size={20}/> २. खोप मात्रा अनुसारको तथ्याङ्क (Child Dose Stats)
-            </h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {[
-                    { label: 'BCG', val: reportStats.child.bcg },
-                    { label: 'DPT-HepB-Hib 1', val: reportStats.child.dpt1 },
-                    { label: 'DPT-HepB-Hib 2', val: reportStats.child.dpt2 },
-                    { label: 'DPT-HepB-Hib 3', val: reportStats.child.dpt3 },
-                    { label: 'OPV 1', val: reportStats.child.opv1 },
-                    { label: 'OPV 2', val: reportStats.child.opv2 },
-                    { label: 'OPV 3', val: reportStats.child.opv3 },
-                    { label: 'PCV 1', val: reportStats.child.pcv1 },
-                    { label: 'PCV 2', val: reportStats.child.pcv2 },
-                    { label: 'PCV 3', val: reportStats.child.pcv3 },
-                    { label: 'Rota 1', val: reportStats.child.rota1 },
-                    { label: 'Rota 2', val: reportStats.child.rota2 },
-                    { label: 'fIPV', val: reportStats.child.fipv },
-                    { label: 'MR 1', val: reportStats.child.mr1 },
-                    { label: 'JE', val: reportStats.child.je },
-                    { label: 'MR 2', val: reportStats.child.mr2 },
-                    { label: 'Typhoid', val: reportStats.child.typhoid }
-                ].map((item, i) => (
-                    <div key={i} className="flex justify-between p-2 border rounded-lg hover:bg-slate-50 transition-colors">
-                        <span className="font-medium text-slate-700">{item.label}:</span>
-                        <span className="font-bold text-slate-900">{item.val}</span>
-                    </div>
-                ))}
-            </div>
-            <div className="mt-4 p-3 bg-indigo-600 text-white rounded-xl flex justify-between items-center shadow-lg shadow-indigo-100">
-                <span className="font-bold font-nepali">जम्मा दिइएको खोपको मात्रा (Total Doses):</span>
-                <span className="text-xl font-black">{reportStats.child.total}</span>
-            </div>
-        </div>
-
-        {/* 3. Maternal Section */}
-        <div className="mb-10">
-            <h4 className="text-lg font-bold text-purple-800 mb-4 flex items-center gap-2 bg-purple-50 p-2 rounded-lg border-l-4 border-purple-600 font-nepali">
-                <Droplets size={20}/> ३. आमाको खोप तथ्याङ्क (Maternal TD Stats)
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 border rounded-xl bg-white shadow-sm flex flex-col items-center">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">TD 1</p>
-                    <p className="text-3xl font-black text-purple-700">{reportStats.maternal.td1}</p>
+        <div className="mb-6">
+            <h4 className="text-base font-bold text-purple-800 mb-2 font-nepali">२. गर्भवती महिला TD खोपको तथ्याङ्क</h4>
+            <div className="grid grid-cols-2 gap-2">
+                <div className="flex justify-between p-1.5 border rounded text-xs">
+                    <span className="text-slate-600">TD1:</span>
+                    <span className="font-bold">{reportStats.maternal.td1}</span>
                 </div>
-                <div className="p-4 border rounded-xl bg-white shadow-sm flex flex-col items-center">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">TD 2</p>
-                    <p className="text-3xl font-black text-purple-700">{reportStats.maternal.td2}</p>
+                <div className="flex justify-between p-1.5 border rounded text-xs">
+                    <span className="text-slate-600">TD2:</span>
+                    <span className="font-bold">{reportStats.maternal.td2}</span>
                 </div>
-                <div className="p-4 border rounded-xl bg-white shadow-sm flex flex-col items-center">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">TD Booster</p>
-                    <p className="text-3xl font-black text-purple-700">{reportStats.maternal.tdBooster}</p>
+                <div className="flex justify-between p-1.5 border rounded text-xs">
+                    <span className="text-slate-600">TD Booster:</span>
+                    <span className="font-bold">{reportStats.maternal.tdBooster}</span>
+                </div>
+                 <div className="flex justify-between p-1.5 border rounded text-xs font-bold">
+                    <span className="text-slate-600">कुल गर्भवती महिलाहरू:</span>
+                    <span>{reportStats.maternal.total}</span>
                 </div>
             </div>
         </div>
 
-        {/* 4. Fully Immunized Section */}
-        <div className="mb-12">
-            <h4 className="text-lg font-bold text-teal-800 mb-4 flex items-center gap-2 bg-teal-50 p-2 rounded-lg border-l-4 border-teal-600 font-nepali">
-                <Users size={20}/> ४. पूर्ण खोप पुरा गरेका बच्चाहरूको जातीय तथा लैङ्गिक विवरण
-            </h4>
-            <div className="overflow-hidden border border-slate-200 rounded-xl">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-50 text-slate-700 font-bold border-b">
-                        <tr>
-                            <th className="px-4 py-3 font-nepali">जातीय कोड (Ethnic Code)</th>
-                            <th className="px-4 py-3 text-center font-nepali">बालक (Male)</th>
-                            <th className="px-4 py-3 text-center font-nepali">बालिका (Female)</th>
-                            <th className="px-4 py-3 text-center font-nepali bg-teal-50">जम्मा (Total)</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {Object.entries(jatLabels).map(([code, label]) => {
-                            const data = reportStats.ethnicFIC[code] || { male: 0, female: 0, total: 0 };
-                            return (
-                                <tr key={code} className="hover:bg-slate-50/50">
-                                    <td className="px-4 py-3 font-medium text-slate-800 font-nepali">{code}: {label}</td>
-                                    <td className="px-4 py-3 text-center font-bold text-blue-600">{data.male}</td>
-                                    <td className="px-4 py-3 text-center font-bold text-pink-600">{data.female}</td>
-                                    <td className="px-4 py-3 text-center font-black text-slate-900 bg-teal-50/30">{data.total}</td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                    <tfoot className="bg-slate-50 font-black border-t-2">
-                        <tr>
-                            <td className="px-4 py-3 font-nepali">कुल जम्मा (FIC Total)</td>
-                            <td className="px-4 py-3 text-center">
-                                {Object.values(reportStats.ethnicFIC).reduce((sum, d) => sum + d.male, 0)}
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                                {Object.values(reportStats.ethnicFIC).reduce((sum, d) => sum + d.female, 0)}
-                            </td>
-                            <td className="px-4 py-3 text-center bg-teal-600 text-white">
-                                {Object.values(reportStats.ethnicFIC).reduce((sum, d) => sum + d.total, 0)}
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-            <p className="text-[10px] text-slate-500 mt-2 italic font-nepali">
-                * १५ महिनाको खोप (MR-2/Typhoid) लगाइसकिएका बच्चाहरूलाई पूर्ण खोप पुरा गरेको मानिएको छ।
-            </p>
+        <div>
+            <h4 className="text-base font-bold text-teal-800 mb-2 font-nepali">३. पूर्ण खोप पुरा गरेका बच्चाहरू (जातीयता अनुसार)</h4>
+            <table className="w-full text-xs text-left border-collapse border border-slate-200">
+                <thead className="bg-slate-50 font-bold">
+                    <tr><th className="border p-2">जातीय कोड</th><th className="border p-2 text-center">बालक</th><th className="border p-2 text-center">बालिका</th><th className="border p-2 text-center">जम्मा</th></tr>
+                </thead>
+                <tbody>
+                    {Object.entries(jatLabels).map(([code, label]) => {
+                        const d = reportStats.ethnicFIC[code] || { male: 0, female: 0, total: 0 };
+                        return (
+                            <tr key={code}>
+                                <td className="border p-2">{code}: {label}</td>
+                                <td className="border p-2 text-center">{d.male}</td>
+                                <td className="border p-2 text-center">{d.female}</td>
+                                <td className="border p-2 text-center font-bold">{d.total}</td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
         </div>
 
-        {/* Report Footer */}
-        <div className="grid grid-cols-3 gap-10 mt-20 text-center text-sm font-bold font-nepali">
-            <div className="border-t-2 border-slate-900 pt-3">तयार गर्ने</div>
-            <div className="border-t-2 border-slate-900 pt-3">रुजु गर्ने</div>
-            <div className="border-t-2 border-slate-900 pt-3">स्वीकृत गर्ने</div>
+        <div className="grid grid-cols-2 gap-10 mt-12 text-center text-xs font-bold font-nepali">
+            <div className="border-t border-slate-900 pt-2">तयार गर्ने</div>
+            <div className="border-t border-slate-900 pt-2">स्वीकृत गर्ने</div>
         </div>
       </div>
     </div>

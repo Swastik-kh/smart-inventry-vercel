@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Save, RotateCcw, Baby, Calendar, FileDigit, User, Phone, MapPin, Plus, Edit, Trash2, Search, X, UsersRound, Weight, Droplets, CheckCircle2, AlertTriangle, Info, Code, CalendarClock } from 'lucide-react';
+import { Save, RotateCcw, Baby, Calendar, FileDigit, User, Phone, MapPin, Plus, Edit, Trash2, Search, UsersRound, Weight, Droplets, CheckCircle2, AlertTriangle, Info, Code, CalendarClock, MapPinned, X } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
-import { Option } from '../types/coreTypes';
+import { Option, OrganizationSettings } from '../types/coreTypes';
 import { ChildImmunizationRecord, ChildImmunizationVaccine } from '../types/healthTypes';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
@@ -12,6 +12,7 @@ import NepaliDate from 'nepali-date-converter';
 interface ChildImmunizationRegistrationProps {
   currentFiscalYear: string;
   records: ChildImmunizationRecord[];
+  generalSettings: OrganizationSettings;
   onAddRecord: (record: ChildImmunizationRecord) => void;
   onUpdateRecord: (record: ChildImmunizationRecord) => void;
   onDeleteRecord: (recordId: string) => void;
@@ -32,7 +33,7 @@ const jatCodeOptions: Option[] = [
   { id: '06', value: '06', label: '०६' },
 ];
 
-const NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE = [
+export const NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE = [
     { name: 'BCG (जन्ममा)', relativeDays: 0, base: 'dob' },
     { name: 'DPT-HepB-Hib-1 (६ हप्ता)', relativeDays: 42, base: 'dob' },
     { name: 'OPV-1 (६ हप्ता)', relativeDays: 42, base: 'dob' },
@@ -44,15 +45,24 @@ const NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE = [
     { name: 'PCV-2 (१० हप्ता)', relativeDays: 28, base: 'PCV-1 (६ हप्ता)' },
     { name: 'FIPV (१४ हप्ता)', relativeDays: 28, base: 'DPT-HepB-Hib-2 (१० हप्ता)' },
     { name: 'DPT-HepB-Hib-3 (१४ हप्ता)', relativeDays: 28, base: 'DPT-HepB-Hib-2 (१० हप्ता)' },
-    { name: 'OPV-3 (१४ हप्ता)', relativeDays: 28, base: 'OPV-2 (१० हप्ता)' },
+    { name: 'OPV-3 (१४ हप्ता)', relativeDays: 28, base: 'OPV-2 (६ हप्ता)' },
     { name: 'MR-1 (९ महिना)', relativeDays: 270, base: 'dob' },
     { name: 'JE (९ महिना)', relativeDays: 270, base: 'dob' }, 
     { name: 'PCV-3 (९ महिना)', relativeDays: 270, base: 'dob' }, 
     { name: 'MR-2 (१५ महिना)', relativeDays: 450, base: 'dob' },
-    { name: 'Typhoid (१५ महिना)', relativeDays: 450, base: 'dob' }, 
+    { name: 'Typhoid (१५ महिना)', relativeDays: 450, base: 'dob' },
+    { name: 'HPV (१४ वर्ष)', relativeDays: 5110, base: 'dob', femaleOnly: true }, 
 ];
 
-// Helper to format Date to local ISO string (prevents timezone shifts)
+const parseDateLocal = (dateStr: string) => {
+    if (!dateStr) return new Date();
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+    }
+    return new Date();
+};
+
 const toLocalISO = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -67,12 +77,12 @@ const calculateImmunizationDate = (
     allVaccines: ChildImmunizationVaccine[] = []
 ): { bs: string; ad: string; } => {
     try {
-        let actualBaseAdDate = new Date(dobAd);
+        let actualBaseAdDate = parseDateLocal(dobAd);
         
         if (baseName !== 'dob') {
             const baseVaccine = allVaccines.find(v => v.name === baseName);
             if (baseVaccine && baseVaccine.givenDateAd) {
-                actualBaseAdDate = new Date(baseVaccine.givenDateAd);
+                actualBaseAdDate = parseDateLocal(baseVaccine.givenDateAd);
             } else {
                 return { bs: "N/A", ad: "N/A" };
             }
@@ -82,6 +92,7 @@ const calculateImmunizationDate = (
         scheduledAdDate.setDate(actualBaseAdDate.getDate() + relativeDays);
         const scheduledAdDateString = toLocalISO(scheduledAdDate);
 
+        // FIX: Corrected month index for NepaliDate constructor by passing the Date object directly
         let scheduledNepaliDate = new NepaliDate(scheduledAdDate);
         
         return {
@@ -89,6 +100,7 @@ const calculateImmunizationDate = (
             ad: scheduledAdDateString,
         };
     } catch (e) {
+        console.error("Error calculating immunization date:", e); // Added error logging
         return { bs: "Error", ad: "Error" };
     }
 };
@@ -96,6 +108,7 @@ const calculateImmunizationDate = (
 export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrationProps> = ({
   currentFiscalYear,
   records,
+  generalSettings,
   onAddRecord,
   onUpdateRecord,
   onDeleteRecord
@@ -106,6 +119,8 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedVaccineForUpdate, setSelectedVaccineForUpdate] = useState<{ record: ChildImmunizationRecord; vaccineIndex: number; } | null>(null);
   const [modalGivenDateBs, setModalGivenDateBs] = useState('');
+
+  const centerOptions: Option[] = (generalSettings.vaccinationCenters || ['मुख्य अस्पताल']).map(c => ({ id: c, value: c, label: c }));
 
   const getTodayAd = () => toLocalISO(new Date());
   const getTodayBs = () => {
@@ -141,6 +156,7 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
     birthWeightKg: undefined,
     vaccines: [],
     remarks: '',
+    vaccinationCenter: centerOptions[0]?.value || '',
   });
 
   useEffect(() => {
@@ -153,14 +169,20 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
             dobAd: getTodayAd(),
             jatCode: '',
             vaccines: [],
+            vaccinationCenter: centerOptions[0]?.value || '',
         }));
     }
-  }, [currentFiscalYear, records, editingRecordId]);
+  }, [currentFiscalYear, records, editingRecordId, centerOptions[0]?.value]);
 
   useEffect(() => {
     if (formData.dobBs && !editingRecordId) {
         try {
-            const newSchedule: ChildImmunizationVaccine[] = NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE.map(vaccine => {
+            const filteredTemplate = NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE.filter(v => {
+                if (v.name.includes('HPV') && formData.gender === 'Male') return false;
+                return true;
+            });
+
+            const newSchedule: ChildImmunizationVaccine[] = filteredTemplate.map(vaccine => {
                 const { bs: scheduledDateBs, ad: scheduledDateAdString } = calculateImmunizationDate(
                     formData.dobAd,
                     vaccine.relativeDays,
@@ -182,7 +204,7 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
             setValidationError("Error calculating schedule.");
         }
     }
-  }, [formData.dobBs, formData.dobAd, editingRecordId]);
+  }, [formData.dobBs, formData.dobAd, formData.gender, editingRecordId]);
 
   const handleDOBBsChange = (dateBs: string) => {
     let dateAd = '';
@@ -200,7 +222,8 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
     givenDoseName: string, 
     givenDateAd: string,
     givenDateBs: string,
-    childDobAd: string
+    childDobAd: string,
+    childGender: string
   ): ChildImmunizationVaccine[] => {
     const updatedVaccinesMap = new Map<string, ChildImmunizationVaccine>();
     currentVaccines.forEach(v => updatedVaccinesMap.set(v.name, v));
@@ -220,6 +243,8 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
     const finalVaccinesOrdered: ChildImmunizationVaccine[] = [];
 
     NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE.forEach(templateVaccine => {
+        if (templateVaccine.name.includes('HPV') && childGender === 'Male') return;
+
         const existingVaccineInMap = updatedVaccinesMap.get(templateVaccine.name);
 
         if (existingVaccineInMap && existingVaccineInMap.status === 'Given') {
@@ -239,6 +264,7 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
                     scheduledDateBs: newScheduledDateBs,
                 });
             } else {
+                // This branch handles cases where a vaccine is in the template but not in existing vaccines
                 finalVaccinesOrdered.push({
                     name: templateVaccine.name,
                     scheduledDateAd: newScheduledDateAd,
@@ -255,13 +281,22 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.childName.trim() || !formData.dobBs.trim() || !formData.jatCode?.trim()) {
-      setValidationError("कृपया आवश्यक विवरणहरू भर्नुहोस्।");
+    if (!formData.childName.trim() || !formData.dobBs.trim() || !formData.jatCode?.trim() || !formData.vaccinationCenter) {
+      setValidationError("कृपया सबै तारा चिन्हित (*) विवरणहरू भर्नुहोस्।");
       return;
     }
 
-    const recordToSave: ChildImmunizationRecord = {
+    // Sanitize optional fields to null if they are undefined
+    const sanitizedData = {
       ...formData,
+      birthWeightKg: formData.birthWeightKg || null,
+      remarks: formData.remarks || null,
+      vaccinationCenter: formData.vaccinationCenter || null,
+      jatCode: formData.jatCode || null,
+    };
+
+    const recordToSave: ChildImmunizationRecord = {
+      ...sanitizedData,
       id: editingRecordId || Date.now().toString(),
       fiscalYear: currentFiscalYear,
     };
@@ -271,6 +306,10 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
     
     setSuccessMessage('रेकर्ड सफलतापूर्वक सुरक्षित भयो!');
     handleReset();
+    // NEW: Clear filters after successful save to ensure new/updated record is visible
+    setSearchTerm('');
+    // setFilterCenter(''); // No filterCenter state in this file directly
+    // setFilterDay(''); // No filterDay state in this file directly
   };
 
   const handleEditRecord = (record: ChildImmunizationRecord) => {
@@ -283,17 +322,16 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
             givenDateBs: v.givenDateBs || null,
         }))
     };
-    // Re-evaluating schedule without updating given date
-    const reEvaluatedVaccines = recalculateFutureDoses(loadedRecord.vaccines, "", "", "", loadedRecord.dobAd);
+    const reEvaluatedVaccines = recalculateFutureDoses(loadedRecord.vaccines, "", "", "", loadedRecord.dobAd, loadedRecord.gender);
     setFormData({ ...loadedRecord, vaccines: reEvaluatedVaccines });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleReset = () => {
     setEditingRecordId(null);
-    setFormData({
+    setFormData(prev => ({
+      ...prev,
       id: '',
-      fiscalYear: currentFiscalYear,
       regNo: generateRegNo(currentFiscalYear, records),
       childName: '',
       gender: 'Male',
@@ -307,8 +345,10 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
       birthWeightKg: undefined,
       vaccines: [],
       remarks: '',
-    });
+      vaccinationCenter: centerOptions[0]?.value || '',
+    }));
     setValidationError(null);
+    setSuccessMessage(null); // Clear success message on reset
   };
 
   const handleDeleteRecord = (recordId: string, childName: string) => {
@@ -331,8 +371,7 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
     const nd = new NepaliDate(modalGivenDateBs);
     const givenDateAd = toLocalISO(nd.toJsDate());
 
-    // Pass modalGivenDateBs directly to prevent recalculation shifts
-    const finalVaccines = recalculateFutureDoses(record.vaccines, currentVaccine.name, givenDateAd, modalGivenDateBs, record.dobAd);
+    const finalVaccines = recalculateFutureDoses(record.vaccines, currentVaccine.name, givenDateAd, modalGivenDateBs, record.dobAd, record.gender);
     onUpdateRecord({ ...record, vaccines: finalVaccines });
     setSelectedVaccineForUpdate(null);
   };
@@ -343,13 +382,36 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
       .filter(r => 
         r.childName.toLowerCase().includes(searchTerm.toLowerCase()) || 
         r.regNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.jatCode?.toLowerCase().includes(searchTerm.toLowerCase())
+        r.jatCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.vaccinationCenter?.toLowerCase().includes(searchTerm.toLowerCase())
       )
       .sort((a, b) => b.id.localeCompare(a.id));
   }, [records, currentFiscalYear, searchTerm]);
 
   return (
     <div className="space-y-6">
+      {validationError && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm flex items-start gap-3 animate-in slide-in-from-top-2 no-print">
+          <AlertTriangle size={24} className="text-red-500 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="text-red-800 font-bold text-sm">त्रुटि</h3>
+            <p className="text-red-700 text-sm mt-1">{validationError}</p>
+          </div>
+          <button onClick={() => setValidationError(null)} className="text-red-400 hover:text-red-600"><X size={20} /></button>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-xl shadow-sm flex items-center gap-3 animate-in slide-in-from-top-2 no-print">
+          <CheckCircle2 size={24} className="text-green-500" />
+          <div className="flex-1">
+            <h3 className="text-green-800 font-bold text-lg font-nepali">सफल भयो</h3>
+            <p className="text-green-700 text-sm">{successMessage}</p>
+          </div>
+          <button onClick={() => setSuccessMessage(null)} className="text-green-400 hover:text-green-600"><X size={20} /></button>
+        </div>
+      )}
+
       <div className="bg-white p-6 rounded-xl border shadow-sm no-print">
         <div className="flex items-center gap-2 mb-6 text-green-800 bg-green-50 p-3 rounded-lg border border-green-100">
             <Baby size={20} />
@@ -359,8 +421,11 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
           <Input label="दर्ता नम्बर" value={formData.regNo} readOnly className="bg-slate-50 font-bold text-green-700" icon={<FileDigit size={16} />} />
           <NepaliDatePicker label="जन्म मिति *" value={formData.dobBs} onChange={handleDOBBsChange} required />
           <Input label="बच्चाको नाम *" value={formData.childName} onChange={e => setFormData({...formData, childName: e.target.value})} required icon={<User size={16} />} />
+          
+          <Select label="खोप केन्द्र *" options={centerOptions} value={formData.vaccinationCenter || ''} onChange={e => setFormData({...formData, vaccinationCenter: e.target.value})} placeholder="-- केन्द्र छान्नुहोस् --" icon={<MapPinned size={16} />} />
           <Select label="लिङ्ग *" options={genderOptions} value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value as any})} />
           <Select label="जातीय कोड *" options={jatCodeOptions} value={formData.jatCode || ''} onChange={e => setFormData({...formData, jatCode: e.target.value})} placeholder="-- छान्नुहोस् --" icon={<Code size={16} />} />
+          
           <Input label="आमाको नाम *" value={formData.motherName} onChange={e => setFormData({...formData, motherName: e.target.value})} required icon={<User size={16} />} />
           <Input label="बुबाको नाम *" value={formData.fatherName} onChange={e => setFormData({...formData, fatherName: e.target.value})} required icon={<User size={16} />} />
           <Input label="ठेगाना *" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} required icon={<MapPin size={16} />} />
@@ -378,7 +443,7 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
           <h3 className="font-bold text-slate-700 font-nepali">खोप तालिका विवरण</h3>
           <div className="relative w-64">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="खोज्नुहोस्..." className="w-full pl-9 pr-4 py-1.5 rounded-lg border text-sm" />
+            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="नाम, दर्ता नं वा केन्द्र..." className="w-full pl-9 pr-4 py-1.5 rounded-lg border text-sm" />
           </div>
         </div>
 
@@ -386,16 +451,19 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50 text-slate-600 font-bold border-b">
               <tr>
-                <th className="px-6 py-3">दर्ता नं</th>
+                <th className="px-6 py-3">दर्ता नं / केन्द्र</th>
                 <th className="px-6 py-3">बच्चाको विवरण</th>
-                <th className="px-6 py-3">खोपको स्थिति (Scheduled vs Administered)</th>
+                <th className="px-6 py-3">खोपको स्थिति</th>
                 <th className="px-6 py-3 text-right">कार्य</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredRecords.map((record) => (
                 <tr key={record.id} className="hover:bg-slate-50/50">
-                  <td className="px-6 py-4 font-mono font-bold text-green-700">{record.regNo}</td>
+                  <td className="px-6 py-4">
+                    <div className="font-mono font-bold text-green-700">{record.regNo}</div>
+                    <div className="text-[10px] text-slate-500 flex items-center gap-1"><MapPinned size={10}/> {record.vaccinationCenter}</div>
+                  </td>
                   <td className="px-6 py-4">
                     <div className="font-bold">{record.childName}</div>
                     <div className="text-[10px] text-slate-400">{record.dobBs} | {record.motherName}</div>
@@ -434,7 +502,7 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
       {selectedVaccineForUpdate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedVaccineForUpdate(null)}></div>
-            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95">
+            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="px-6 py-4 border-b bg-blue-50 text-blue-800 flex justify-between items-center">
                     <h3 className="font-bold font-nepali">खोप स्थिति अपडेट</h3>
                     <button onClick={() => setSelectedVaccineForUpdate(null)}><X size={20}/></button>

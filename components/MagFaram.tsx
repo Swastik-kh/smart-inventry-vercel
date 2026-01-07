@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Printer, Save, Calendar, CheckCircle2, Send, Clock, FileText, Eye, Search, X, AlertCircle, ChevronRight, ArrowLeft, Check, Square, Warehouse, Layers, ShieldCheck, Info } from 'lucide-react';
 import { User, Option, OrganizationSettings, Signature } from '../types/coreTypes';
@@ -607,6 +609,106 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
 
   return (
     <div className="space-y-6">
+       {/* Inject print-specific styles */}
+       <style>{`
+            @media print {
+                /* General A4 portrait settings */
+                @page { 
+                    size: A4 portrait; 
+                    margin: 1cm; 
+                }
+
+                /* Container overrides */
+                #mag-form-print {
+                    font-family: 'Mukta', sans-serif !important;
+                    background: white !important;
+                    box-shadow: none !important;
+                    padding: 0 !important; /* Remove padding from main container */
+                    width: 100% !important;
+                    max-width: none !important;
+                    min-height: auto !important;
+                }
+
+                /* Header adjustments */
+                #mag-form-print h1 { font-size: 16px !important; color: black !important; } /* Org Name */
+                #mag-form-print h2 { font-size: 14px !important; } /* Subtitle 1 */
+                #mag-form-print h3 { font-size: 12px !important; } /* Subtitle 2/3 */
+                #mag-form-print .text-[10px] { font-size: 9px !important; } /* Smaller text in header */
+                #mag-form-print .text-sm { font-size: 11px !important; } /* Normal text size */
+
+                /* Input fields to look like text */
+                #mag-form-print input,
+                #mag-form-print select,
+                #mag-form-print textarea {
+                    border: none !important;
+                    background: none !important;
+                    box-shadow: none !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    color: inherit !important;
+                    outline: none !important;
+                    width: 100% !important; /* Ensure it fills its container */
+                    height: auto !important;
+                    line-height: normal !important;
+                    text-align: inherit !important; /* Inherit alignment from parent td/div */
+                    font-size: inherit !important; /* Inherit font size */
+                    pointer-events: none !important; /* Not interactive */
+                    -webkit-print-color-adjust: exact !important; /* For background colors */
+                    print-color-adjust: exact !important;
+                }
+                /* Specific adjustments for NepaliDatePicker within print */
+                #mag-form-print .nepali-date-picker-input-for-print input {
+                    border-bottom: 1px dotted black !important; /* Retain minimal line for date */
+                    font-weight: bold !important;
+                    color: black !important;
+                    text-align: center !important;
+                }
+                /* Remove placeholder text in print */
+                #mag-form-print input::placeholder {
+                    color: transparent !important;
+                }
+
+                /* Table styling */
+                #mag-form-print table {
+                    table-layout: fixed; /* Ensures columns respect defined widths */
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                #mag-form-print th, #mag-form-print td {
+                    border: 1px solid black !important; /* Solid black borders */
+                    padding: 4px !important; /* Reduced padding for more content per page */
+                    vertical-align: top;
+                }
+                #mag-form-print thead {
+                    display: table-header-group; /* Ensures header repeats on new pages */
+                }
+                #mag-form-print tr {
+                    page-break-inside: avoid; /* Avoid breaking rows across pages */
+                    break-inside: avoid; /* Standard for CSS Paged Media Module 3 */
+                }
+                #mag-form-print .bg-slate-50 { background-color: #f8fafc !important; } /* Keep light background */
+                #mag-form-print .bg-slate-100 { background-color: #f1f5f9 !important; } /* Keep light background */
+
+                /* Signature sections - ensure dotted lines are visible and text is clean */
+                #mag-form-print .border-b.border-dotted.border-black {
+                    border-bottom: 1px dotted black !important;
+                }
+                #mag-form-print .border-b.border-dotted.border-slate-600 {
+                    border-bottom: 1px dotted black !important;
+                }
+
+                /* Remove colors/shadows on emblem text */
+                #mag-form-print .text-red-600 { color: black !important; }
+
+                /* Specific width adjustments for table columns if necessary for print */
+                #mag-form-print table th.w-10 { width: 30px !important; }
+                #mag-form-print table th.w-\[30\%\] { width: 25% !important; } /* Name */
+                #mag-form-print table th.w-\[20\%\] { width: 20% !important; } /* Specification */
+                #mag-form-print table th.w-\[10\%\] { width: 10% !important; } /* Unit & Quantity */
+                #mag-form-print table th.w-\[8\%\] { width: 12% !important; } /* Remarks */
+            }
+       `}</style>
+       
        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
           <div className="flex items-center gap-4">
               <button onClick={handleReset} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"><ArrowLeft size={20} /></button>
@@ -738,7 +840,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                         format="YYYY/MM/DD"
                         label=""
                         hideIcon={true}
-                        inputClassName={`border-b border-dotted border-black flex-1 outline-none w-32 text-center bg-white font-bold placeholder:text-slate-400 placeholder:font-normal rounded-none px-0 py-0 h-auto focus:ring-0 focus:border-black ${validationError ? 'text-red-600' : ''}`}
+                        inputClassName={`nepali-date-picker-input-for-print border-b border-dotted border-black flex-1 outline-none w-32 text-center bg-white font-bold placeholder:text-slate-400 placeholder:font-normal rounded-none px-0 py-0 h-auto focus:ring-0 focus:border-black ${validationError ? 'text-red-600' : ''}`}
                         wrapperClassName="w-32"
                         disabled={isViewOnly}
                         popupAlign="right"

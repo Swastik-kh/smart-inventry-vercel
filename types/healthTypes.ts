@@ -100,7 +100,7 @@ export interface ChildImmunizationRecord {
   gender: 'Male' | 'Female' | 'Other';
   dobBs: string;
   dobAd: string;
-  jatCode?: string; // NEW: Added for ethnic code
+  jatCode?: string; 
   motherName: string;
   fatherName: string;
   address: string;
@@ -108,4 +108,5 @@ export interface ChildImmunizationRecord {
   birthWeightKg?: number;
   vaccines: ChildImmunizationVaccine[];
   remarks?: string;
+  vaccinationCenter?: string; // Added for center tracking
 }

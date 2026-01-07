@@ -1,14 +1,14 @@
 
-
 import React, { useState, useMemo } from 'react';
-import { Printer, Calendar, FileText, Filter, Package, FilePlus, Save, CheckCircle2 } from 'lucide-react';
+import { Printer, Calendar, Filter, Package, FilePlus, Save, CheckCircle2 } from 'lucide-react';
 import { Select } from './Select';
 import { FISCAL_YEARS } from '../constants';
 // Corrected import paths for InventoryItem, User, MagFormEntry, OrganizationSettings, Store
 import { User, OrganizationSettings } from '../types/coreTypes';
-import { InventoryItem, MagFormEntry, Store } from '../types/inventoryTypes';
+import { InventoryItem, MagFormEntry, DakhilaPratibedanEntry, IssueReportEntry, StockEntryRequest, Store } from '../types/inventoryTypes';
+// @ts-ignore
+import NepaliDate from 'nepali-date-converter';
 
-// Removed missing stores property to fix type mismatch error in Dashboard.tsx
 interface InventoryMonthlyReportProps {
   currentFiscalYear: string;
   currentUser: User;
@@ -16,43 +16,255 @@ interface InventoryMonthlyReportProps {
   magForms: MagFormEntry[];
   onSaveMagForm: (form: MagFormEntry) => void;
   generalSettings: OrganizationSettings;
+  dakhilaReports: DakhilaPratibedanEntry[]; // Added dakhilaReports
+  issueReports: IssueReportEntry[]; // Added issueReports
+  stockEntryRequests: StockEntryRequest[]; // Added stockEntryRequests
+  stores: Store[]; // Added stores prop
 }
 
+// Interface for the aggregated row data
+interface AggregatedMonthlyItem {
+  id: string; // A unique ID for the aggregated row (e.g., hash of itemName)
+  itemName: string;
+  ledgerPageNo: string; // Representative ledger page no
+  unit: string;
+  previousMonthClosingStock: number;
+  monthlyReceipts: number;
+  monthlyExpenditure: number;
+  approvedStockLevel: number; // Representative ASL
+  emergencyOrderPoint: number; // Representative EOP
+  quantityToOrder: number;
+}
+
+
 export const InventoryMonthlyReport: React.FC<InventoryMonthlyReportProps> = ({ 
-  currentFiscalYear, inventoryItems, generalSettings, currentUser 
+  currentFiscalYear, inventoryItems, generalSettings, currentUser, 
+  dakhilaReports, issueReports, stockEntryRequests, stores
 }) => {
   const [selectedFiscalYear, setSelectedFiscalYear] = useState(currentFiscalYear);
+  const [selectedMonth, setSelectedMonth] = useState(new NepaliDate().format('MM')); // Default to current month
+  const [filterCenter, setFilterCenter] = useState(''); // New state for filter by store/center
+
+  // State for sorting
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const nepaliMonthOptions = [
+    { id: '01', value: '01', label: 'बैशाख (Baishakh)' },
+    { id: '02', value: '02', label: 'जेठ (Jestha)' },
+    { id: '03', value: '03', label: 'असार (Ashad)' },
+    { id: '04', value: '04', label: 'साउन (Shrawan)' },
+    { id: '05', value: '05', label: 'भदौ (Bhadra)' },
+    { id: '06', value: '06', label: 'असोज (Ashwin)' },
+    { id: '07', value: '07', label: 'कार्तिक (Kartik)' },
+    { id: '08', value: '08', label: 'मंसिर (Mangsir)' },
+    { id: '09', value: '09', label: 'पुष (Poush)' },
+    { id: '10', value: '10', label: 'माघ (Magh)' },
+    { id: '11', value: '11', label: 'फागुन (Falgun)' },
+    { id: '12', value: '12', label: 'चैत्र (Caitra)' },
+  ];
+
+  const storeOptions = useMemo(() => stores.map(s => ({ id: s.id, value: s.id, label: s.name })), [stores]);
+
 
   const reportData = useMemo(() => {
-    return inventoryItems.filter(i => i.fiscalYear === selectedFiscalYear && i.itemType === 'Expendable')
-      .map(item => ({
-        ...item,
-        quantityToOrder: Math.max(0, (item.approvedStockLevel || 0) - item.currentQuantity)
+    // 1. Group all relevant inventory items by item name and consolidate initial stock
+    const aggregatedItemsMap = new Map<string, {
+      id: string; // Use itemName itself as a unique ID for aggregation
+      itemName: string;
+      ledgerPageNo: string;
+      unit: string;
+      currentTotalStock: number; // Sum of currentQuantity for all batches/stores of this item name
+      approvedStockLevel: number; // Representative ASL
+      emergencyOrderPoint: number; // Representative EOP
+    }>();
+
+    inventoryItems
+      .filter(i => 
+        i.fiscalYear === selectedFiscalYear && 
+        i.itemType === 'Expendable' &&
+        (filterCenter ? i.storeId === filterCenter : true)
+      )
+      .forEach(item => {
+        const lowerItemName = item.itemName.trim().toLowerCase();
+        if (!aggregatedItemsMap.has(lowerItemName)) {
+          aggregatedItemsMap.set(lowerItemName, {
+            id: lowerItemName, // Unique key for the aggregated item
+            itemName: item.itemName,
+            ledgerPageNo: item.ledgerPageNo || '-', // Take from first encountered
+            unit: item.unit,
+            currentTotalStock: 0, // Will sum up later
+            approvedStockLevel: item.approvedStockLevel || 0, // Take from first encountered
+            emergencyOrderPoint: item.emergencyOrderPoint || 0, // Take from first encountered
+          });
+        }
+        // Always sum current stock across all matching physical inventory items
+        const aggItem = aggregatedItemsMap.get(lowerItemName)!;
+        aggItem.currentTotalStock += item.currentQuantity;
+      });
+
+    // 2. Aggregate monthly receipts (for the selected month) by item name
+    const monthlyReceiptsMap = new Map<string, number>();
+    dakhilaReports
+      .filter(d => 
+        d.fiscalYear === selectedFiscalYear && 
+        d.date.split('-')[1] === selectedMonth &&
+        (filterCenter ? d.storeId === filterCenter : true)
+      )
+      .forEach(d => d.items.forEach(item => {
+        const key = item.name.trim().toLowerCase();
+        monthlyReceiptsMap.set(key, (monthlyReceiptsMap.get(key) || 0) + item.quantity);
       }));
-  }, [inventoryItems, selectedFiscalYear]);
+    
+    stockEntryRequests
+      .filter(s => 
+        s.status === 'Approved' && 
+        s.fiscalYear === selectedFiscalYear && 
+        s.requestDateBs.split('-')[1] === selectedMonth &&
+        (filterCenter ? s.storeId === filterCenter : true)
+      )
+      .forEach(s => s.items.forEach(item => {
+        const key = item.itemName.trim().toLowerCase();
+        monthlyReceiptsMap.set(key, (monthlyReceiptsMap.get(key) || 0) + item.currentQuantity);
+      }));
+
+    // 3. Aggregate monthly expenditure (for the selected month) by item name
+    const monthlyExpenditureMap = new Map<string, number>();
+    issueReports
+      .filter(i => 
+        i.fiscalYear === selectedFiscalYear && 
+        i.issueDate?.split('-')[1] === selectedMonth && // Using issueDate now
+        (filterCenter ? i.selectedStoreId === filterCenter : true)
+      )
+      .forEach(i => i.items.forEach(item => {
+        const key = item.name.trim().toLowerCase();
+        monthlyExpenditureMap.set(key, (monthlyExpenditureMap.get(key) || 0) + parseFloat(item.quantity));
+      }));
+
+    // 4. Combine all data into final report rows
+    let data: AggregatedMonthlyItem[] = [];
+
+    aggregatedItemsMap.forEach(aggItem => {
+        const lowerItemName = aggItem.itemName.trim().toLowerCase();
+        const currentMonthReceipts = monthlyReceiptsMap.get(lowerItemName) || 0;
+        const currentMonthExpenditure = monthlyExpenditureMap.get(lowerItemName) || 0;
+
+        // Calculate previous month's closing stock for the aggregated item
+        // This is the total current stock MINUS receipts in this month PLUS expenditure in this month
+        const previousMonthClosingStock = aggItem.currentTotalStock - currentMonthReceipts + currentMonthExpenditure;
+
+        // Ensure these values don't go negative for display if actual stock is managed differently
+        const finalPreviousMonthClosingStock = Math.max(0, previousMonthClosingStock);
+        const finalCurrentTotalStock = Math.max(0, aggItem.currentTotalStock);
+
+        data.push({
+            id: aggItem.id,
+            itemName: aggItem.itemName,
+            ledgerPageNo: aggItem.ledgerPageNo,
+            unit: aggItem.unit,
+            previousMonthClosingStock: finalPreviousMonthClosingStock,
+            monthlyReceipts: currentMonthReceipts,
+            monthlyExpenditure: currentMonthExpenditure,
+            approvedStockLevel: aggItem.approvedStockLevel,
+            emergencyOrderPoint: aggItem.emergencyOrderPoint,
+            // Quantity to order is based on ASL and finalCurrentTotalStock
+            quantityToOrder: Math.max(0, (aggItem.approvedStockLevel || 0) - finalCurrentTotalStock),
+        });
+    });
+
+    // Apply sorting
+    if (sortColumn) {
+      data.sort((a, b) => {
+        let valA: any;
+        let valB: any;
+
+        if (sortColumn === 'ledgerPageNo') {
+          valA = parseInt(a.ledgerPageNo.replace(/[^0-9]/g, '') || '0'); // Extract numeric part
+          valB = parseInt(b.ledgerPageNo.replace(/[^0-9]/g, '') || '0');
+        } else if (sortColumn === 'itemName') {
+            valA = a.itemName;
+            valB = b.itemName;
+        } else {
+          valA = (a as any)[sortColumn];
+          valB = (b as any)[sortColumn];
+        }
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        return sortDirection === 'asc' ? valA - valB : valB - valA;
+      });
+    }
+
+    return data;
+  }, [inventoryItems, selectedFiscalYear, selectedMonth, dakhilaReports, issueReports, stockEntryRequests, filterCenter, sortColumn, sortDirection]);
+
+  const currentMonthLabel = nepaliMonthOptions.find(m => m.value === selectedMonth)?.label || '';
+  const currentStoreLabel = storeOptions.find(s => s.value === filterCenter)?.label || 'सबै';
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl border no-print">
-        <Select label="Fiscal Year" options={FISCAL_YEARS} value={selectedFiscalYear} onChange={(e) => setSelectedFiscalYear(e.target.value)} icon={<Calendar size={18} />} />
-        <button onClick={() => window.print()} className="px-6 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2"><Printer size={18} /> Print Report</button>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
+        <div className="flex flex-wrap gap-4">
+          <div className="w-40"><Select label="आर्थिक वर्ष" options={FISCAL_YEARS} value={selectedFiscalYear} onChange={(e) => setSelectedFiscalYear(e.target.value)} icon={<Calendar size={18} />} /></div>
+          <div className="w-48"><Select label="महिना" options={nepaliMonthOptions} value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} icon={<Filter size={18} />} /></div>
+          <div className="w-48">
+            <Select 
+                label="केन्द्र/गोदाम फिल्टर" 
+                options={[{ id: '', value: '', label: '-- सबै केन्द्रहरू --' }, ...storeOptions]} 
+                value={filterCenter} 
+                onChange={(e) => setFilterCenter(e.target.value)} 
+                icon={<Package size={18} />} 
+            />
+          </div>
+        </div>
+        <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 text-white rounded-lg font-medium shadow-sm"><Printer size={18} /> प्रिन्ट</button>
       </div>
 
-      <div className="bg-white p-8 rounded-xl shadow-lg max-w-[297mm] mx-auto min-h-[210mm] font-nepali text-sm">
-        <div className="text-center mb-8">
+      <div className="bg-white p-8 rounded-xl shadow-lg max-w-[297mm] mx-auto min-h-[210mm] font-nepali text-sm print:shadow-none print:p-0">
+        <div className="text-center mb-6 border-b-2 border-slate-900 pb-4">
             <h1 className="text-xl font-bold text-red-600">{generalSettings.orgNameNepali}</h1>
-            <h2 className="text-lg font-bold underline">जिन्सी मौज्दात तथा निकासा प्रतिवेदन</h2>
+            <h3 className="text-lg font-black mt-2 underline font-nepali">जिन्सी मौज्दात तथा निकासा प्रतिवेदन</h3>
+            <div className="flex justify-between mt-4 text-xs font-bold text-slate-600">
+                <span>आ.व.: {selectedFiscalYear}</span>
+                <span>महिना: {currentMonthLabel}</span>
+                <span>केन्द्र: {currentStoreLabel}</span>
+            </div>
         </div>
 
         <table className="w-full border-collapse border border-slate-900 text-xs">
             <thead>
                 <tr className="bg-slate-50">
                     <th className="border border-slate-900 p-1">क्र.सं.</th>
-                    <th className="border border-slate-900 p-1">सामानको नाम</th>
-                    <th className="border border-slate-900 p-1">जि.खा.पा.नं.</th>
+                    <th 
+                        className="border border-slate-900 p-1 cursor-pointer select-none" 
+                        onDoubleClick={() => handleSort('itemName')}
+                    >
+                        सामानको नाम&nbsp;
+                        {sortColumn === 'itemName' && (sortDirection === 'asc' ? '▲' : '▼')}
+                    </th>
+                    <th 
+                      className="border border-slate-900 p-1 cursor-pointer select-none" 
+                      onDoubleClick={() => handleSort('ledgerPageNo')}
+                    >
+                      जि.खा.पा.नं.&nbsp;
+                      {sortColumn === 'ledgerPageNo' && (sortDirection === 'asc' ? '▲' : '▼')}
+                    </th>
                     <th className="border border-slate-900 p-1">एकाई</th>
-                    <th className="border border-slate-900 p-1">हालको मौज्दात</th>
+                    <th className="border border-slate-900 p-1">अघिल्लो महिनाको अन्तिम मौज्दात</th> {/* Updated column header */}
+                    <th className="border border-slate-900 p-1">यस महिना प्राप्त</th>
+                    <th className="border border-slate-900 p-1">यस महिना खर्च</th>
                     <th className="border border-slate-900 p-1">स्वीकृत मौज्दात (ASL)</th>
+                    <th className="border border-slate-900 p-1">आपतकालीन अर्डर बिन्दु (EOP)</th> {/* New column header */}
                     <th className="border border-slate-900 p-1">माग गर्नुपर्ने परिमाण</th>
                 </tr>
             </thead>
@@ -63,8 +275,11 @@ export const InventoryMonthlyReport: React.FC<InventoryMonthlyReportProps> = ({
                         <td className="border border-slate-900 p-1 px-2">{d.itemName}</td>
                         <td className="border border-slate-900 p-1 text-center">{d.ledgerPageNo || '-'}</td>
                         <td className="border border-slate-900 p-1 text-center">{d.unit}</td>
-                        <td className="border border-slate-900 p-1 text-center font-bold">{d.currentQuantity}</td>
+                        <td className="border border-slate-900 p-1 text-center font-bold">{d.previousMonthClosingStock}</td> {/* Display new calculated value */}
+                        <td className="border border-slate-900 p-1 text-center text-green-700 font-bold">{d.monthlyReceipts || 0}</td>
+                        <td className="border border-slate-900 p-1 text-center text-red-600 font-bold">{d.monthlyExpenditure || 0}</td>
                         <td className="border border-slate-900 p-1 text-center">{d.approvedStockLevel || '-'}</td>
+                        <td className="border border-slate-900 p-1 text-center">{d.emergencyOrderPoint || '-'}</td> {/* New data */}
                         <td className="border border-slate-900 p-1 text-center font-bold text-blue-700">{d.quantityToOrder || '-'}</td>
                     </tr>
                 ))}
