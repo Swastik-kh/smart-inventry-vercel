@@ -597,11 +597,95 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                   </div>
                   <div className="p-6 border-t bg-slate-50 flex justify-between items-center">
                       <div className="text-xs text-slate-400 italic">Total Items Found: {expiryModalType === 'expired' ? expiredItems.length : nearExpiryItems.length}</div>
+                      <button onClick={() => window.print()} className="bg-slate-800 text-white px-8 py-2.5 rounded-2xl font-bold hover:bg-slate-900 shadow-lg shadow-slate-200 transition-all flex items-center gap-2">
+                         <Printer size={18} /> प्रिन्ट गर्नुहोस्
+                      </button>
                       <button onClick={() => setShowExpiryModal(false)} className="bg-slate-800 text-white px-8 py-2.5 rounded-2xl font-bold hover:bg-slate-900 shadow-lg shadow-slate-200 transition-all">Close Window</button>
                   </div>
               </div>
           </div>
       )}
+
+      {/* PRINT SECTIONS (Hidden by default, shown only on print) */}
+      <div id="expired-items-print" className="hidden print-container">
+          <style>{`
+            @media print {
+                .print-container { page-break-after: always; }
+                .print-table th, .print-table td { border: 1px solid black !important; padding: 8px !important; font-size: 12px !important; }
+                .print-header h1 { font-size: 20px; }
+                .print-header h2 { font-size: 16px; }
+            }
+          `}</style>
+          <div className="print-header">
+              <h1>{generalSettings.orgNameNepali}</h1>
+              <h2>म्याद सकिएका सामानहरूको सूची (Expired Inventory Items)</h2>
+              <p>मिति: {new NepaliDate().format('YYYY-MM-DD')}</p>
+          </div>
+          <table className="print-table">
+              <thead>
+                  <tr>
+                      <th>क्र.सं.</th>
+                      <th>सामानको नाम</th>
+                      <th>ब्याच नं</th>
+                      <th>मौज्दात</th>
+                      <th>म्याद सकिने मिति (BS)</th>
+                      <th>म्याद सकिने मिति (AD)</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  {expiredItems.map((item, idx) => (
+                      <tr key={item.id}>
+                          <td>{idx + 1}</td>
+                          <td>{item.itemName}</td>
+                          <td>{item.batchNo || '-'}</td>
+                          <td>{item.currentQuantity} {item.unit}</td>
+                          <td>{item.expiryDateBs}</td>
+                          <td>{item.expiryDateAd}</td>
+                      </tr>
+                  ))}
+              </tbody>
+          </table>
+      </div>
+
+      <div id="near-expiry-items-print" className="hidden print-container">
+          <style>{`
+            @media print {
+                .print-container { page-break-after: always; }
+                .print-table th, .print-table td { border: 1px solid black !important; padding: 8px !important; font-size: 12px !important; }
+                .print-header h1 { font-size: 20px; }
+                .print-header h2 { font-size: 16px; }
+            }
+          `}</style>
+          <div className="print-header">
+              <h1>{generalSettings.orgNameNepali}</h1>
+              <h2>म्याद सकिन लागेका सामानहरूको सूची (Near Expiry Inventory Items - Next 90 Days)</h2>
+              <p>मिति: {new NepaliDate().format('YYYY-MM-DD')}</p>
+          </div>
+          <table className="print-table">
+              <thead>
+                  <tr>
+                      <th>क्र.सं.</th>
+                      <th>सामानको नाम</th>
+                      <th>ब्याच नं</th>
+                      <th>मौज्दात</th>
+                      <th>म्याद सकिने मिति (BS)</th>
+                      <th>म्याद सकिने मिति (AD)</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  {nearExpiryItems.map((item, idx) => (
+                      <tr key={item.id}>
+                          <td>{idx + 1}</td>
+                          <td>{item.itemName}</td>
+                          <td>{item.batchNo || '-'}</td>
+                          <td>{item.currentQuantity} {item.unit}</td>
+                          <td>{item.expiryDateBs}</td>
+                          <td>{item.expiryDateAd}</td>
+                      </tr>
+                  ))}
+              </tbody>
+          </table>
+      </div>
     </div>
   );
 };

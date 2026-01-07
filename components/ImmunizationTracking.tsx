@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback } from 'react';
 /* Added RotateCcw to the imports from lucide-react to fix the error on line 272 */
 import { Baby, Printer, AlertOctagon, Calendar, Clock, Info, User, Phone, MapPin, Search, CheckCircle2, ShieldCheck, Award, X, FileBadge, BadgeCheck, CalendarDays, CalendarClock, ListFilter, Users, MapPinned, Hash, RotateCcw } from 'lucide-react';
@@ -7,6 +8,8 @@ import { Input } from './Input';
 import { Select } from './Select';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
+// Add missing import for NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE
+import { NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE } from './ChildImmunizationRegistration';
 
 interface ImmunizationTrackingProps {
   currentFiscalYear: string;
@@ -60,6 +63,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCenter, setFilterCenter] = useState('');
   const [filterDay, setFilterDay] = useState('');
+  const [filterVaccine, setFilterVaccine] = useState(''); // NEW: State for vaccine filter
   const [selectedChildForCard, setSelectedChildForCard] = useState<ChildImmunizationRecord | null>(null);
 
   const todayBs = useMemo(() => new NepaliDate(), []);
@@ -75,6 +79,17 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
     (generalSettings.vaccinationSessions || [6, 20]).map(d => ({ id: d.toString(), value: d.toString(), label: `${d} गते` })),
     [generalSettings.vaccinationSessions]
   );
+
+  // NEW: Vaccine Name Options
+  const vaccineNameOptions: Option[] = useMemo(() => {
+    // Assuming NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE is accessible
+    if (typeof NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE === 'undefined') return [];
+    
+    const uniqueVaccineNames = new Set<string>();
+    NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE.forEach(vax => uniqueVaccineNames.add(vax.name));
+    
+    return Array.from(uniqueVaccineNames).sort().map(name => ({ id: name, value: name, label: name }));
+  }, []);
 
   interface ChildVaccineDue {
       child: ChildImmunizationRecord;
@@ -101,18 +116,21 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
           // If a specific day is filtered, only show vaccines scheduled for that day of any month
           const vaccineDay = vaccine.scheduledDateBs.split('-')[2];
           const matchesDay = filterDay ? vaccineDay === filterDay.padStart(2, '0') : true;
+          // NEW: Filter by vaccine name
+          const matchesVaccine = filterVaccine ? vaccine.name === filterVaccine : true;
 
           if (
             vaccine.status === 'Pending' &&
             vaccine.scheduledDateBs >= todayBsFormatted && // Future or today
-            matchesDay
+            matchesDay &&
+            matchesVaccine // NEW: Apply vaccine filter
           ) {
             list.push({ child, vaccine });
           }
         });
       });
     return list.sort((a, b) => a.vaccine.scheduledDateBs.localeCompare(b.vaccine.scheduledDateBs));
-  }, [filteredBaseRecords, todayBsFormatted, filterDay]);
+  }, [filteredBaseRecords, todayBsFormatted, filterDay, filterVaccine]); // NEW: Add filterVaccine to deps
 
   const defaulterList = useMemo(() => {
     const list: ChildVaccineDue[] = [];
@@ -120,18 +138,22 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
         child.vaccines.forEach(vaccine => {
           const vaccineDay = vaccine.scheduledDateBs.split('-')[2];
           const matchesDay = filterDay ? vaccineDay === filterDay.padStart(2, '0') : true;
+          // NEW: Filter by vaccine name
+          const matchesVaccine = filterVaccine ? vaccine.name === filterVaccine : true;
+
 
           if (
             vaccine.status === 'Pending' &&
             vaccine.scheduledDateBs < todayBsFormatted &&
-            matchesDay
+            matchesDay &&
+            matchesVaccine // NEW: Apply vaccine filter
           ) {
             list.push({ child, vaccine });
           }
         });
       });
     return list.sort((a, b) => a.vaccine.scheduledDateBs.localeCompare(b.vaccine.scheduledDateBs));
-  }, [filteredBaseRecords, todayBsFormatted, filterDay]);
+  }, [filteredBaseRecords, todayBsFormatted, filterDay, filterVaccine]); // NEW: Add filterVaccine to deps
 
   const ficList = useMemo(() => {
     return filteredBaseRecords
@@ -148,10 +170,18 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
             if (completionDay !== filterDay.padStart(2, '0')) return false;
         }
 
+        // Vaccine filter on FIC - only if the completed vaccine is the one being filtered
+        if (filterVaccine) {
+            const completedVaccineMatchesFilter = child.vaccines.some(v => 
+                v.status === 'Given' && v.name === filterVaccine
+            );
+            if (!completedVaccineMatchesFilter) return false;
+        }
+
         return isFullyVax;
       })
       .sort((a, b) => a.childName.localeCompare(b.childName));
-  }, [filteredBaseRecords, filterDay]);
+  }, [filteredBaseRecords, filterDay, filterVaccine]); // NEW: Add filterVaccine to deps
 
   const handlePrint = useCallback((listType: 'upcoming' | 'defaulter' | 'fic' | 'single-card') => {
     const printContentId = 
@@ -223,13 +253,13 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                     </button>
                     <button 
                         onClick={() => { setActiveView('defaulter'); setSearchTerm(''); }}
-                        className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeView === 'defaulter' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-500'}`}
+                        className={`flex-1 md::flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeView === 'defaulter' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-500'}`}
                     >
                         <AlertOctagon size={18}/> छुटेका (Defaulters)
                     </button>
                     <button 
                         onClick={() => { setActiveView('fic'); setSearchTerm(''); }}
-                        className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeView === 'fic' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500'}`}
+                        className={`flex-1 md::flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeView === 'fic' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500'}`}
                     >
                         <BadgeCheck size={18}/> पूर्ण खोप (FIC)
                     </button>
@@ -267,8 +297,18 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                         icon={<Hash size={16}/>}
                     />
                 </div>
+                {/* NEW: Vaccine Name Filter */}
+                <div className="w-full md:w-64">
+                    <Select 
+                        label="खोपको नाम फिल्टर" 
+                        options={[{id: 'all', value: '', label: '-- सबै खोपहरू --'}, ...vaccineNameOptions]} 
+                        value={filterVaccine}
+                        onChange={e => setFilterVaccine(e.target.value)}
+                        icon={<Baby size={16}/>}
+                    />
+                </div>
                 <button 
-                    onClick={() => { setFilterCenter(''); setFilterDay(''); setSearchTerm(''); }}
+                    onClick={() => { setFilterCenter(''); setFilterDay(''); setFilterVaccine(''); setSearchTerm(''); }} // NEW: Reset filterVaccine
                     className="flex items-center gap-2 px-4 py-2.5 text-slate-500 hover:text-slate-700 font-bold text-xs"
                 >
                     <RotateCcw size={14}/> रिसेट फिल्टर
@@ -295,6 +335,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                                 आगामी निर्धारित खोपहरू 
                                 {filterCenter && ` - केन्द्र: ${filterCenter}`}
                                 {filterDay && ` - गते: ${filterDay}`}
+                                {filterVaccine && ` - खोप: ${filterVaccine}`} {/* NEW: Display vaccine filter */}
                             </span>
                         </div>
                         <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">{upcomingSessionList.length} रेकर्डहरू</span>
@@ -346,7 +387,12 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                     <div className="p-4 bg-red-50 border-b border-red-100 flex items-center justify-between">
                         <div className="flex items-center gap-3 text-red-800">
                             <AlertOctagon className="text-red-600" />
-                            <span className="font-bold font-nepali">छुटेका बालबालिकाहरू (Defaulter List)</span>
+                            <span className="font-bold font-nepali">
+                                छुटेका बालबालिकाहरू (Defaulter List)
+                                {filterCenter && ` - केन्द्र: ${filterCenter}`}
+                                {filterDay && ` - गते: ${filterDay}`}
+                                {filterVaccine && ` - खोप: ${filterVaccine}`} {/* NEW: Display vaccine filter */}
+                            </span>
                         </div>
                         <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">{defaulterList.length} जना बाँकी</span>
                     </div>
@@ -438,7 +484,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                     <div className="p-4 border-b flex justify-between items-center bg-teal-600 text-white">
                         <div className="flex items-center gap-2">
                             <ShieldCheck size={24}/>
-                            <h3 className="font-bold font-nepali">पूर्ण खोप प्रमाणपत्र</h3>
+                            <h3 className="font-bold font-nepali">पूर्ण खोप सुनिश्चितता कार्ड</h3>
                         </div>
                         <div className="flex gap-2">
                             <button onClick={() => handlePrint('single-card')} className="flex items-center gap-2 px-4 py-1.5 bg-white text-teal-700 rounded-full text-xs font-bold hover:bg-teal-50 shadow-sm transition-all">
@@ -542,6 +588,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                 <h2>खोप तालिका विवरण (Vaccination Schedule)</h2>
                 {filterCenter && <p>केन्द्र: {filterCenter}</p>}
                 {filterDay && <p>सत्र गते: {filterDay}</p>}
+                {filterVaccine && <p>खोपको नाम: {filterVaccine}</p>} {/* NEW: Print vaccine filter */}
             </div>
             <table className="print-table">
                 <thead>
@@ -572,6 +619,8 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                 <h1 style={{color: 'red'}}>{generalSettings.orgNameNepali}</h1>
                 <h2 style={{color: 'red'}}>खोप छुटेका बालबालिकाहरूको सूची (Defaulter List)</h2>
                 {filterCenter && <p>केन्द्र: {filterCenter}</p>}
+                {filterDay && <p>सत्र गते: {filterDay}</p>}
+                {filterVaccine && <p>खोपको नाम: {filterVaccine}</p>} {/* NEW: Print vaccine filter */}
             </div>
             <table className="print-table">
                 <thead>
