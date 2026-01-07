@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Printer, Calendar, Filter, BarChart, Download, Baby, Droplets, Users } from 'lucide-react';
+import { Printer, Calendar, Filter, BarChart, Download, Baby, Droplets, Users, UsersRound } from 'lucide-react';
 import { Select } from './Select';
 import { FISCAL_YEARS } from '../constants';
 import { ChildImmunizationRecord, GarbhawatiPatient } from '../types/healthTypes';
@@ -52,12 +52,14 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
     const stats = {
       child: {
         bcg: 0, dpt1: 0, dpt2: 0, dpt3: 0, opv1: 0, opv2: 0, opv3: 0,
-        pcv1: 0, pcv2: 0, pcv3: 0, mr1: 0, mr2: 0, je: 0, fipv: 0, typhoid: 0, total: 0
+        pcv1: 0, pcv2: 0, pcv3: 0, rota1: 0, rota2: 0, mr1: 0, mr2: 0, je: 0, fipv: 0, typhoid: 0, total: 0
       },
       maternal: {
         td1: 0, td2: 0, tdBooster: 0, total: 0
       },
-      // New: Ethnic & Gender wise fully immunized stats
+      // Total unique children who received at least one dose this month
+      uniqueChildrenVax: { male: 0, female: 0, other: 0, total: 0 },
+      // Ethnic & Gender wise fully immunized stats
       ethnicFIC: Object.keys(jatLabels).reduce((acc, code) => {
         acc[code] = { male: 0, female: 0, total: 0 };
         return acc;
@@ -70,6 +72,7 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
       .forEach(record => {
         let isFullyImmunized = false;
         let lastVaccineMonth = '';
+        let receivedDoseThisMonth = false;
 
         record.vaccines.forEach(v => {
           if (v.status === 'Given' && v.givenDateBs) {
@@ -77,6 +80,7 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
             
             // Core vaccine counts for the selected month
             if (m === selectedMonth) {
+              receivedDoseThisMonth = true;
               const name = v.name.toLowerCase();
               if (name.includes('bcg')) stats.child.bcg++;
               else if (name.includes('dpt-hepb-hib-1')) stats.child.dpt1++;
@@ -88,6 +92,8 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
               else if (name.includes('pcv-1')) stats.child.pcv1++;
               else if (name.includes('pcv-2')) stats.child.pcv2++;
               else if (name.includes('pcv-3')) stats.child.pcv3++;
+              else if (name.includes('rota-1')) stats.child.rota1++;
+              else if (name.includes('rota-2')) stats.child.rota2++;
               else if (name.includes('fipv')) stats.child.fipv++;
               else if (name.includes('mr-1')) stats.child.mr1++;
               else if (name.includes('mr-2')) stats.child.mr2++;
@@ -104,9 +110,18 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
           }
         });
 
+        // Count unique children vaccinated in the selected month
+        if (receivedDoseThisMonth) {
+            const gender = record.gender.toLowerCase();
+            if (gender === 'male') stats.uniqueChildrenVax.male++;
+            else if (gender === 'female') stats.uniqueChildrenVax.female++;
+            else stats.uniqueChildrenVax.other++;
+            stats.uniqueChildrenVax.total++;
+        }
+
         // If the child became FIC in the selected month, add to ethnic stats
         if (isFullyImmunized && lastVaccineMonth === selectedMonth) {
-            const code = record.jatCode || '06'; // Default to others if missing
+            const code = record.jatCode || '06'; 
             const gender = record.gender === 'Female' ? 'female' : 'male';
             if (stats.ethnicFIC[code]) {
                 stats.ethnicFIC[code][gender]++;
@@ -161,10 +176,31 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
             </div>
         </div>
 
-        {/* Child Immunization Section */}
+        {/* 1. Vaccinated Children Summary (Unique Count) */}
+        <div className="mb-10">
+            <h4 className="text-lg font-bold text-green-800 mb-4 flex items-center gap-2 bg-green-50 p-2 rounded-lg border-l-4 border-green-600 font-nepali">
+                <UsersRound size={20}/> १. खोप सेवा पाएका जम्मा बच्चाहरूको विवरण (Unique Children)
+            </h4>
+            <div className="grid grid-cols-3 gap-4">
+                <div className="p-3 border rounded-xl bg-white shadow-sm text-center">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">बालक (Male)</p>
+                    <p className="text-2xl font-black text-blue-600">{reportStats.uniqueChildrenVax.male}</p>
+                </div>
+                <div className="p-3 border rounded-xl bg-white shadow-sm text-center">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">बालिका (Female)</p>
+                    <p className="text-2xl font-black text-pink-600">{reportStats.uniqueChildrenVax.female}</p>
+                </div>
+                <div className="p-3 border rounded-xl bg-green-600 text-white shadow-md text-center">
+                    <p className="text-[10px] font-bold text-green-100 uppercase">जम्मा (Total)</p>
+                    <p className="text-2xl font-black">{reportStats.uniqueChildrenVax.total}</p>
+                </div>
+            </div>
+        </div>
+
+        {/* 2. Child Immunization Section (Dose-wise) */}
         <div className="mb-10">
             <h4 className="text-lg font-bold text-indigo-800 mb-4 flex items-center gap-2 bg-indigo-50 p-2 rounded-lg border-l-4 border-indigo-600 font-nepali">
-                <Baby size={20}/> १. बच्चाको खोप तथ्याङ्क (Child Immunization Stats)
+                <Baby size={20}/> २. खोप मात्रा अनुसारको तथ्याङ्क (Child Dose Stats)
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {[
@@ -178,6 +214,8 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
                     { label: 'PCV 1', val: reportStats.child.pcv1 },
                     { label: 'PCV 2', val: reportStats.child.pcv2 },
                     { label: 'PCV 3', val: reportStats.child.pcv3 },
+                    { label: 'Rota 1', val: reportStats.child.rota1 },
+                    { label: 'Rota 2', val: reportStats.child.rota2 },
                     { label: 'fIPV', val: reportStats.child.fipv },
                     { label: 'MR 1', val: reportStats.child.mr1 },
                     { label: 'JE', val: reportStats.child.je },
@@ -191,15 +229,15 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
                 ))}
             </div>
             <div className="mt-4 p-3 bg-indigo-600 text-white rounded-xl flex justify-between items-center shadow-lg shadow-indigo-100">
-                <span className="font-bold font-nepali">जम्मा दिइएको खोप (Total Child Doses):</span>
+                <span className="font-bold font-nepali">जम्मा दिइएको खोपको मात्रा (Total Doses):</span>
                 <span className="text-xl font-black">{reportStats.child.total}</span>
             </div>
         </div>
 
-        {/* Maternal Section */}
+        {/* 3. Maternal Section */}
         <div className="mb-10">
             <h4 className="text-lg font-bold text-purple-800 mb-4 flex items-center gap-2 bg-purple-50 p-2 rounded-lg border-l-4 border-purple-600 font-nepali">
-                <Droplets size={20}/> २. आमाको खोप तथ्याङ्क (Maternal TD Stats)
+                <Droplets size={20}/> ३. आमाको खोप तथ्याङ्क (Maternal TD Stats)
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 border rounded-xl bg-white shadow-sm flex flex-col items-center">
@@ -217,10 +255,10 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
             </div>
         </div>
 
-        {/* NEW: Fully Immunized Section by Ethnic Group and Gender */}
+        {/* 4. Fully Immunized Section */}
         <div className="mb-12">
             <h4 className="text-lg font-bold text-teal-800 mb-4 flex items-center gap-2 bg-teal-50 p-2 rounded-lg border-l-4 border-teal-600 font-nepali">
-                <Users size={20}/> ३. पूर्ण खोप पुरा गरेका बच्चाहरूको जातीय तथा लैङ्गिक विवरण
+                <Users size={20}/> ४. पूर्ण खोप पुरा गरेका बच्चाहरूको जातीय तथा लैङ्गिक विवरण
             </h4>
             <div className="overflow-hidden border border-slate-200 rounded-xl">
                 <table className="w-full text-sm text-left">
@@ -247,7 +285,7 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
                     </tbody>
                     <tfoot className="bg-slate-50 font-black border-t-2">
                         <tr>
-                            <td className="px-4 py-3 font-nepali">कुल जम्मा (Grand Total)</td>
+                            <td className="px-4 py-3 font-nepali">कुल जम्मा (FIC Total)</td>
                             <td className="px-4 py-3 text-center">
                                 {Object.values(reportStats.ethnicFIC).reduce((sum, d) => sum + d.male, 0)}
                             </td>
@@ -262,7 +300,7 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
                 </table>
             </div>
             <p className="text-[10px] text-slate-500 mt-2 italic font-nepali">
-                * १५ महिनाको खोप (MR-2/Typhoid) लगाइसकेका बच्चाहरूलाई पूर्ण खोप पुरा गरेको मानिएको छ।
+                * १५ महिनाको खोप (MR-2/Typhoid) लगाइसकिएका बच्चाहरूलाई पूर्ण खोप पुरा गरेको मानिएको छ।
             </p>
         </div>
 
