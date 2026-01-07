@@ -100,6 +100,7 @@ export interface ChildImmunizationRecord {
   gender: 'Male' | 'Female' | 'Other';
   dobBs: string;
   dobAd: string;
+  jatCode?: string; // NEW: Added for ethnic code
   motherName: string;
   fatherName: string;
   address: string;

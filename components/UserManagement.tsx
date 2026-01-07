@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo } from 'react'; // Added useMemo
 import { User, UserRole, Option } from '../types/coreTypes'; // Corrected import path
 import { UserManagementProps } from '../types/dashboardTypes'; // Corrected import path
@@ -13,10 +12,9 @@ const PERMISSION_STRUCTURE = [
         label: 'सेवा (Services)',
         children: [
             { id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग (TB/Leprosy)' },
-            // UPDATED: 'khop_sewa' no longer has children directly in this permission structure
-            // as its children are now tabs within the 'khop_sewa' view itself.
             { id: 'khop_sewa', label: 'खोप सेवा (Vaccination Service)' }, 
-            { id: 'rabies', label: 'रेबिज खोप क्लिनिक (Rabies Vaccine)' }
+            { id: 'rabies', label: 'रेबिज खोप क्लिनिक (Rabies Vaccine)' },
+            { id: 'immunization_tracking', label: 'खोप अनुगमन (Immunization Tracking)' }
         ]
     },
     { 
@@ -45,6 +43,7 @@ const PERMISSION_STRUCTURE = [
         children: [
             { id: 'report_tb_leprosy', label: 'क्षयरोग/कुष्ठरोग रिपोर्ट (TB/Leprosy)' },
             { id: 'report_rabies', label: 'रेबिज रिपोर्ट (Rabies Report)' },
+            { id: 'report_khop', label: 'खोप रिपोर्ट (Immunization Report)' }, // NEW PERMISSION
             { id: 'report_inventory_monthly', label: 'जिन्सी मासिक प्रतिवेदन (Monthly Report)' }
         ]
     },
@@ -72,7 +71,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedPermissions, setExpandedPermissions] = useState<string[]>(['services', 'inventory', 'report', 'settings']);
 
-  // All possible roles, excluding SUPER_ADMIN for creation purposes
   const allCreatableRoles: Option[] = [
     { id: 'admin', value: 'ADMIN', label: 'एडमिन (Admin)' },
     { id: 'staff', value: 'STAFF', label: 'कर्मचारी (Staff)' },
@@ -81,16 +79,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     { id: 'approval', value: 'APPROVAL', label: 'स्वीकृत गर्ने (Approval/Head)' },
   ];
 
-  // Dynamically filter available roles for the dropdown based on currentUser's role
   const rolesForDropdown = useMemo(() => {
-    if (currentUser.role === 'SUPER_ADMIN') {
-      // SUPER_ADMIN can create ADMIN and lower roles
-      return allCreatableRoles;
-    } else if (currentUser.role === 'ADMIN') {
-      // ADMIN can only create STAFF, STOREKEEPER, ACCOUNT, APPROVAL
-      return allCreatableRoles.filter(opt => opt.value !== 'ADMIN');
-    }
-    return []; // Other roles should not be here
+    if (currentUser.role === 'SUPER_ADMIN') return allCreatableRoles;
+    if (currentUser.role === 'ADMIN') return allCreatableRoles.filter(opt => opt.value !== 'ADMIN');
+    return [];
   }, [currentUser.role]);
 
   const [formData, setFormData] = useState<{
@@ -108,9 +100,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     fullName: '',
     designation: '',
     phoneNumber: '',
-    // Modified: Automatically set organizationName for ADMIN when creating new user
     organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '',
-    role: (rolesForDropdown.length > 0 ? (rolesForDropdown[0].value as UserRole) : 'STAFF'), // Set initial role from available options
+    role: (rolesForDropdown.length > 0 ? (rolesForDropdown[0].value as UserRole) : 'STAFF'),
     allowedMenus: ['dashboard']
   });
 
@@ -125,7 +116,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   const resetForm = () => {
       setFormData({ 
         username: '', password: '', fullName: '', designation: '', phoneNumber: '',
-        organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '', // This ensures correct default on reset
+        organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '',
         role: (rolesForDropdown.length > 0 ? (rolesForDropdown[0].value as UserRole) : 'STAFF'),
         allowedMenus: ['dashboard']
       });
@@ -164,9 +155,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       setFormData(prev => {
           let newMenus = [...prev.allowedMenus];
           const allDescendantIds = groupChildren.flatMap((child: any) => flattenDescendantIds(child));
-          
           const isParentCurrentlyChecked = newMenus.includes(parentId) && allDescendantIds.every(id => newMenus.includes(id));
-
           if (isParentCurrentlyChecked) {
               newMenus = newMenus.filter(id => id !== parentId && !allDescendantIds.includes(id));
           } else {

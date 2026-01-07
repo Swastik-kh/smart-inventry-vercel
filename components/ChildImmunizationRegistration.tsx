@@ -1,6 +1,7 @@
 
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Save, RotateCcw, Baby, Calendar, FileDigit, User, Phone, MapPin, Plus, Edit, Trash2, Search, X, UsersRound, Weight, Droplets, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
+import { Save, RotateCcw, Baby, Calendar, FileDigit, User, Phone, MapPin, Plus, Edit, Trash2, Search, X, UsersRound, Weight, Droplets, CheckCircle2, AlertTriangle, Info, Code } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
@@ -24,110 +25,106 @@ const genderOptions: Option[] = [
   { id: 'other', value: 'Other', label: 'अन्य (Other)' },
 ];
 
-// Standard National Immunization Schedule
-// Dates are relative to DOB (days)
-const NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE = [
-    { name: 'BCG (जन्ममा)', relativeDays: 0 },
-    { name: 'DPT-HepB-Hib-1 (६ हप्ता)', relativeDays: 42 },
-    { name: 'OPV-1 (६ हप्ता)', relativeDays: 42 },
-    { name: 'PCV-1 (६ हप्ता)', relativeDays: 42 },
-    { name: 'Rota-1 (६ हप्ता)', relativeDays: 42 },
-    { name: 'DPT-HepB-Hib-2 (१० हप्ता)', relativeDays: 70 },
-    { name: 'OPV-2 (१० हप्ता)', relativeDays: 70 },
-    { name: 'Rota-2 (१० हप्ता)', relativeDays: 70 },
-    { name: 'DPT-HepB-Hib-3 (१४ हप्ता)', relativeDays: 98 },
-    { name: 'OPV-3 (१४ हप्ता)', relativeDays: 98 },
-    // Fix: Corrected PCV-2 relative days as per national schedule (10 weeks)
-    { name: 'PCV-2 (१० हप्ता)', relativeDays: 70 }, 
-    { name: 'FIPV (१४ हप्ता)', relativeDays: 98 },
-    { name: 'MR-1 (९ महिना)', relativeDays: 270 },
-    { name: 'JE (९ महिना)', relativeDays: 270 }, // Japanese Encephalitis
-    { name: 'PCV-3 (९ महिना)', relativeDays: 270 }, // Assuming 3rd PCV dose is at 9 months from the image's structure
-    { name: 'MR-2 (१५ महिना)', relativeDays: 450 },
-    { name: 'Typhoid (१५ महिना)', relativeDays: 450 }, // ADDED: Typhoid as per image
-    { name: 'HPV (१० वर्ष - किशोरी)', relativeDays: 3650 }, // ADDED: HPV for 10-year-old girls, placeholder date for auto-scheduling
+// NEW: Options for Jat Code
+const jatCodeOptions: Option[] = [
+  { id: '01', value: '01', label: '०१' },
+  { id: '02', value: '02', label: '०२' },
+  { id: '03', value: '03', label: '०३' },
+  { id: '04', value: '04', label: '०४' },
+  { id: '05', value: '05', label: '०५' },
+  { id: '06', value: '06', label: '०६' },
 ];
 
-// Define constants for date range handling outside the component for clarity.
-const DOB_BS_YEAR_UPPER_BOUND = 2090; // NepaliDate library's effective upper limit for BS year
-// AD year where we switch to an approximate BS calculation because the library might fail or be at its limit.
-// 2035 AD is approx 2091-2092 BS, which is beyond the 2090 BS limit.
+// Standard National Immunization Schedule
+// Now storing 'key' to refer to previous dose for scheduling calculation
+const NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE = [
+    { name: 'BCG (जन्ममा)', relativeDays: 0, base: 'dob' },
+    { name: 'DPT-HepB-Hib-1 (६ हप्ता)', relativeDays: 42, base: 'dob' },
+    { name: 'OPV-1 (६ हप्ता)', relativeDays: 42, base: 'dob' },
+    { name: 'PCV-1 (६ हप्ता)', relativeDays: 42, base: 'dob' },
+    { name: 'Rota-1 (६ हप्ता)', relativeDays: 42, base: 'dob' },
+    { name: 'DPT-HepB-Hib-2 (१० हप्ता)', relativeDays: 28, base: 'DPT-HepB-Hib-1 (६ हप्ता)' }, // 28 days after 6-week actual date
+    { name: 'OPV-2 (१० हप्ता)', relativeDays: 28, base: 'OPV-1 (६ हप्ता)' },         // 28 days after 6-week actual date
+    { name: 'Rota-2 (१० हप्ता)', relativeDays: 28, base: 'Rota-1 (६ हप्ता)' },         // 28 days after 6-week actual date
+    { name: 'PCV-2 (१० हप्ता)', relativeDays: 28, base: 'PCV-1 (६ हप्ता)' },         // 28 days after 6-week actual date
+    { name: 'FIPV (१४ हप्ता)', relativeDays: 28, base: 'DPT-HepB-Hib-2 (१० हप्ता)' }, // 28 days after 10-week actual date (using DPT as base for FIPV too)
+    { name: 'DPT-HepB-Hib-3 (१४ हप्ता)', relativeDays: 28, base: 'DPT-HepB-Hib-2 (१० हप्ता)' }, // 28 days after 10-week actual date
+    { name: 'OPV-3 (१४ हप्ता)', relativeDays: 28, base: 'OPV-2 (१० हप्ता)' },         // 28 days after 10-week actual date
+    { name: 'MR-1 (९ महिना)', relativeDays: 270, base: 'dob' },
+    { name: 'JE (९ महिना)', relativeDays: 270, base: 'dob' }, 
+    { name: 'PCV-3 (९ महिना)', relativeDays: 270, base: 'dob' }, 
+    { name: 'MR-2 (१५ महिना)', relativeDays: 450, base: 'dob' },
+    { name: 'Typhoid (१५ महिना)', relativeDays: 450, base: 'dob' }, 
+    { name: 'HPV (१० वर्ष - किशोरी)', relativeDays: 3650, base: 'dob' }, 
+];
+
+const DOB_BS_YEAR_UPPER_BOUND = 2090; 
 const AD_YEAR_FOR_APPROX_BS_CALC = 2035; 
 
-// Helper function to safely calculate scheduled dates, handling NepaliDate range limitations.
+// Helper function to safely calculate scheduled dates
 const calculateImmunizationDate = (
-    dobBs: string,
-    relativeDays: number
+    dobAd: string, // Child's DOB in AD, used as a fallback base if a specific base vaccine isn't given
+    relativeDays: number,
+    baseName: string, // Name of the vaccine this dose is based on (e.g., 'DPT-HepB-Hib-1 (६ हप्ता)') or 'dob'
+    allVaccines: ChildImmunizationVaccine[] = [] // All vaccines to find actual given dates
 ): { bs: string; ad: string; } => {
-    // Variable to hold the scheduled AD date string, for consistent return in catch blocks
     let scheduledAdDateString = "Error Calculating AD Date";
 
     try {
-        // 1. Validate dobBs format and convert to AD date
-        let dobNepaliDate: NepaliDate;
-        try {
-            dobNepaliDate = new NepaliDate(dobBs);
-            // Additional check for DOB itself if it's already beyond the reasonable limit
-            if (dobNepaliDate.getYear() > DOB_BS_YEAR_UPPER_BOUND || isNaN(dobNepaliDate.toJsDate().getTime())) {
-                return { bs: `Invalid DOB (BS > ${DOB_BS_YEAR_UPPER_BOUND})`, ad: "Invalid DOB" };
-            }
-        } catch (e) {
-            console.error(`Invalid DOB BS string: ${dobBs}`, e);
-            return { bs: "Invalid DOB Format", ad: "Invalid DOB" };
-        }
+        let actualBaseAdDate = new Date(dobAd); // Start with DOB (AD) by default
         
-        const dobAdDate = dobNepaliDate.toJsDate(); // Convert valid Nepali DOB to AD Date object
+        // NEW LOGIC: If a specific base vaccine name is provided (and it's not 'dob'), try to find its actual given date.
+        // This logic applies for dependent doses like 10-week and 14-week based on previous doses.
+        if (baseName !== 'dob') {
+            const baseVaccine = allVaccines.find(v => v.name === baseName);
+            if (baseVaccine && baseVaccine.givenDateAd) {
+                // If the base vaccine has been given, use its actual given date as the new base
+                actualBaseAdDate = new Date(baseVaccine.givenDateAd);
+            } else {
+                // If the base vaccine hasn't been given yet, this dependent vaccine cannot be scheduled accurately
+                // based on its predecessor's actual date. Return N/A.
+                console.log(`[DEBUG] Base vaccine "${baseName}" not given or not found. Returning N/A for dependent vaccine.`);
+                return { bs: "N/A", ad: "N/A" };
+            }
+        }
 
-        // 2. Calculate scheduled AD date by adding relativeDays
-        const scheduledAdDate = new Date(dobAdDate);
-        scheduledAdDate.setDate(dobAdDate.getDate() + relativeDays);
-        scheduledAdDateString = scheduledAdDate.toISOString().split('T')[0]; // Update for consistent return
+        const scheduledAdDate = new Date(actualBaseAdDate);
+        scheduledAdDate.setDate(actualBaseAdDate.getDate() + relativeDays);
+        scheduledAdDateString = scheduledAdDate.toISOString().split('T')[0];
 
-        // 3. NEW LOGIC: If calculated AD year is beyond the known safe conversion limit for NepaliDate (e.g., 2035 AD ~ 2091/92 BS),
-        // perform a manual, approximate BS year calculation for display to avoid library crashes.
         if (scheduledAdDate.getFullYear() >= AD_YEAR_FOR_APPROX_BS_CALC) {
-            // Approximate BS year: AD Year + 56 years. This is a common approximation.
-            // (1943 AD is approx 2000 BS, so difference is 57. Using 56 for simplicity as it aligns with user's context of 2092+ from 2035 AD)
             const approxBsYear = scheduledAdDate.getFullYear() + 56; 
-            // The user requested "2092-XX-XX". We provide year and placeholder for month/day.
             return { 
-                bs: `${approxBsYear}-XX-XX (Approx. Limit+)`, // Manual approximation string
+                bs: `${approxBsYear}-XX-XX (Approx. Limit+)`, 
                 ad: scheduledAdDateString 
             };
         }
 
-        // 4. Attempt to convert the scheduled AD date back to NepaliDate (only if within safe AD range for library)
         let scheduledNepaliDate: NepaliDate;
         try {
             scheduledNepaliDate = new NepaliDate(scheduledAdDate);
         } catch (e) {
-            // This catches errors where `scheduledAdDate` might be technically within the AD_YEAR_FOR_APPROX_BS_CALC
-            // but still causes `nepali-date-converter` to fail due to its internal exact date range.
             console.warn(`Error converting AD date ${scheduledAdDateString} to BS date:`, e);
             return { bs: "Error Calculating BS Date", ad: scheduledAdDateString };
         }
 
-        // 5. Final check on the calculated Nepali Year (if conversion was successful but resulted in a BS year beyond desired range)
         if (scheduledNepaliDate.getYear() > DOB_BS_YEAR_UPPER_BOUND) {
             const year = scheduledNepaliDate.getYear();
-            const month = String(scheduledNepaliDate.getMonth() + 1).padStart(2, '0'); // getMonth() is 0-indexed
+            const month = String(scheduledNepaliDate.getMonth() + 1).padStart(2, '0');
             const day = String(scheduledNepaliDate.getDate()).padStart(2, '0');
             return { 
-                bs: `${year}-${month}-${day} (Limit+)`, // Manually constructed string using safe getters
+                bs: `${year}-${month}-${day} (Limit+)`, 
                 ad: scheduledAdDateString 
             };
         }
         
-        // 6. If all checks pass and within range, format normally using the library
         return {
             bs: scheduledNepaliDate.format('YYYY-MM-DD'),
             ad: scheduledAdDateString,
         };
 
     } catch (e) {
-        // Catch any unexpected errors during the process
-        console.error(`Unexpected error in calculateImmunizationDate for DOB ${dobBs} + ${relativeDays} days:`, e);
-        // Ensure scheduledAdDateString is defined for this catch block
+        console.error(`Unexpected error in calculateImmunizationDate for Base ${dobAd} + ${relativeDays} days, Base Name: ${baseName}:`, e);
         return { bs: "Error Calculating", ad: scheduledAdDateString };
     }
 };
@@ -172,6 +169,7 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
     gender: 'Male',
     dobBs: getTodayBs(),
     dobAd: getTodayAd(),
+    jatCode: '', // NEW: Initialize jatCode
     motherName: '',
     fatherName: '',
     address: '',
@@ -189,16 +187,18 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
             regNo: generateRegNo(currentFiscalYear, records),
             dobBs: getTodayBs(),
             dobAd: getTodayAd(),
+            jatCode: '', // NEW: Reset jatCode
             vaccines: [], // Reset vaccines for new entry
         }));
     }
   }, [currentFiscalYear, records, editingRecordId]);
 
   // Recalculate vaccine schedule when DOB changes or when a new record is created
+  // This effect will be triggered on initial load or DOB change.
+  // When 'editingRecordId' is not null (editing an existing record), this effect should NOT reset the schedule.
   useEffect(() => {
     if (formData.dobBs && !editingRecordId) {
         try {
-            // Validate formData.dobBs itself before proceeding.
             try {
                 new NepaliDate(formData.dobBs);
             } catch (e) {
@@ -209,30 +209,30 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
             }
 
             const newSchedule: ChildImmunizationVaccine[] = NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE.map(vaccine => {
-                const { bs: scheduledDateBs, ad: scheduledDateAdString } = calculateImmunizationDate( // USING THE RENAMED HELPER
-                    formData.dobBs,
-                    vaccine.relativeDays
+                const { bs: scheduledDateBs, ad: scheduledDateAdString } = calculateImmunizationDate(
+                    formData.dobAd, // Child's DOB in AD is the initial base
+                    vaccine.relativeDays,
+                    vaccine.base, // Pass the base vaccine name ('dob' for initial, or previous vaccine name for dependencies)
+                    [] // No other vaccines available yet for initial calculation, so dependencies will fall back to DOB
                 );
 
                 return {
                     name: vaccine.name,
                     scheduledDateAd: scheduledDateAdString,
                     scheduledDateBs: scheduledDateBs,
-                    givenDateAd: null, // Initialize as null to prevent undefined
-                    givenDateBs: null, // Initialize as null to prevent undefined
+                    givenDateAd: null, 
+                    givenDateBs: null, 
                     status: 'Pending',
                 } as ChildImmunizationVaccine;
             });
             setFormData(prev => ({ ...prev, vaccines: newSchedule }));
         } catch (e) {
-            // This outer catch now primarily handles unexpected issues in the map function itself,
-            // or if `formData.dobBs` causes a problem before `calculateImmunizationDate` is called (e.g. if `formData.dobBs` is malformed and not caught by the inner `try-catch`).
             console.error("Error generating immunization schedule for DOB:", formData.dobBs, e);
             setFormData(prev => ({ ...prev, vaccines: [] }));
             setValidationError("Error calculating schedule for this DOB. Please check the date or contact support.");
         }
     }
-  }, [formData.dobBs, editingRecordId]);
+  }, [formData.dobBs, formData.dobAd, editingRecordId]); // Added formData.dobAd to dependencies
 
   const handleDOBBsChange = (dateBs: string) => {
     let dateAd = '';
@@ -255,8 +255,75 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
     if (!formData.fatherName.trim()) return "बुबाको नाम आवश्यक छ।";
     if (!formData.address.trim()) return "ठेगाना आवश्यक छ।";
     if (!formData.phone.trim()) return "फोन नम्बर आवश्यक छ।";
+    // NEW: Validation for jatCode
+    if (!formData.jatCode?.trim()) return "जातीय कोड आवश्यक छ।";
     return null;
   };
+
+  // Function to recalculate all future vaccine dates based on an actual given date of a specific dose.
+  const recalculateFutureDoses = useCallback((
+    currentVaccines: ChildImmunizationVaccine[], 
+    givenDoseName: string, 
+    givenDateAd: string,
+    childDobAd: string // Pass child's DOB AD as the ultimate fallback base
+  ): ChildImmunizationVaccine[] => {
+    const updatedVaccinesMap = new Map<string, ChildImmunizationVaccine>();
+    currentVaccines.forEach(v => updatedVaccinesMap.set(v.name, v));
+    
+    // Only update the given dose if givenDoseName is provided (i.e., when a dose is explicitly marked 'Given')
+    if (givenDoseName) {
+        const justGivenVaccine = updatedVaccinesMap.get(givenDoseName);
+        if (justGivenVaccine) {
+            updatedVaccinesMap.set(givenDoseName, { 
+                ...justGivenVaccine, 
+                givenDateAd, 
+                givenDateBs: new NepaliDate(new Date(givenDateAd)).format('YYYY-MM-DD'), 
+                status: 'Given'
+            });
+        }
+    }
+
+    const finalVaccinesOrdered: ChildImmunizationVaccine[] = [];
+
+    // Re-calculate all vaccines based on template order to ensure dependencies are met
+    NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE.forEach(templateVaccine => {
+        const existingVaccineInMap = updatedVaccinesMap.get(templateVaccine.name);
+
+        if (existingVaccineInMap && existingVaccineInMap.status === 'Given') {
+            // If already given, preserve its given status and dates
+            finalVaccinesOrdered.push(existingVaccineInMap);
+        } else {
+            // Otherwise, recalculate based on its base (either DOB or a previous vaccine's given date)
+            const { bs: newScheduledDateBs, ad: newScheduledDateAd } = calculateImmunizationDate(
+                childDobAd, // Ultimate base is child's DOB AD
+                templateVaccine.relativeDays,
+                templateVaccine.base, // The base vaccine name from template
+                Array.from(updatedVaccinesMap.values()) // Pass the latest state of all vaccines including the recently given one
+            );
+
+            if (existingVaccineInMap) {
+                // Update existing pending vaccine
+                finalVaccinesOrdered.push({
+                    ...existingVaccineInMap,
+                    scheduledDateAd: newScheduledDateAd,
+                    scheduledDateBs: newScheduledDateBs,
+                });
+            } else {
+                // This case ideally shouldn't happen if template is complete and `formData.vaccines` initially generated from template
+                // If it does, create a new one, but it implies a missing template entry or initial generation error
+                finalVaccinesOrdered.push({
+                    name: templateVaccine.name,
+                    scheduledDateAd: newScheduledDateAd,
+                    scheduledDateBs: newScheduledDateBs,
+                    givenDateAd: null, givenDateBs: null,
+                    status: 'Pending',
+                });
+            }
+        }
+    });
+
+    return finalVaccinesOrdered;
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,24 +335,22 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
 
     setValidationError(null);
 
-    // Sanitize vaccine data before saving
-    const sanitizedVaccines = formData.vaccines.map(v => ({
-      ...v,
-      givenDateAd: v.givenDateAd || null, // Convert undefined to null
-      givenDateBs: v.givenDateBs || null, // Convert undefined to null
-      status: v.status || 'Pending' // Ensure status is never undefined
-    }));
-
     const recordToSave: ChildImmunizationRecord = {
       ...formData,
       id: editingRecordId || Date.now().toString(),
       fiscalYear: currentFiscalYear,
-      vaccines: sanitizedVaccines, // Use sanitized vaccines
+      vaccines: formData.vaccines.map(v => ({ // Ensure sanitation for saved vaccines
+        ...v,
+        givenDateAd: v.givenDateAd || null,
+        givenDateBs: v.givenDateBs || null,
+        status: v.status || 'Pending'
+      })),
+      jatCode: formData.jatCode?.trim() || '', // NEW: Sanitize jatCode before saving
     };
 
     if (editingRecordId) {
       onUpdateRecord(recordToSave);
-      setSuccessMessage('बच्चाको खोप रेkर्ड सफलतापूर्वक अपडेट भयो!');
+      setSuccessMessage('बच्चाको खोप रेकर्ड सफलतापूर्वक अपडेट भयो!');
     } else {
       onAddRecord(recordToSave);
       setSuccessMessage('बच्चाको खोप रेकर्ड सफलतापूर्वक दर्ता भयो!');
@@ -295,7 +360,31 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
 
   const handleEditRecord = (record: ChildImmunizationRecord) => {
     setEditingRecordId(record.id);
-    setFormData({ ...record });
+    
+    // Deep copy the record and ensure all dates are correctly null for missing ones
+    const loadedRecord = { 
+        ...record,
+        vaccines: record.vaccines.map(v => ({
+            ...v,
+            givenDateAd: v.givenDateAd || null,
+            givenDateBs: v.givenDateBs || null,
+        }))
+    };
+    
+    // IMPORTANT: Recalculate schedule based on loaded given dates to ensure dependencies are respected.
+    // This will correctly set 'N/A' for dependent vaccines if their base is not given.
+    const reEvaluatedVaccines = recalculateFutureDoses(
+        loadedRecord.vaccines, // Pass the initially loaded vaccines
+        "", // No specific dose was just given for this initial load, so don't mark anything new as 'Given'
+        "", // No specific given date for this initial load
+        loadedRecord.dobAd // Pass the child's DOB AD
+    );
+    
+    // Update formData with the loaded record and the re-evaluated schedule
+    setFormData(prev => ({ 
+        ...loadedRecord, 
+        vaccines: reEvaluatedVaccines 
+    }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -316,6 +405,7 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
       gender: 'Male',
       dobBs: getTodayBs(),
       dobAd: getTodayAd(),
+      jatCode: '', // NEW: Reset jatCode
       motherName: '',
       fatherName: '',
       address: '',
@@ -328,7 +418,6 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
     setSuccessMessage(null);
   };
 
-  // Fix: Defined handleUpdateDoseStatus function
   const handleUpdateDoseStatus = () => {
     if (!selectedVaccineForUpdate) return;
     const { record, vaccineIndex } = selectedVaccineForUpdate;
@@ -348,15 +437,15 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
         return;
     }
 
-    const updatedVaccines = [...record.vaccines];
-    updatedVaccines[vaccineIndex] = {
-      ...currentVaccine,
-      givenDateBs: modalGivenDateBs,
-      givenDateAd: givenDateAd,
-      status: 'Given',
-    };
+    // Recalculate all future dependent doses based on this actual given date
+    const finalVaccines = recalculateFutureDoses(
+        record.vaccines, // Pass the original vaccines to `recalculateFutureDoses`
+        currentVaccine.name, // Pass the name of the vaccine that was just given
+        givenDateAd,
+        record.dobAd // Pass child's DOB AD for fallback calculation
+    );
 
-    onUpdateRecord({ ...record, vaccines: updatedVaccines });
+    onUpdateRecord({ ...record, vaccines: finalVaccines });
     setSuccessMessage(`${currentVaccine.name} खोपको स्थिति सफलतापूर्वक अपडेट भयो!`);
     setSelectedVaccineForUpdate(null);
   };
@@ -368,12 +457,12 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
         r.childName.toLowerCase().includes(searchTerm.toLowerCase()) || 
         r.regNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.motherName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.fatherName.toLowerCase().includes(searchTerm.toLowerCase())
+        r.fatherName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.jatCode?.toLowerCase().includes(searchTerm.toLowerCase()) // NEW: Search by jatCode
       )
       .sort((a, b) => b.id.localeCompare(a.id));
   }, [records, currentFiscalYear, searchTerm]);
 
-  // Helper to calculate age from DOB - REPLACED WITH USER PROVIDED CODE
   const calculateAge = useCallback((dobBs: string) => {
     if (!dobBs) return "N/A";
     try {
@@ -452,6 +541,16 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
           <Select label="लिङ्ग (Gender) *" options={genderOptions} value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value as 'Male' | 'Female' | 'Other'})} required />
           <Input label="जन्म मिति (DOB - AD)" value={formData.dobAd} readOnly className="bg-slate-100 text-slate-500 text-xs cursor-not-allowed" icon={<Calendar size={16} />} />
 
+          {/* MODIFIED: Changed Input to Select for jatCode */}
+          <Select 
+            label="जातीय कोड (Ethnic Code) *" 
+            options={jatCodeOptions} 
+            value={formData.jatCode || ''} 
+            onChange={e => setFormData({...formData, jatCode: e.target.value})} 
+            required 
+            icon={<Code size={16} />} 
+            placeholder="-- छान्नुहोस् --"
+          />
           <Input label="आमाको नाम (Mother's Name) *" value={formData.motherName} onChange={e => setFormData({...formData, motherName: e.target.value})} required icon={<User size={16} />} />
           <Input label="बुबाको नाम (Father's Name) *" value={formData.fatherName} onChange={e => setFormData({...formData, fatherName: e.target.value})} required icon={<User size={16} />} />
           <Input label="ठेगाना (Address) *" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} required icon={<MapPin size={16} />} />
@@ -479,7 +578,7 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
           </div>
           <div className="relative w-full sm:w-72">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="बच्चाको नाम, आमाको नाम खोज्नुहोस्..." className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none text-sm transition-all" />
+            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="बच्चाको नाम, आमाको नाम, जातीय कोड खोज्नुहोस्..." className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none text-sm transition-all" />
           </div>
         </div>
 
@@ -489,6 +588,7 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
               <tr>
                 <th className="px-6 py-3">Reg No</th>
                 <th className="px-6 py-3">Child / Parents</th>
+                <th className="px-6 py-3">जातीय कोड</th> {/* NEW: Jat Code Column */}
                 <th className="px-6 py-3">DOB (BS) / Age</th>
                 <th className="px-6 py-3">खोप तालिका (Immunization Schedule)</th>
                 <th className="px-6 py-3 text-right">Action</th>
@@ -497,7 +597,7 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
             <tbody className="divide-y divide-slate-100">
               {filteredRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400 italic">
+                  <td colSpan={6} className="px-6 py-8 text-center text-slate-400 italic font-nepali"> {/* Colspan changed to 6 */}
                     {searchTerm ? 'कुनै नतिजा फेला परेन (No matching records)' : 'कुनै बच्चा दर्ता भएको छैन (No children registered)'}
                   </td>
                 </tr>
@@ -510,6 +610,7 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
                       <div className="text-xs text-slate-500">आमा: {record.motherName}</div>
                       <div className="text-xs text-slate-500">बुबा: {record.fatherName}</div>
                     </td>
+                    <td className="px-6 py-4 text-slate-600 font-mono">{record.jatCode || '-'}</td> {/* NEW: Jat Code Display */}
                     <td className="px-6 py-4 text-slate-600 font-nepali">
                         {record.dobBs}
                         <div className="text-xs text-slate-500">({calculateAge(record.dobBs)})</div>
@@ -517,19 +618,22 @@ export const ChildImmunizationRegistration: React.FC<ChildImmunizationRegistrati
                     <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-1">
                             {record.vaccines.map((vaccine, idx) => {
-                                const isOverdue = vaccine.status === 'Pending' && new Date(vaccine.scheduledDateAd) < new Date(getTodayAd());
+                                const isOverdue = vaccine.status === 'Pending' && vaccine.scheduledDateAd !== 'N/A' && new Date(vaccine.scheduledDateAd) < new Date(getTodayAd());
                                 return (
                                     <button 
                                         key={idx} 
                                         type="button" 
                                         onClick={() => setSelectedVaccineForUpdate({ record, vaccineIndex: idx })}
+                                        disabled={vaccine.scheduledDateBs === 'N/A' || vaccine.scheduledDateBs?.includes('Error')} // Disable if date is N/A or Error
                                         className={`px-2 py-1 rounded text-[10px] font-bold border 
                                             ${vaccine.status === 'Given' ? 'bg-green-100 text-green-700 border-green-200' :
                                             isOverdue ? 'bg-red-100 text-red-700 border-red-200 animate-pulse' :
                                             'bg-blue-50 text-blue-700 border-blue-200'
-                                            }`}
+                                            }
+                                            ${(vaccine.scheduledDateBs === 'N/A' || vaccine.scheduledDateBs?.includes('Error')) ? 'opacity-50 cursor-not-allowed' : ''}
+                                            `}
                                     >
-                                        {vaccine.name} ({vaccine.scheduledDateBs.slice(5)})
+                                        {vaccine.name} ({vaccine.scheduledDateBs && vaccine.scheduledDateBs !== 'N/A' ? vaccine.scheduledDateBs.slice(5) : 'N/A'})
                                     </button>
                                 );
                             })}
