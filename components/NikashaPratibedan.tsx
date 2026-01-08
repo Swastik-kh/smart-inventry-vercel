@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { FileOutput, ArrowLeft, Printer, CheckCircle2, X, Clock, Eye, Send, AlertCircle } from 'lucide-react';
+// Corrected import path to use the types folder's index file explicitly to avoid shadowing by root types.ts
 import { IssueReportEntry, MagItem, User, OrganizationSettings } from '../types/index';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
@@ -59,34 +60,41 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
             <div className="space-y-6 animate-in fade-in">
                 <div className="flex justify-between items-center bg-white p-4 rounded-xl border no-print">
                     <div className="flex items-center gap-4">
-                        <button onClick={handleBack} className="p-2 hover:bg-slate-100 rounded-full"><ArrowLeft size={20} /></button>
-                        <h2 className="font-bold text-slate-700">निकासा प्रतिवेदन #{selectedReport.magFormNo}</h2>
+                        <button onClick={handleBack} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
+                            <ArrowLeft size={20} />
+                        </button>
+                        <h2 className="font-bold text-slate-700 font-nepali">निकासा प्रतिवेदन #{selectedReport.magFormNo}</h2>
                     </div>
                     <div className="flex gap-2">
                         {!isViewOnlyMode && (
                             <>
                                 {isStoreKeeper && selectedReport.status === 'Pending' && (
-                                    <button onClick={() => handleAction('Pending Approval')} disabled={isProcessing} className="bg-primary-600 text-white px-6 py-2 rounded-lg flex items-center gap-2">
+                                    <button onClick={() => handleAction('Pending Approval')} disabled={isProcessing} className="bg-primary-600 text-white px-6 py-2 rounded-lg flex items-center gap-2 font-bold text-sm">
                                         <Send size={18} /> पेश गर्नुहोस्
                                     </button>
                                 )}
                                 {isApprover && selectedReport.status === 'Pending Approval' && (
-                                    <button onClick={() => handleAction('Issued')} disabled={isProcessing} className="bg-green-600 text-white px-6 py-2 rounded-lg flex items-center gap-2">
+                                    <button onClick={() => handleAction('Issued')} disabled={isProcessing} className="bg-green-600 text-white px-6 py-2 rounded-lg flex items-center gap-2 font-bold text-sm">
                                         <CheckCircle2 size={18} /> स्वीकृत गर्नुहोस्
                                     </button>
                                 )}
                             </>
                         )}
-                        <button onClick={() => window.print()} className="bg-slate-800 text-white px-6 py-2 rounded-lg flex items-center gap-2">
+                        <button onClick={() => window.print()} className="bg-slate-800 text-white px-6 py-2 rounded-lg flex items-center gap-2 font-bold text-sm">
                             <Printer size={18} /> प्रिन्ट
                         </button>
                     </div>
                 </div>
 
-                <div className="bg-white p-10 rounded-xl shadow-lg max-w-[210mm] mx-auto min-h-[297mm]">
+                <div className="bg-white p-10 rounded-xl shadow-lg max-w-[210mm] mx-auto min-h-[297mm] font-nepali text-slate-900 print:shadow-none print:p-0">
                     <div className="text-center mb-8">
-                        <h1 className="text-xl font-bold">{generalSettings.orgNameNepali}</h1>
-                        <h2 className="text-lg font-bold underline">निकासा प्रतिवेदन (निकासी फारम)</h2>
+                        <h1 className="text-xl font-bold text-red-600">{generalSettings.orgNameNepali}</h1>
+                        <h2 className="text-lg font-bold underline mt-4">निकासा प्रतिवेदन (निकासी फारम)</h2>
+                    </div>
+
+                    <div className="flex justify-between mb-4 text-sm font-bold">
+                        <p>माग फारम नं: #{selectedReport.magFormNo}</p>
+                        <p>मिति: {selectedReport.issueDate || selectedReport.requestDate}</p>
                     </div>
 
                     <table className="w-full border-collapse border border-slate-900 text-xs">
@@ -95,8 +103,8 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
                                 <th className="border border-slate-900 p-2">क्र.सं.</th>
                                 <th className="border border-slate-900 p-2">सामानको नाम</th>
                                 <th className="border border-slate-900 p-2">एकाई</th>
-                                <th className="border border-slate-900 p-2">माग परिमाण</th>
-                                <th className="border border-slate-900 p-2">निकासा परिमाण</th>
+                                <th className="border border-slate-900 p-2 text-center">माग परिमाण</th>
+                                <th className="border border-slate-900 p-2 text-center">निकासा परिमाण</th>
                                 <th className="border border-slate-900 p-2">कैफियत</th>
                             </tr>
                         </thead>
@@ -104,7 +112,7 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
                             {selectedReport.items.map((item, idx) => (
                                 <tr key={idx}>
                                     <td className="border border-slate-900 p-2 text-center">{idx + 1}</td>
-                                    <td className="border border-slate-900 p-2">{item.name}</td>
+                                    <td className="border border-slate-900 p-2 text-left">{item.name}</td>
                                     <td className="border border-slate-900 p-2 text-center">{item.unit}</td>
                                     <td className="border border-slate-900 p-2 text-center">{item.quantity}</td>
                                     <td className="border border-slate-900 p-2 text-center font-bold">{item.quantity}</td>
@@ -115,13 +123,19 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
                     </table>
 
                     <div className="grid grid-cols-2 gap-12 mt-20 text-sm">
-                        <div className="border-t border-slate-800 pt-2 text-center">
-                            <p className="font-bold">तयार गर्ने (Storekeeper)</p>
-                            <p>{selectedReport.preparedBy?.name || '...................'}</p>
+                        <div className="text-center">
+                            <div className="border-t border-slate-800 pt-2">
+                                <p className="font-bold">तयार गर्ने (Storekeeper)</p>
+                                <p className="mt-4">{selectedReport.preparedBy?.name || '...................'}</p>
+                                <p className="text-[10px] uppercase text-slate-500">{selectedReport.preparedBy?.designation}</p>
+                            </div>
                         </div>
-                        <div className="border-t border-slate-800 pt-2 text-center">
-                            <p className="font-bold">स्वीकृत गर्ने (Approver)</p>
-                            <p>{selectedReport.approvedBy?.name || '...................'}</p>
+                        <div className="text-center">
+                            <div className="border-t border-slate-800 pt-2">
+                                <p className="font-bold">स्वीकृत गर्ने (Approver)</p>
+                                <p className="mt-4">{selectedReport.approvedBy?.name || '...................'}</p>
+                                <p className="text-[10px] uppercase text-slate-500">{selectedReport.approvedBy?.designation}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -130,26 +144,102 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
     }
 
     return (
-        <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl border shadow-sm">
-                <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2"><Clock size={20} className="text-orange-600"/> विचाराधीन निकासा अनुरोधहरू</h3>
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <h3 className="font-bold text-slate-700 font-nepali flex items-center gap-2">
+                        <FileOutput size={20} className="text-indigo-600"/> 
+                        विचाराधीन निकासा अनुरोधहरू (Pending Issues)
+                    </h3>
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-50 border-b">
-                            <tr><th className="px-4 py-3">माग नं</th><th className="px-4 py-3">मिति</th><th className="px-4 py-3">स्थिति</th><th className="px-4 py-3 text-right">कार्य</th></tr>
+                        <thead className="bg-slate-50 text-slate-500 font-bold border-b">
+                            <tr>
+                                <th className="px-6 py-4">माग नं</th>
+                                <th className="px-6 py-4">मिति</th>
+                                <th className="px-6 py-4">स्थिति</th>
+                                <th className="px-6 py-4 text-right">कार्य</th>
+                            </tr>
                         </thead>
-                        <tbody className="divide-y">
+                        <tbody className="divide-y divide-slate-100">
                             {actionableReports.map(r => (
-                                <tr key={r.id}>
-                                    <td className="px-4 py-3 font-bold">#{r.magFormNo}</td>
-                                    <td className="px-4 py-3 font-nepali">{r.requestDate}</td>
-                                    <td className="px-4 py-3"><span className="px-2 py-1 rounded-full text-[10px] bg-orange-100 text-orange-700">{r.status}</span></td>
-                                    <td className="px-4 py-3 text-right">
-                                        <button onClick={() => handleLoadReport(r)} className="text-primary-600 font-bold hover:underline">Review & Process</button>
+                                <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
+                                    <td className="px-6 py-4 font-mono font-bold text-indigo-600">#{r.magFormNo}</td>
+                                    <td className="px-6 py-4 font-nepali">{r.requestDate}</td>
+                                    <td className="px-6 py-4">
+                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                            r.status === 'Pending' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-blue-50 text-blue-700 border-blue-200'
+                                        }`}>
+                                            <Clock size={12}/> {r.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <button onClick={() => handleLoadReport(r)} className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-all border border-indigo-200">
+                                            Review & Process
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
-                            {actionableReports.length === 0 && <tr><td colSpan={4} className="p-8 text-center text-slate-400">कुनै नयाँ अनुरोध छैन।</td></tr>}
+                            {actionableReports.length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="p-12 text-center text-slate-400 italic font-nepali">
+                                        कुनै नयाँ निकासा अनुरोध छैन।
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
+                    <h3 className="font-bold text-slate-700 font-nepali flex items-center gap-2">
+                        <AlertCircle size={18} className="text-slate-400" />
+                        निकासा इतिहास (Issue History)
+                    </h3>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-slate-50 text-slate-500 font-bold border-b">
+                            <tr>
+                                <th className="px-6 py-4">निकासा नं / माग नं</th>
+                                <th className="px-6 py-4">मिति</th>
+                                <th className="px-6 py-4">स्थिति</th>
+                                <th className="px-6 py-4 text-right">Preview</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {reports.filter(r => r.status === 'Issued' || r.status === 'Rejected').map(r => (
+                                <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <div className="font-mono font-bold text-slate-700">{r.issueNo ? `#${r.issueNo}` : `-`}</div>
+                                        <div className="text-[10px] text-slate-400">Demand: #{r.magFormNo}</div>
+                                    </td>
+                                    <td className="px-6 py-4 font-nepali">{r.issueDate || r.requestDate}</td>
+                                    <td className="px-6 py-4">
+                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                            r.status === 'Issued' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
+                                        }`}>
+                                            {r.status === 'Issued' ? <CheckCircle2 size={12}/> : <X size={12}/>}
+                                            {r.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <button onClick={() => handleLoadReport(r, true)} className="text-indigo-400 hover:text-indigo-600 p-2 rounded-full transition-colors">
+                                            <Eye size={20}/>
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {reports.filter(r => r.status === 'Issued' || r.status === 'Rejected').length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="p-12 text-center text-slate-400 italic font-nepali">
+                                        इतिहासमा कुनै रेकर्ड छैन।
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>

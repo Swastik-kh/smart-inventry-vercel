@@ -5,11 +5,12 @@ import {
   ChevronDown, ChevronRight, Syringe, Activity, Info,
   ClipboardList, FileSpreadsheet, FilePlus, ShoppingCart, FileOutput, 
   BookOpen, Book, Archive, RotateCcw, Wrench, Scroll, BarChart3,
-  Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, AlertTriangle, Calculator, Trash2, TrendingUp, AlertOctagon, Timer, Printer, Baby, Flame, CalendarClock
+  Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, AlertTriangle, Calculator, Trash2, TrendingUp, AlertOctagon, Timer, Printer, Baby, Flame, CalendarClock, List,
+  Eye, ShieldAlert
 } from 'lucide-react';
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
-import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest } from '../types/inventoryTypes';
+import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest, DakhilaPratibedanEntry } from '../types/inventoryTypes';
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -36,6 +37,7 @@ import { GeneralSetting } from './GeneralSetting';
 import { VaccinationServiceTabs } from './VaccinationServiceTabs';
 import { ImmunizationTracking } from './ImmunizationTracking';
 import { ImmunizationReport } from './ImmunizationReport';
+import { PrintOptionsModal } from './PrintOptionsModal';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -53,7 +55,7 @@ interface AppNotification {
     isNew: boolean;
 }
 
-const LAST_SEEN_NOTIF_KEY = 'smart_inv_last_seen_notif_v2';
+const READ_NOTIFS_KEY = 'smart_inv_read_notifs_v3';
 
 export const Dashboard: React.FC<ExtendedDashboardProps> = ({ 
   onLogout, currentUser, currentFiscalYear, users, onAddUser, onUpdateUser, onDeleteUser, onChangePassword,
@@ -71,15 +73,33 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [activeItem, setActiveItem] = useState<string>('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Initially hidden
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const [showNotifications, setShowNotifications] = useState(false);
-  const [lastSeenNotifId, setLastSeenNotifId] = useState<string>(() => localStorage.getItem(LAST_SEEN_NOTIF_KEY) || '');
+  
+  const [readNotifIds, setReadNotifIds] = useState<string[]>(() => {
+      const saved = localStorage.getItem(READ_NOTIFS_KEY);
+      return saved ? JSON.parse(saved) : [];
+  });
+
   const [pendingPoDakhila, setPendingPoDakhila] = useState<PurchaseOrderEntry | null>(null);
   const [showExpiryModal, setShowExpiryModal] = useState(false);
   const [expiryModalType, setExpiryModalType] = useState<'expired' | 'near-expiry'>('expired');
+  const [showExpiryPrintOptionsModal, setShowExpiryPrintOptionsModal] = useState(false); 
+  const [initialDakhilaReportId, setInitialDakhilaReportId] = useState<string | null>(null);
   
+  const [previewDakhila, setPreviewDakhila] = useState<DakhilaPratibedanEntry | null>(null);
+
   const mainContentRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+      localStorage.setItem(READ_NOTIFS_KEY, JSON.stringify(readNotifIds));
+  }, [readNotifIds]);
+
+  const canViewFullReport = useMemo(() => {
+    if (!currentUser) return false;
+    return ['ADMIN', 'SUPER_ADMIN', 'STOREKEEPER', 'ACCOUNT'].includes(currentUser.role);
+  }, [currentUser]);
 
   useEffect(() => {
     if (mainContentRef.current) mainContentRef.current.scrollTo(0, 0);
@@ -95,49 +115,106 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const notifications = useMemo(() => {
+  const allDakhilaNotifs = useMemo(() => {
       if (!currentUser) return [];
-      const list: AppNotification[] = [];
-
-      // 1. Latest 5 Dakhila Reports
-      const latestDakhilas = [...dakhilaReports]
+      return dakhilaReports
           .filter(d => d.fiscalYear === currentFiscalYear)
-          .sort((a, b) => b.id.localeCompare(a.id))
-          .slice(0, 5);
+          .map(d => {
+              const notifId = `dakhila-${d.id}`;
+              return {
+                  id: notifId,
+                  title: 'सम्पन्न दाखिला प्रतिवेदन',
+                  description: `दाखिला नम्बर ${d.dakhilaNo} सफलतापूर्वक सम्पन्न भयो। सामान विवरण हेर्न क्लिक गर्नुहोस्।`,
+                  time: d.date,
+                  targetMenu: 'dakhila_pratibedan',
+                  type: 'success',
+                  isNew: !readNotifIds.includes(notifId)
+              } as AppNotification;
+          })
+          .sort((a, b) => b.id.localeCompare(a.id));
+  }, [dakhilaReports, currentUser, readNotifIds, currentFiscalYear]);
 
-      latestDakhilas.forEach(d => {
-          list.push({
-              id: `dakhila-${d.id}`,
-              title: 'सम्पन्न दाखिला प्रतिवेदन',
-              description: `दाखिला नम्बर ${d.dakhilaNo} सफलतापूर्वक सम्पन्न भयो।`,
-              time: d.date,
-              targetMenu: 'dakhila_pratibedan',
-              type: 'success',
-              isNew: d.id > lastSeenNotifId
-          });
-      });
+  // For the bell dropdown, we only show latest 10
+  const notifications = useMemo(() => allDakhilaNotifs.slice(0, 10), [allDakhilaNotifs]);
 
-      return list.sort((a, b) => b.id.localeCompare(a.id));
-  }, [dakhilaReports, currentUser, lastSeenNotifId, currentFiscalYear]);
+  // For the badge, we count ALL unread dakhilas in current fiscal year
+  const unreadCount = useMemo(() => allDakhilaNotifs.filter(n => n.isNew).length, [allDakhilaNotifs]);
 
-  const unreadCount = useMemo(() => notifications.filter(n => n.isNew).length, [notifications]);
+  // --- BADGE CALCULATIONS ---
+  const counts = useMemo(() => {
+    if (!currentUser) return {};
+
+    const res: Record<string, number> = {};
+
+    // 1. Mag Faram Pending
+    if (currentUser.role === 'STOREKEEPER') {
+        res.mag_faram = magForms.filter(f => f.status === 'Pending').length;
+    } else if (['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role)) {
+        res.mag_faram = magForms.filter(f => f.status === 'Verified').length;
+    }
+
+    // 2. Purchase Order Pending
+    if (currentUser.role === 'STOREKEEPER') {
+        res.kharid_adesh = purchaseOrders.filter(o => o.status === 'Pending').length;
+    } else if (currentUser.role === 'ACCOUNT') {
+        res.kharid_adesh = purchaseOrders.filter(o => o.status === 'Pending Account').length;
+    } else if (['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role)) {
+        res.kharid_adesh = purchaseOrders.filter(o => o.status === 'Account Verified').length;
+    }
+
+    // 3. Stock Entry Approval (Admin only)
+    if (['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role)) {
+        res.stock_entry_approval = stockEntryRequests.filter(r => r.status === 'Pending').length;
+    }
+
+    // 4. Issue Reports (Nikasha)
+    if (currentUser.role === 'STOREKEEPER') {
+        res.nikasha_pratibedan = issueReports.filter(r => r.status === 'Pending').length;
+    } else if (['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role)) {
+        res.nikasha_pratibedan = issueReports.filter(r => r.status === 'Pending Approval').length;
+    }
+
+    // 5. Unread Dakhila Reports
+    res.dakhila_pratibedan = unreadCount;
+
+    return res;
+  }, [currentUser, magForms, purchaseOrders, stockEntryRequests, issueReports, unreadCount]);
+
+  const handleMarkDakhilaRead = useCallback((id: string) => {
+      const notifId = `dakhila-${id}`;
+      if (!readNotifIds.includes(notifId)) {
+          setReadNotifIds(prev => [...prev, notifId]);
+      }
+  }, [readNotifIds]);
 
   const handleNotifClick = (n: AppNotification) => {
-      setActiveItem(n.targetMenu);
       setShowNotifications(false);
-      const rawId = n.id.includes('-') ? n.id.split('-').pop() || n.id : n.id;
-      if (rawId > lastSeenNotifId) {
-          setLastSeenNotifId(rawId);
-          localStorage.setItem(LAST_SEEN_NOTIF_KEY, rawId);
+      handleMarkDakhilaRead(n.id.replace('dakhila-', ''));
+      
+      if (n.id.startsWith('dakhila-')) {
+          const reportId = n.id.replace('dakhila-', '');
+          const report = dakhilaReports.find(r => r.id === reportId);
+          if (report) {
+              setPreviewDakhila(report);
+          } else {
+              setActiveItem(n.targetMenu);
+          }
+      } else {
+          setActiveItem(n.targetMenu);
+      }
+  };
+
+  const handleOpenFullDakhila = () => {
+      if (previewDakhila && canViewFullReport) {
+          setInitialDakhilaReportId(previewDakhila.id);
+          setActiveItem('dakhila_pratibedan');
+          setPreviewDakhila(null);
       }
   };
 
   const clearAllNotifs = () => {
-      if (notifications.length > 0) {
-          const newest = notifications[0].id.includes('-') ? notifications[0].id.split('-').pop() || '0' : notifications[0].id;
-          setLastSeenNotifId(newest);
-          localStorage.setItem(LAST_SEEN_NOTIF_KEY, newest);
-      }
+      const allIds = allDakhilaNotifs.map(n => n.id);
+      setReadNotifIds(prev => Array.from(new Set([...prev, ...allIds])));
       setShowNotifications(false);
   };
 
@@ -190,7 +267,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   const inventoryTotalCount = useMemo(() => inventoryItems.filter(i => i.currentQuantity > 0).length, [inventoryItems]);
   const magFormsPendingCount = useMemo(() => magForms.filter(f => f.status === 'Pending').length, [magForms]);
 
-  // Wrapped hasAccess in useCallback for memoization
   const hasAccess = useCallback((menuId: string) => {
     if (!currentUser) return false;
     if (currentUser.role === 'SUPER_ADMIN') return true;
@@ -218,11 +294,11 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       icon: <Package size={20} />,
       subItems: [
         { id: 'jinshi_maujdat', label: 'जिन्सी मौज्दात', icon: <Warehouse size={16} /> },
-        { id: 'stock_entry_approval', label: 'स्टक दाखिला अनुमति', icon: <ClipboardCheck size={16} /> },
-        { id: 'mag_faram', label: 'माग फारम', icon: <FilePlus size={16} /> },
-        { id: 'kharid_adesh', label: 'खरिद आदेश', icon: <ShoppingCart size={16} /> },
-        { id: 'nikasha_pratibedan', label: 'निकासा प्रतिवेदन', icon: <FileOutput size={16} /> },
-        { id: 'dakhila_pratibedan', label: 'दाखिला प्रतिवेदन', icon: <Archive size={16} /> },
+        { id: 'stock_entry_approval', label: 'स्टक दाखिला अनुमति', icon: <ClipboardCheck size={16} />, badgeCount: counts.stock_entry_approval },
+        { id: 'mag_faram', label: 'माग फारम', icon: <FilePlus size={16} />, badgeCount: counts.mag_faram },
+        { id: 'kharid_adesh', label: 'खरिद आदेश', icon: <ShoppingCart size={16} />, badgeCount: counts.kharid_adesh },
+        { id: 'nikasha_pratibedan', label: 'निकासा प्रतिवेदन', icon: <FileOutput size={16} />, badgeCount: counts.nikasha_pratibedan },
+        { id: 'dakhila_pratibedan', label: 'दाखिला प्रतिवेदन', icon: <Archive size={16} />, badgeCount: counts.dakhila_pratibedan },
         { id: 'jinshi_khata', label: 'जिन्सी खाता', icon: <Book size={16} /> },
         { id: 'sahayak_jinshi_khata', label: 'सहायक जिन्सी खाता', icon: <BookOpen size={16} /> },
         { id: 'jinshi_firta_khata', label: 'जिन्सी फिर्ता', icon: <RotateCcw size={16} /> },
@@ -257,56 +333,97 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     }
   ];
 
-  // Modified menuItems memoization logic
   const menuItems = useMemo(() => {
     return allMenuItems.map(item => {
-        // First, filter subItems based on access
         const accessibleSubItems = item.subItems?.filter(si => hasAccess(si.id));
-
-        // A top-level item is included if:
-        // 1. The user has direct access to the top-level item itself OR
-        // 2. It has accessible sub-items (even if the top-level item.id isn't explicitly in allowedMenus)
         const shouldIncludeTopLevel = hasAccess(item.id) || (accessibleSubItems && accessibleSubItems.length > 0);
-
+        
         if (shouldIncludeTopLevel) {
-            return {
-                ...item,
-                subItems: accessibleSubItems // Use the already filtered sub-items
+            const subBadgesSum = accessibleSubItems?.reduce((acc, si) => acc + (si.badgeCount || 0), 0) || 0;
+            return { 
+                ...item, 
+                subItems: accessibleSubItems,
+                badgeCount: item.badgeCount !== undefined ? item.badgeCount : (subBadgesSum > 0 ? subBadgesSum : undefined)
             };
         }
         return null;
-    }).filter(Boolean) as MenuItem[]; // Filter out nulls and assert type
-}, [currentUser, hasAccess]);
+    }).filter(Boolean) as MenuItem[];
+}, [currentUser, hasAccess, counts]);
+
+  const handlePrint = useCallback((printContentId: string, orientation: 'portrait' | 'landscape' = 'portrait') => {
+    const style = document.createElement('style');
+    style.id = 'print-orientation-style';
+    style.innerHTML = `@page { size: A4 ${orientation}; margin: 1cm; }`;
+    document.head.appendChild(style);
+
+    const originalContents = document.body.innerHTML;
+    const printContents = document.getElementById(printContentId)?.innerHTML;
+
+    if (!printContents) {
+      alert('प्रिन्ट गर्नको लागि कुनै डाटा छैन।');
+      const existingStyle = document.getElementById('print-orientation-style');
+      if (existingStyle) document.head.removeChild(existingStyle);
+      return;
+    }
+
+    document.body.innerHTML = printContents;
+    window.print();
+    document.body.innerHTML = originalContents; 
+    window.location.reload(); 
+    setTimeout(() => {
+      const existingStyle = document.getElementById('print-orientation-style');
+      if (existingStyle) {
+        document.head.removeChild(existingStyle);
+      }
+      setShowExpiryPrintOptionsModal(false);
+    }, 500); 
+  }, []);
 
   const renderContent = () => {
     if (!currentUser) return null;
     switch (activeItem) {
       case 'dashboard': return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-          <div className="flex items-center gap-3 border-b pb-4"><div className="bg-indigo-100 p-2 rounded-lg text-indigo-600"><Activity size={24} /></div><div><h2 className="text-xl font-bold text-slate-800 font-nepali">प्रणाली ड्यासबोर्ड (System Dashboard)</h2><p className="text-sm text-slate-500">प्रणालीको हालको अवस्था र तथ्याङ्क</p></div></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
-              <div className="relative z-10"><div className="flex items-center justify-between mb-4"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Clinic Progress</p><h3 className="text-sm font-bold text-slate-700 font-nepali">आजको खोप प्रगति</h3></div><div className="bg-red-100 p-2.5 rounded-xl text-red-600"><Syringe size={20} /></div></div><div className="space-y-3">{['D0', 'D3', 'D7'].map((d, idx) => { const stats = idx === 0 ? { p: rabiesDoseStats.d0Progress, r: rabiesDoseStats.d0Received, t: rabiesDoseStats.d0Total } : idx === 1 ? { p: rabiesDoseStats.d3Progress, r: rabiesDoseStats.d3Received, t: rabiesDoseStats.d3Total } : { p: rabiesDoseStats.d7Progress, r: rabiesDoseStats.d7Received, t: rabiesDoseStats.d7Total }; return ( <div key={d} className="space-y-1"> <div className="flex justify-between text-[10px] font-bold"> <span className="text-slate-500">{d} Dose:</span> <span className={stats.p === 100 ? 'text-green-600' : 'text-orange-600'}>{stats.r}/{stats.t}</span> </div> <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden"> <div className={`h-full transition-all duration-700 ${stats.p === 100 ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${stats.p}%` }}></div> </div> </div> ); })} </div></div>
+          <div className="flex justify-between items-center border-b pb-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600"><Activity size={24} /></div>
+              <div><h2 className="text-xl font-bold text-slate-800 font-nepali">प्रणाली ड्यासबोर्ड (System Dashboard)</h2><p className="text-sm text-slate-500">प्रणालीको हालको अवस्था र तथ्याङ्क</p></div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm group hover:border-blue-300 transition-all cursor-pointer" onClick={() => setActiveItem('jinshi_maujdat')}><div className="flex items-center justify-between mb-6"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Inventory</p><h3 className="text-sm font-bold text-slate-700 font-nepali">जिन्सी मौज्दात</h3></div><div className="bg-blue-100 p-2.5 rounded-xl text-blue-600"><Warehouse size={20} /></div></div><div className="flex items-baseline gap-2"><span className="text-5xl font-black text-blue-600">{inventoryTotalCount}</span><span className="text-[10px] text-slate-400 font-bold uppercase">Items</span></div></div>
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><div className="flex items-center justify-between mb-4"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Forecast (Month)</p><h3 className="text-sm font-bold text-slate-700 font-nepali">खोप पूर्वानुमान</h3></div><div className="bg-cyan-100 p-2.5 rounded-xl text-cyan-600"><Calculator size={20} /></div></div><div className="space-y-3"><div className="flex justify-between items-center"><span className="text-[11px] font-bold text-slate-500">कुल मात्रा:</span><span className="text-xs font-black text-indigo-600">{vaccineForecast.totalMl} ml</span></div><div className="grid grid-cols-2 gap-2"><div className="bg-slate-50 p-1.5 rounded-lg border text-center"><p className="text-[8px] font-bold text-slate-400">1.0 ml Vials</p><p className="text-sm font-black text-indigo-700">{vaccineForecast.vials10}</p></div><div className="bg-slate-50 p-1.5 rounded-lg border text-center"><p className="text-[8px] font-bold text-slate-400">0.5 ml Vials</p><p className="text-sm font-black text-indigo-700">{vaccineForecast.vials05}</p></div></div></div></div>
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm cursor-pointer" onClick={() => setActiveItem('mag_faram')}><div className="flex items-center justify-between mb-6"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Pending</p><h3 className="text-sm font-bold text-slate-700 font-nepali">बाँकी माग</h3></div><div className="bg-orange-100 p-2.5 rounded-xl text-orange-600"><FilePlus size={20} /></div></div><div className="flex items-baseline gap-2"><span className="text-5xl font-black text-orange-600">{magFormsPendingCount}</span><span className="text-[10px] text-slate-400 font-bold uppercase">Forms</span></div></div>
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-red-300 transition-all group" onClick={() => { setExpiryModalType('expired'); setShowExpiryModal(true); }}><div className="absolute -right-2 -bottom-2 text-red-50 opacity-10 group-hover:scale-110 transition-transform"><Flame size={80} /></div><div className="relative z-10"><div className="flex items-center justify-between mb-6"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Safety Alert</p><h3 className="text-sm font-bold text-slate-700 font-nepali">म्याद सकिएका</h3></div><div className="bg-red-100 p-2.5 rounded-xl text-red-600"><AlertOctagon size={20} /></div></div><div className="flex items-baseline gap-2"><span className="text-5xl font-black text-red-600">{expiredItems.length}</span><span className="text-[10px] text-slate-400 font-bold uppercase">Items</span></div></div></div>
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-amber-300 transition-all group" onClick={() => { setExpiryModalType('near-expiry'); setShowExpiryModal(true); }}><div className="absolute -right-2 -bottom-2 text-amber-50 opacity-10 group-hover:rotate-12 transition-transform"><CalendarClock size={80} /></div><div className="relative z-10"><div className="flex items-center justify-between mb-6"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Soon</p><h3 className="text-sm font-bold text-slate-700 font-nepali">सकिन लागेका</h3></div><div className="bg-amber-100 p-2.5 rounded-xl text-amber-600"><Timer size={20} /></div></div><div className="flex items-baseline gap-2"><span className="text-5xl font-black text-amber-600">{nearExpiryItems.length}</span><span className="text-[10px] text-slate-400 font-bold uppercase">90 Days</span></div></div></div>
+            <button onClick={() => handlePrint('dashboard-main-print')} className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 text-white rounded-lg font-medium shadow-sm hover:bg-slate-900 no-print">
+              <Printer size={18} /> प्रिन्ट
+            </button>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <h4 className="font-bold text-slate-800 font-nepali mb-4 flex items-center gap-2"><Syringe size={18} className="text-indigo-600"/> आजका खोप सेवाग्राहीहरू (D0, D3, D7)</h4>
-                <table className="w-full text-xs text-left">
-                    <thead className="bg-slate-50 font-bold"><tr><th className="p-2 border-b">बिरामीको नाम</th><th className="p-2 border-b text-center">डोज</th><th className="p-2 border-b text-right">सम्पर्क</th></tr></thead>
-                    <tbody className="divide-y">
-                        {rabiesPatients.filter(p => p.schedule.some(d => fixDate(d.dateBs || '') === fixDate(new NepaliDate().format('YYYY-MM-DD')))).map(p => (
-                            <tr key={p.id} className="hover:bg-slate-50"><td className="p-2 font-bold">{p.name}</td><td className="p-2 text-center"><div className="flex justify-center gap-1">{p.schedule.filter(d => fixDate(d.dateBs || '') === fixDate(new NepaliDate().format('YYYY-MM-DD'))).map(d => ( <span key={d.day} className={`px-2 py-0.5 rounded-full font-black text-[10px] ${d.status === 'Given' ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'}`}>D{d.day}</span> ))}</div></td><td className="p-2 text-right font-mono">{p.phone}</td></tr>
-                        ))}
-                    </tbody>
-                </table>
-             </div>
-             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h4 className="font-bold text-slate-800 font-nepali mb-4 flex items-center gap-2"><TrendingUp size={18} className="text-blue-600"/> मौज्दात सारांश</h4><div className="grid grid-cols-2 gap-4"><div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 text-center"><p className="text-xs font-bold text-slate-500 uppercase mb-1">खर्च हुने (Expendable)</p><p className="text-2xl font-black text-blue-700">{inventoryItems.filter(i => i.itemType === 'Expendable' && i.currentQuantity > 0).length}</p></div><div className="p-4 bg-teal-50/50 rounded-xl border border-teal-100 text-center"><p className="text-xs font-bold text-slate-500 uppercase mb-1">खर्च नहुने (Non-Exp)</p><p className="text-2xl font-black text-teal-700">{inventoryItems.filter(i => i.itemType === 'Non-Expendable' && i.currentQuantity > 0).length}</p></div></div></div>
+          <div id="dashboard-main-print" className="print-container">
+            <div className="hidden print:block text-center mb-6">
+              <h1 className="text-xl font-bold text-red-600">{generalSettings.orgNameNepali}</h1>
+              <h2 className="text-lg font-bold underline mt-2">प्रणाली ड्यासबोर्ड सारांश</h2>
+              <p className="text-sm">मिति: {new NepaliDate().format('YYYY-MM-DD')}</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 print:grid-cols-2 print:gap-4 print:mb-6">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                <div className="relative z-10"><div className="flex items-center justify-between mb-4"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Clinic Progress</p><h3 className="text-sm font-bold text-slate-700 font-nepali">आजको खोप प्रगति</h3></div><div className="bg-red-100 p-2.5 rounded-xl text-red-600"><Syringe size={20} /></div></div><div className="space-y-3">{['D0', 'D3', 'D7'].map((d, idx) => { const stats = idx === 0 ? { p: rabiesDoseStats.d0Progress, r: rabiesDoseStats.d0Received, t: rabiesDoseStats.d0Total } : idx === 1 ? { p: rabiesDoseStats.d3Progress, r: rabiesDoseStats.d3Received, t: rabiesDoseStats.d3Total } : { p: rabiesDoseStats.d7Progress, r: rabiesDoseStats.d7Received, t: rabiesDoseStats.d7Total }; return ( <div key={d} className="space-y-1"> <div className="flex justify-between text-[10px] font-bold"> <span className="text-slate-500">{d} Dose:</span> <span className={stats.p === 100 ? 'text-green-600' : 'text-orange-600'}>{stats.r}/{stats.t}</span> </div> <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden"> <div className={`h-full transition-all duration-700 ${stats.p === 100 ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${stats.p}%` }}></div> </div> </div> ); })} </div></div>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm group hover:border-blue-300 transition-all cursor-pointer" onClick={() => setActiveItem('jinshi_maujdat')}><div className="flex items-center justify-between mb-6"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Inventory</p><h3 className="text-sm font-bold text-slate-700 font-nepali">जिन्सी मौज्दात</h3></div><div className="bg-blue-100 p-2.5 rounded-xl text-blue-600"><Warehouse size={20} /></div></div><div className="flex items-baseline gap-2"><span className="text-5xl font-black text-blue-600">{inventoryTotalCount}</span><span className="text-[10px] text-slate-400 font-bold uppercase">Items</span></div></div>
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><div className="flex items-center justify-between mb-4"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Forecast (Month)</p><h3 className="text-sm font-bold text-slate-700 font-nepali">खोप पूर्वानुमान</h3></div><div className="bg-cyan-100 p-2.5 rounded-xl text-cyan-600"><Calculator size={20} /></div></div><div className="space-y-3"><div className="flex justify-between items-center"><span className="text-[11px] font-bold text-slate-500">कुल मात्रा:</span><span className="text-xs font-black text-indigo-600">{vaccineForecast.totalMl} ml</span></div><div className="grid grid-cols-2 gap-2"><div className="bg-slate-50 p-1.5 rounded-lg border text-center"><p className="text-[8px] font-bold text-slate-400">1.0 ml Vials</p><p className="text-sm font-black text-indigo-700">{vaccineForecast.vials10}</p></div><div className="bg-slate-50 p-1.5 rounded-lg border text-center"><p className="text-[8px] font-bold text-slate-400">0.5 ml Vials</p><p className="text-sm font-black text-indigo-700">{vaccineForecast.vials05}</p></div></div></div></div>
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm cursor-pointer" onClick={() => setActiveItem('mag_faram')}><div className="flex items-center justify-between mb-6"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Pending</p><h3 className="text-sm font-bold text-slate-700 font-nepali">बाँकी माग</h3></div><div className="bg-orange-100 p-2.5 rounded-xl text-orange-600"><FilePlus size={20} /></div></div><div className="flex items-baseline gap-2"><span className="text-5xl font-black text-orange-600">{magFormsPendingCount}</span><span className="text-[10px] text-slate-400 font-bold uppercase">Forms</span></div></div>
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-red-300 transition-all group" onClick={() => { setExpiryModalType('expired'); setShowExpiryModal(true); }}><div className="absolute -right-2 -bottom-2 text-red-50 opacity-10 group-hover:scale-110 transition-transform"><Flame size={80} /></div><div className="relative z-10"><div className="flex items-center justify-between mb-6"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Safety Alert</p><h3 className="text-sm font-bold text-slate-700 font-nepali">म्याद सकिएका</h3></div><div className="bg-red-100 p-2.5 rounded-xl text-red-600"><AlertOctagon size={20} /></div></div><div className="flex items-baseline gap-2"><span className="text-5xl font-black text-red-600">{expiredItems.length}</span><span className="text-[10px] text-slate-400 font-bold uppercase">Items</span></div></div></div>
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-amber-300 transition-all group" onClick={() => { setExpiryModalType('near-expiry'); setShowExpiryModal(true); }}><div className="absolute -right-2 -bottom-2 text-amber-50 opacity-10 group-hover:rotate-12 transition-transform"><CalendarClock size={80} /></div><div className="relative z-10"><div className="flex items-center justify-between mb-6"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Soon</p><h3 className="text-sm font-bold text-slate-700 font-nepali">सकिन लागेका</h3></div><div className="bg-amber-100 p-2.5 rounded-xl text-amber-600"><Timer size={20} /></div></div><div className="flex items-baseline gap-2"><span className="text-5xl font-black text-amber-600">{nearExpiryItems.length}</span><span className="text-[10px] text-slate-400 font-bold uppercase">90 Days</span></div></div></div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 print:grid-cols-1 print:gap-4 print:mt-6">
+               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <h4 className="font-bold text-slate-800 font-nepali mb-4 flex items-center gap-2"><Syringe size={18} className="text-indigo-600"/> आजका खोप सेवाग्राहीहरू (D0, D3, D7)</h4>
+                  <table className="w-full text-xs text-left print-table">
+                      <thead className="bg-slate-50 font-bold"><tr><th className="p-2 border-b">बिरामीको नाम</th><th className="p-2 border-b text-center">डोज</th><th className="p-2 border-b text-right">सम्पर्क</th></tr></thead>
+                      <tbody className="divide-y">
+                          {rabiesPatients.filter(p => p.schedule.some(d => fixDate(d.dateBs || '') === fixDate(new NepaliDate().format('YYYY-MM-DD')))).map(p => (
+                              <tr key={p.id} className="hover:bg-slate-50"><td className="p-2 font-bold">{p.name}</td><td className="p-2 text-center"><div className="flex justify-center gap-1">{p.schedule.filter(d => fixDate(d.dateBs || '') === fixDate(new NepaliDate().format('YYYY-MM-DD'))).map(d => ( <span key={d.day} className={`px-2 py-0.5 rounded-full font-black text-[10px] ${d.status === 'Given' ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'}`}>D{d.day}</span> ))}</div></td><td className="p-2 text-right font-mono">{p.phone}</td></tr>
+                          ))}
+                          {rabiesPatients.filter(p => p.schedule.some(d => fixDate(d.dateBs || '') === fixDate(new NepaliDate().format('YYYY-MM-DD')))).length === 0 && <tr><td colSpan={3} className="p-8 text-center text-slate-400 italic">आज कुनै सेवाग्राही छैनन्।</td></tr>}
+                      </tbody>
+                  </table>
+               </div>
+               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h4 className="font-bold text-slate-800 font-nepali mb-4 flex items-center gap-2"><TrendingUp size={18} className="text-blue-600"/> मौज्दात सारांश</h4><div className="grid grid-cols-2 gap-4"><div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 text-center"><p className="text-xs font-bold text-slate-500 uppercase mb-1">खर्च हुने (Expendable)</p><p className="text-2xl font-black text-blue-700">{inventoryItems.filter(i => i.itemType === 'Expendable' && i.currentQuantity > 0).length}</p></div><div className="p-4 bg-teal-50/50 rounded-xl border border-teal-100 text-center"><p className="text-xs font-bold text-slate-500 uppercase mb-1">खर्च नहुने (Non-Exp)</p><p className="text-2xl font-black text-teal-700">{inventoryItems.filter(i => i.itemType === 'Non-Expendable' && i.currentQuantity > 0).length}</p></div></div></div>
+            </div>
           </div>
         </div>
       );
@@ -326,7 +443,19 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'quotation': return <Quotation currentFiscalYear={currentFiscalYear} firms={firms} quotations={quotations} onAddQuotation={onAddQuotation} inventoryItems={inventoryItems} />;
       case 'jinshi_maujdat': return <JinshiMaujdat currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} onAddInventoryItem={onAddInventoryItem} onUpdateInventoryItem={onUpdateInventoryItem} onDeleteInventoryItem={onDeleteInventoryItem} onRequestStockEntry={onRequestStockEntry} stores={stores} pendingPoDakhila={pendingPoDakhila} onClearPendingPoDakhila={() => setPendingPoDakhila(null)} />;
       case 'stock_entry_approval': return <StockEntryApproval requests={stockEntryRequests} currentUser={currentUser} onApprove={onApproveStockEntry} onReject={onRejectStockEntry} stores={stores} />;
-      case 'dakhila_pratibedan': return <DakhilaPratibedan dakhilaReports={dakhilaReports} onSaveDakhilaReport={onSaveDakhilaReport} currentFiscalYear={currentFiscalYear} currentUser={currentUser} stockEntryRequests={stockEntryRequests} generalSettings={generalSettings} stores={stores} />;
+      case 'dakhila_pratibedan': return <DakhilaPratibedan 
+                                          dakhilaReports={dakhilaReports} 
+                                          onSaveDakhilaReport={onSaveDakhilaReport} 
+                                          currentFiscalYear={currentFiscalYear} 
+                                          currentUser={currentUser} 
+                                          stockEntryRequests={stockEntryRequests} 
+                                          generalSettings={generalSettings} 
+                                          stores={stores} 
+                                          initialSelectedReportId={initialDakhilaReportId} 
+                                          onInitialReportLoaded={() => setInitialDakhilaReportId(null)}
+                                          onMarkAsRead={handleMarkDakhilaRead}
+                                          readNotifIds={readNotifIds}
+                                        />;
       case 'sahayak_jinshi_khata': return <SahayakJinshiKhata currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} issueReports={issueReports} dakhilaReports={dakhilaReports} users={users} returnEntries={returnEntries} generalSettings={generalSettings} />;
       case 'jinshi_khata': return <JinshiKhata currentFiscalYear={currentFiscalYear} inventoryItems={inventoryItems} issueReports={issueReports} dakhilaReports={dakhilaReports} stockEntryRequests={stockEntryRequests} returnEntries={returnEntries} generalSettings={generalSettings} stores={stores} />;
       case 'jinshi_firta_khata': return <JinshiFirtaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} returnEntries={returnEntries} onSaveReturnEntry={onSaveReturnEntry} issueReports={issueReports} generalSettings={generalSettings} />;
@@ -340,10 +469,10 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                                               magForms={magForms} 
                                               onSaveMagForm={onSaveMagForm} 
                                               generalSettings={generalSettings}
-                                              dakhilaReports={dakhilaReports} // Pass dakhilaReports
-                                              issueReports={issueReports} // Pass issueReports
-                                              stockEntryRequests={stockEntryRequests} // Pass stockEntryRequests
-                                              stores={stores} // Pass stores
+                                              dakhilaReports={dakhilaReports} 
+                                              issueReports={issueReports} 
+                                              stockEntryRequests={stockEntryRequests} 
+                                              stores={stores} 
                                             />;
       case 'database_management': return <DatabaseManagement currentUser={currentUser} users={users} inventoryItems={inventoryItems} magForms={magForms} purchaseOrders={purchaseOrders} issueReports={issueReports} rabiesPatients={rabiesPatients} tbPatients={tbPatients} firms={firms} stores={stores} dakhilaReports={dakhilaReports} returnEntries={returnEntries} marmatEntries={marmatEntries} dhuliyaunaEntries={dhuliyaunaEntries} logBookEntries={logBookEntries} onClearData={onClearData} onUploadData={onUploadData} />;
       case 'general_setting': return <GeneralSetting currentUser={currentUser} settings={generalSettings} onUpdateSettings={onUpdateGeneralSettings} />;
@@ -353,7 +482,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-nepali">
-      {/* Sidebar Overlay (Now always relevant if isSidebarOpen is true) */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 transition-opacity duration-300"
@@ -361,13 +489,11 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         />
       )}
 
-      {/* Sidebar - Modified to be hidden by default on all screens */}
       <aside className={`
         fixed inset-y-0 left-0 w-72 bg-white border-r border-slate-200 z-40 transform transition-transform duration-300 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex flex-col h-full">
-          {/* Sidebar Header */}
           <div className="p-6 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-primary-600 p-2 rounded-xl text-white shadow-lg shadow-primary-200">
@@ -383,7 +509,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
             </button>
           </div>
 
-          {/* Navigation Menu */}
           <nav className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-hide">
             {menuItems.map((menu) => (
               <div key={menu.id}>
@@ -396,9 +521,14 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                         ${expandedMenu === menu.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'}
                       `}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 relative">
                         <span className={`${expandedMenu === menu.id ? 'text-primary-600' : 'text-slate-700'}`}>{menu.icon}</span>
                         <span className="font-bold text-sm">{menu.label}</span>
+                        {menu.badgeCount !== undefined && menu.badgeCount > 0 && (
+                            <span className="absolute -top-1 -left-2 min-w-[18px] h-[18px] bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-white">
+                                {menu.badgeCount}
+                            </span>
+                        )}
                       </div>
                       <span className="transition-transform duration-300">
                         {expandedMenu === menu.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -419,7 +549,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                             <span className={`${activeItem === sub.id ? 'text-primary-600' : 'text-slate-500'}`}>{sub.icon}</span>
                             <span>{sub.label}</span>
                             {sub.badgeCount !== undefined && sub.badgeCount > 0 && (
-                              <span className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{sub.badgeCount}</span>
+                              <span className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm">{sub.badgeCount}</span>
                             )}
                           </button>
                         ))}
@@ -434,7 +564,14 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                       ${activeItem === menu.id ? 'bg-primary-600 text-white shadow-lg shadow-primary-200 font-bold' : 'text-slate-700 hover:bg-slate-50'}
                     `}
                   >
-                    <span className={`${activeItem === menu.id ? 'text-white' : 'text-slate-700'}`}>{menu.icon}</span>
+                    <div className="relative">
+                      <span className={`${activeItem === menu.id ? 'text-white' : 'text-slate-700'}`}>{menu.icon}</span>
+                      {menu.badgeCount !== undefined && menu.badgeCount > 0 && (
+                          <span className="absolute -top-1 -left-2 min-w-[18px] h-[18px] bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-white">
+                              {menu.badgeCount}
+                          </span>
+                      )}
+                    </div>
                     <span className="text-sm">{menu.label}</span>
                   </button>
                 )}
@@ -442,7 +579,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
             ))}
           </nav>
 
-          {/* User Profile Summary */}
           <div className="p-4 border-t border-slate-100 bg-slate-50/50">
             <div className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-200 shadow-sm">
               <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700">
@@ -464,12 +600,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         </div>
       </aside>
 
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Top Header - Always shows the Menu Button now */}
         <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 shrink-0">
           <div className="flex items-center gap-4">
-            {/* Always visible Menu Button */}
             <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg">
               <Menu size={20} />
             </button>
@@ -480,7 +613,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Notifications Dropdown */}
             <div className="relative" ref={notifRef}>
                 <button 
                     onClick={() => setShowNotifications(!showNotifications)}
@@ -549,7 +681,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
           </div>
         </header>
 
-        {/* Content Section */}
         <main ref={mainContentRef} className="flex-1 overflow-y-auto p-6 md:p-8 scroll-smooth no-print">
           <div className="max-w-7xl mx-auto min-h-full">
             {renderContent()}
@@ -557,7 +688,91 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         </main>
       </div>
 
-      {/* Expiry Alert Modal */}
+      {/* QUICK PREVIEW MODAL FOR DAKHILA */}
+      {previewDakhila && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-md" onClick={() => setPreviewDakhila(null)}></div>
+              <div className="relative bg-white rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+                  <div className="px-8 py-6 border-b bg-indigo-50 flex justify-between items-center">
+                      <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-2xl bg-indigo-100 text-indigo-600 shadow-sm">
+                              <Archive size={28} />
+                          </div>
+                          <div>
+                              <h3 className="text-xl font-black text-indigo-900 font-nepali">दाखिला सामान विवरण</h3>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-500">Quick Item Preview</p>
+                          </div>
+                      </div>
+                      <button onClick={() => setPreviewDakhila(null)} className="p-2 hover:bg-white/50 rounded-full transition-colors text-slate-400 hover:text-slate-600">
+                          <X size={24} />
+                      </button>
+                  </div>
+                  
+                  <div className="p-8">
+                      <div className="mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100 flex justify-between items-center">
+                          <div className="space-y-0.5">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase">Dakhila Number</p>
+                              <p className="text-lg font-black text-slate-700 font-mono">#{previewDakhila.dakhilaNo}</p>
+                          </div>
+                          <div className="text-right space-y-0.5">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase">Entry Date</p>
+                              <p className="text-lg font-bold text-slate-700 font-nepali">{previewDakhila.date}</p>
+                          </div>
+                      </div>
+
+                      <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                          <table className="w-full text-sm text-left">
+                              <thead className="bg-slate-50 text-slate-500 font-bold">
+                                  <tr>
+                                      <th className="px-6 py-3 border-b border-slate-100">सामानको नाम</th>
+                                      <th className="px-6 py-3 border-b border-slate-100 text-right">परिमाण</th>
+                                  </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                  {previewDakhila.items.map((item, idx) => (
+                                      <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                          <td className="px-6 py-3 font-bold text-slate-700">{item.name}</td>
+                                          <td className="px-6 py-3 text-right">
+                                              <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-black text-xs">
+                                                  {item.quantity} {item.unit}
+                                              </span>
+                                          </td>
+                                      </tr>
+                                  ))}
+                              </tbody>
+                          </table>
+                      </div>
+
+                      <div className="mt-8 flex flex-col gap-3">
+                          {!canViewFullReport && (
+                              <div className="bg-red-50 border border-red-100 p-3 rounded-2xl flex items-center gap-3 text-red-700 animate-in fade-in slide-in-from-top-1">
+                                  <ShieldAlert size={20} className="shrink-0" />
+                                  <p className="text-xs font-bold font-nepali">तपाईंलाई पूर्ण रिपोर्ट हेर्ने अनुमति छैन। कृपया शाखा प्रमुख वा एडमिनसँग सम्पर्क गर्नुहोस्।</p>
+                              </div>
+                          )}
+                          
+                          <div className="flex gap-3">
+                              <button 
+                                onClick={() => setPreviewDakhila(null)}
+                                className="flex-1 py-3.5 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all active:scale-[0.98]"
+                              >
+                                बन्द गर्नुहोस्
+                              </button>
+                              {canViewFullReport && (
+                                  <button 
+                                    onClick={handleOpenFullDakhila}
+                                    className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                                  >
+                                    <Eye size={18} /> पूर्ण रिपोर्ट हेर्नुहोस्
+                                  </button>
+                              )}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {showExpiryModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowExpiryModal(false)}></div>
@@ -597,95 +812,20 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                   </div>
                   <div className="p-6 border-t bg-slate-50 flex justify-between items-center">
                       <div className="text-xs text-slate-400 italic">Total Items Found: {expiryModalType === 'expired' ? expiredItems.length : nearExpiryItems.length}</div>
-                      <button onClick={() => window.print()} className="bg-slate-800 text-white px-8 py-2.5 rounded-2xl font-bold hover:bg-slate-900 shadow-lg shadow-slate-200 transition-all flex items-center gap-2">
+                      <button onClick={() => setShowExpiryPrintOptionsModal(true)} className="bg-slate-800 text-white px-8 py-2.5 rounded-2xl font-bold hover:bg-slate-900 shadow-lg shadow-slate-200 transition-all flex items-center gap-2">
                          <Printer size={18} /> प्रिन्ट गर्नुहोस्
                       </button>
-                      <button onClick={() => setShowExpiryModal(false)} className="bg-slate-800 text-white px-8 py-2.5 rounded-2xl font-bold hover:bg-slate-900 shadow-lg shadow-slate-200 transition-all">Close Window</button>
                   </div>
               </div>
           </div>
       )}
 
-      {/* PRINT SECTIONS (Hidden by default, shown only on print) */}
-      <div id="expired-items-print" className="hidden print-container">
-          <style>{`
-            @media print {
-                .print-container { page-break-after: always; }
-                .print-table th, .print-table td { border: 1px solid black !important; padding: 8px !important; font-size: 12px !important; }
-                .print-header h1 { font-size: 20px; }
-                .print-header h2 { font-size: 16px; }
-            }
-          `}</style>
-          <div className="print-header">
-              <h1>{generalSettings.orgNameNepali}</h1>
-              <h2>म्याद सकिएका सामानहरूको सूची (Expired Inventory Items)</h2>
-              <p>मिति: {new NepaliDate().format('YYYY-MM-DD')}</p>
-          </div>
-          <table className="print-table">
-              <thead>
-                  <tr>
-                      <th>क्र.सं.</th>
-                      <th>सामानको नाम</th>
-                      <th>ब्याच नं</th>
-                      <th>मौज्दात</th>
-                      <th>म्याद सकिने मिति (BS)</th>
-                      <th>म्याद सकिने मिति (AD)</th>
-                  </tr>
-              </thead>
-              <tbody>
-                  {expiredItems.map((item, idx) => (
-                      <tr key={item.id}>
-                          <td>{idx + 1}</td>
-                          <td>{item.itemName}</td>
-                          <td>{item.batchNo || '-'}</td>
-                          <td>{item.currentQuantity} {item.unit}</td>
-                          <td>{item.expiryDateBs}</td>
-                          <td>{item.expiryDateAd}</td>
-                      </tr>
-                  ))}
-              </tbody>
-          </table>
-      </div>
-
-      <div id="near-expiry-items-print" className="hidden print-container">
-          <style>{`
-            @media print {
-                .print-container { page-break-after: always; }
-                .print-table th, .print-table td { border: 1px solid black !important; padding: 8px !important; font-size: 12px !important; }
-                .print-header h1 { font-size: 20px; }
-                .print-header h2 { font-size: 16px; }
-            }
-          `}</style>
-          <div className="print-header">
-              <h1>{generalSettings.orgNameNepali}</h1>
-              <h2>म्याद सकिन लागेका सामानहरूको सूची (Near Expiry Inventory Items - Next 90 Days)</h2>
-              <p>मिति: {new NepaliDate().format('YYYY-MM-DD')}</p>
-          </div>
-          <table className="print-table">
-              <thead>
-                  <tr>
-                      <th>क्र.सं.</th>
-                      <th>सामानको नाम</th>
-                      <th>ब्याच नं</th>
-                      <th>मौज्दात</th>
-                      <th>म्याद सकिने मिति (BS)</th>
-                      <th>म्याद सकिने मिति (AD)</th>
-                  </tr>
-              </thead>
-              <tbody>
-                  {nearExpiryItems.map((item, idx) => (
-                      <tr key={item.id}>
-                          <td>{idx + 1}</td>
-                          <td>{item.itemName}</td>
-                          <td>{item.batchNo || '-'}</td>
-                          <td>{item.currentQuantity} {item.unit}</td>
-                          <td>{item.expiryDateBs}</td>
-                          <td>{item.expiryDateAd}</td>
-                      </tr>
-                  ))}
-              </tbody>
-          </table>
-      </div>
+      {showExpiryPrintOptionsModal && (
+        <PrintOptionsModal 
+          onClose={() => setShowExpiryPrintOptionsModal(false)} 
+          onPrint={(orientation) => handlePrint(expiryModalType === 'expired' ? 'expired-items-print' : 'near-expiry-items-print', orientation)} 
+        />
+      )}
     </div>
   );
 };
