@@ -92,6 +92,7 @@ export const MarmatAdesh: React.FC<MarmatAdeshProps> = ({
   }, [currentFiscalYear, marmatEntries, formDetails.id, todayBS]);
 
   const handleAddItem = () => {
+    if (items.length >= 14) return;
     setItems([...items, { id: Date.now(), name: '', codeNo: '', details: '', quantity: 0, unit: '', remarks: '' }]);
   };
 
@@ -456,8 +457,12 @@ export const MarmatAdesh: React.FC<MarmatAdeshProps> = ({
 
         {!isViewOnly && (
             <div className="mt-2 no-print">
-                <button onClick={handleAddItem} className="flex items-center gap-1 text-primary-600 hover:text-primary-700 text-xs font-bold px-2 py-1 bg-primary-50 rounded">
-                    <Plus size={14} /> Add Row
+                <button 
+                    onClick={handleAddItem} 
+                    disabled={items.length >= 14}
+                    className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded transition-colors ${items.length >= 14 ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : 'bg-primary-50 text-primary-600 hover:text-primary-700'}`}
+                >
+                    <Plus size={14} /> Add Row (Max 14)
                 </button>
             </div>
         )}

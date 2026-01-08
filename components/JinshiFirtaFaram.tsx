@@ -59,6 +59,7 @@ export const JinshiFirtaFaram: React.FC<JinshiFirtaFaramProps> = ({
   const isApprover = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
 
   const handleAddItem = () => {
+    if (items.length >= 14) return;
     setItems([...items, { id: Date.now(), codeNo: '', name: '', specification: '', unit: '', quantity: 0, rate: 0, totalAmount: 0, reasonAndCondition: '', remarks: '' }]);
   };
 
@@ -186,7 +187,14 @@ export const JinshiFirtaFaram: React.FC<JinshiFirtaFaramProps> = ({
                     ))}
                 </tbody>
             </table>
-            <button onClick={handleAddItem} className="mt-2 text-primary-600 text-xs font-bold no-print">+ लहर थप्नुहोस्</button>
+            
+            <button 
+                onClick={handleAddItem} 
+                disabled={items.length >= 14}
+                className={`mt-2 text-xs font-bold no-print flex items-center gap-1 transition-colors ${items.length >= 14 ? 'text-slate-400 cursor-not-allowed' : 'text-primary-600 hover:text-primary-700'}`}
+            >
+                <Plus size={14} /> + लहर थप्नुहोस् (अधिकतम १४)
+            </button>
 
             <div className="grid grid-cols-2 gap-12 mt-20 text-sm">
                 <div className="border-t border-slate-800 pt-2 text-center">फिर्ता गर्नेको दस्तखत</div>

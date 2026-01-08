@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trash2, Plus, Printer, Save, ArrowLeft, Clock, CheckCircle2, Send, AlertTriangle, Search, X, Eye } from 'lucide-react';
 import { User } from '../types/coreTypes'; // Changed import
@@ -91,6 +92,7 @@ export const DhuliyaunaFaram: React.FC<DhuliyaunaFaramProps> = ({
   }, [currentFiscalYear, dhuliyaunaEntries, formDetails.id, todayBS]);
 
   const handleAddItem = () => {
+    if (items.length >= 14) return;
     setItems([...items, { id: Date.now(), codeNo: '', name: '', specification: '', unit: '', quantity: 0, rate: 0, totalAmount: 0, reason: '', remarks: '' }]);
   };
 
@@ -389,6 +391,16 @@ export const DhuliyaunaFaram: React.FC<DhuliyaunaFaramProps> = ({
                 ))}
             </tbody>
         </table>
+
+        {!isViewOnly && (
+            <button 
+                onClick={handleAddItem} 
+                disabled={items.length >= 14}
+                className={`mt-2 text-xs font-bold px-2 py-1 rounded no-print flex items-center gap-1 transition-colors ${items.length >= 14 ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : 'bg-primary-50 text-primary-600 hover:text-primary-700'}`}
+            >
+                <Plus size={14} /> + लहर थप्नुहोस् (अधिकतम १४)
+            </button>
+        )}
 
         {/* Footer section for signatures */}
         <div className="grid grid-cols-2 gap-12 mt-20 text-sm">
