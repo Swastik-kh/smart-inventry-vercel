@@ -178,11 +178,11 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-slate-50 text-slate-600 font-medium border-b">
                                     <tr>
-                                        <th className="px-6 py-4">मिति (Date)</th>
-                                        <th className="px-6 py-4">स्टोर (Store)</th>
-                                        <th className="px-6 py-4">स्रोत (Source)</th>
-                                        <th className="px-6 py-4">निवेदक (Requester)</th>
-                                        <th className="px-6 py-4 text-right">कार्य (Action)</th>
+                                        <th className="px-6 py-3">मिति (Date)</th>
+                                        <th className="px-6 py-3">स्टोर (Store)</th>
+                                        <th className="px-6 py-3">स्रोत (Source)</th>
+                                        <th className="px-6 py-3">निवेदक (Requester)</th>
+                                        <th className="px-6 py-3 text-right">कार्य (Action)</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -234,11 +234,11 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
                                 <table className="w-full text-sm text-left">
                                     <thead className="bg-slate-50 text-slate-600 font-medium border-b">
                                         <tr>
-                                            <th className="px-6 py-4">दाखिला मिति</th>
-                                            <th className="px-6 py-4">दाखिला नं</th>
-                                            <th className="px-6 py-4">तयार गर्ने (Storekeeper)</th>
-                                            <th className="px-6 py-4">स्वीकृत गर्ने (Head)</th>
-                                            <th className="px-6 py-4 text-right">Preview</th>
+                                            <th className="px-6 py-3">दाखिला मिति</th>
+                                            <th className="px-6 py-3">दाखिला नं</th>
+                                            <th className="px-6 py-3">तयार गर्ने (Storekeeper)</th>
+                                            <th className="px-6 py-3">स्वीकृत गर्ने (Head)</th>
+                                            <th className="px-6 py-3 text-right">Preview</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
@@ -279,7 +279,10 @@ export const DakhilaPratibedan: React.FC<DakhilaPratibedanProps> = ({
                                                                     <Eye size={20}/>
                                                                 </button>
                                                             ) : (
-                                                                <ShieldAlert size={20} className="text-slate-300 ml-auto" title="No Permission" />
+                                                                /* Fix Lucide icon receiving 'title' prop by wrapping it in a span */
+                                                                <span title="No Permission" className="ml-auto block w-fit">
+                                                                    <ShieldAlert size={20} className="text-slate-300" />
+                                                                </span>
                                                             )}
                                                         </td>
                                                     </tr>
