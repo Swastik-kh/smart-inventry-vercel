@@ -667,9 +667,9 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                            </label>
                       </div>
                       <p className="mb-6">सिफारिस गर्नेको दस्तखत</p>
-                      <p>नाम: <span className="font-bold border-b border-dotted border-black px-2 min-w-[100px] inline-block">${formDetails.recommendedBy?.name || '....................................'}</span></p>
-                      <p>पद: <span className="font-bold border-b border-dotted border-black px-2 min-w-[100px] inline-block">${formDetails.recommendedBy?.designation || '....................................'}</span></p>
-                      <p>मिति: <span className="font-bold border-b border-dotted border-black px-2 min-w-[100px] inline-block">${formDetails.recommendedBy?.date || '....................................'}</span></p>
+                      <p>नाम: <span className="font-bold border-b border-dotted border-black px-2 min-w-[100px] inline-block">{formDetails.recommendedBy?.name || '....................................'}</span></p>
+                      <p>पद: <span className="font-bold border-b border-dotted border-black px-2 min-w-[100px] inline-block">{formDetails.recommendedBy?.designation || '....................................'}</span></p>
+                      <p>मिति: <span className="font-bold border-b border-dotted border-black px-2 min-w-[100px] inline-block">{formDetails.recommendedBy?.date || '....................................'}</span></p>
                   </div>
                   <div className="border-t border-black pt-2">
                       <p className="mb-6">स्वीकृत गर्नेको दस्तखत</p>
