@@ -62,7 +62,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
         if (!matchesSearch) return false;
 
         // Level 1: Visibility Constraint
-        // Other users see only their own. Privileged roles see all.
         if (!isPrivileged && f.demandBy?.name !== currentUser.fullName) {
             return false;
         }
@@ -71,19 +70,15 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
         if (activeTab === 'requests') {
             if (isStoreKeeper) return f.status === 'Pending';
             if (isApprover || isAccount) return f.status === 'Verified';
-            // Normal user: show their own forms that are still in process
             return f.status === 'Pending' || f.status === 'Verified';
         } else {
-            // History Tab
             if (isStoreKeeper) return f.status !== 'Pending';
             if (isApprover || isAccount) return f.status === 'Approved' || f.status === 'Rejected';
-            // Normal user: show their own forms that are finalized
             return f.status === 'Approved' || f.status === 'Rejected';
         }
     }).sort((a, b) => b.formNo.localeCompare(a.formNo));
   }, [existingForms, activeTab, isStoreKeeper, isApprover, isAccount, isPrivileged, currentUser.fullName, searchTerm]);
 
-  // Logic to calculate pending count for badge
   const pendingBadgeCount = useMemo(() => {
       return existingForms.filter(f => {
           if (!isPrivileged) {
@@ -95,7 +90,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
       }).length;
   }, [existingForms, isStoreKeeper, isApprover, isAccount, isPrivileged, currentUser.fullName]);
 
-  // Prepare Rich Alphabetical Item Options from Inventory
   const itemOptions = useMemo(() => {
     const itemMap = new Map<string, { totalQty: number, type: string, unit: string }>();
     
@@ -181,6 +175,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
         ...prev, id: '', items: [], status: 'Pending', 
         demandBy: { name: currentUser.fullName, designation: currentUser.designation, date: todayBS, purpose: '' },
         receiver: { name: '', designation: '', date: '' },
+        recommendedBy: { name: '', designation: '', date: '' },
         storeKeeper: { name: '', date: '', verified: false, marketRequired: false, inStock: false }
     }));
   };
@@ -205,26 +200,27 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
         return;
     }
 
-    for (let i = 0; i < validItems.length; i++) {
-        const item = validItems[i];
-        if (!item.name.trim()) {
-            setValidationError(`क्रम संख्या ${i + 1} मा सामानको नाम भर्नुहोस्।`);
-            return;
-        }
-        if (!item.quantity.trim() || parseFloat(item.quantity) <= 0) {
-            setValidationError(`क्रम संख्या ${i + 1} मा सामानको परिमाण (Quantity) भर्नुहोस्।`);
-            return;
-        }
+    let finalStatus = formDetails.status || 'Pending';
+    let finalRecommendedBy = { ...formDetails.recommendedBy };
+
+    if (isStoreKeeper && (formDetails.storeKeeper?.marketRequired || formDetails.storeKeeper?.inStock)) {
+        finalStatus = 'Verified';
+        finalRecommendedBy = {
+            name: currentUser.fullName,
+            designation: currentUser.designation,
+            date: todayBS
+        };
     }
 
     onSave({
         ...formDetails,
         id: editingId === 'new' || !editingId ? Date.now().toString() : editingId,
         items: validItems.map(({ isFromInventory, ...rest }) => rest),
-        status: formDetails.status || 'Pending'
+        status: finalStatus,
+        recommendedBy: finalRecommendedBy
     });
     
-    setSuccessMessage("माग फारम सुरक्षित गरियो।");
+    setSuccessMessage(finalStatus === 'Verified' ? "माग फारम प्रमाणित गरी पठाइयो।" : "माग फारम सुरक्षित गरियो।");
     setIsSaved(true);
     setTimeout(handleReset, 1500);
   };
@@ -338,9 +334,9 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                 </div>
                 <span class="sig-label">सिफारिस गर्नेको दस्तखत</span>
                 <div style="font-size: 11px;">
-                  नाम: ..............................<br/>
-                  पद: ..............................<br/>
-                  मिति: ..............................
+                  नाम: ${formDetails.recommendedBy?.name || '..............................'}<br/>
+                  पद: ${formDetails.recommendedBy?.designation || '..............................'}<br/>
+                  मिति: ${formDetails.recommendedBy?.date || '..............................'}
                 </div>
               </div>
               <div class="sig-block">
@@ -389,7 +385,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                 <div className="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto">
                     <button 
                         onClick={() => setActiveTab('requests')}
-                        className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'requests' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200'}`}
+                        className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'requests' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200'}`}
                     >
                         <Clock size={18}/> {isPrivileged ? 'नयाँ अनुरोधहरू' : 'प्रक्रियामा रहेका'}
                         {pendingBadgeCount > 0 && 
@@ -517,6 +513,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                   <h3 className="text-green-800 font-bold text-lg font-nepali">सफल भयो</h3>
                   <p className="text-green-700 text-sm">{successMessage}</p>
               </div>
+              <button onClick={() => setSuccessMessage(null)} className="text-green-400 hover:text-green-600"><X size={20} /></button>
           </div>
        )}
 
@@ -662,12 +659,17 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               <div className="space-y-4">
                   <div className="border-t border-black pt-2 relative">
                       <div className="flex flex-col gap-1 mb-2 no-print">
-                           <label className="flex items-center gap-2 cursor-pointer hover:text-primary-600 transition-colors"><input type="checkbox" checked={formDetails.storeKeeper?.marketRequired} onChange={e => setFormDetails({...formDetails, storeKeeper: {...formDetails.storeKeeper!, marketRequired: e.target.checked}})} disabled={isViewOnly} className="w-3 h-3" /> बजारबाट खरिद गर्नु पर्ने</label>
-                           <label className="flex items-center gap-2 cursor-pointer hover:text-primary-600 transition-colors"><input type="checkbox" checked={formDetails.storeKeeper?.inStock} onChange={e => setFormDetails({...formDetails, storeKeeper: {...formDetails.storeKeeper!, inStock: e.target.checked}})} disabled={isViewOnly} className="w-3 h-3" /> मौज्दातमा रहेको</label>
+                           <label className={`flex items-center gap-2 transition-colors ${isViewOnly || !isStoreKeeper ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:text-primary-600'}`}>
+                               <input type="checkbox" checked={formDetails.storeKeeper?.marketRequired} onChange={e => setFormDetails({...formDetails, storeKeeper: {...formDetails.storeKeeper!, marketRequired: e.target.checked}})} disabled={isViewOnly || !isStoreKeeper} className="w-3 h-3" /> बजारबाट खरिद गर्नु पर्ने
+                           </label>
+                           <label className={`flex items-center gap-2 transition-colors ${isViewOnly || !isStoreKeeper ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:text-primary-600'}`}>
+                               <input type="checkbox" checked={formDetails.storeKeeper?.inStock} onChange={e => setFormDetails({...formDetails, storeKeeper: {...formDetails.storeKeeper!, inStock: e.target.checked}})} disabled={isViewOnly || !isStoreKeeper} className="w-3 h-3" /> मौज्दातमा रहेको
+                           </label>
                       </div>
                       <p className="mb-6">सिफारिस गर्नेको दस्तखत</p>
-                      <p>नाम: ....................................</p>
-                      <p>पद: ....................................</p>
+                      <p>नाम: <span className="font-bold border-b border-dotted border-black px-2 min-w-[100px] inline-block">${formDetails.recommendedBy?.name || '....................................'}</span></p>
+                      <p>पद: <span className="font-bold border-b border-dotted border-black px-2 min-w-[100px] inline-block">${formDetails.recommendedBy?.designation || '....................................'}</span></p>
+                      <p>मिति: <span className="font-bold border-b border-dotted border-black px-2 min-w-[100px] inline-block">${formDetails.recommendedBy?.date || '....................................'}</span></p>
                   </div>
                   <div className="border-t border-black pt-2">
                       <p className="mb-6">स्वीकृत गर्नेको दस्तखत</p>
