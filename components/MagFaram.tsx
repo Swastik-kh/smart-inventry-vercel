@@ -30,6 +30,9 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
   const [isSaved, setIsSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<'requests' | 'history'>('requests');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // State for Stock Tooltip
+  const [hoveredStock, setHoveredStock] = useState<{ x: number; y: number; content: React.ReactNode } | null>(null);
 
   const isStoreKeeper = currentUser.role === 'STOREKEEPER';
   const isAccount = currentUser.role === 'ACCOUNT';
@@ -93,14 +96,27 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
 
   useEffect(() => {
     if (!editingId && !formDetails.id) {
-        const fyClean = currentFiscalYear.replace('/', '');
+        // Filter forms strictly for the current fiscal year
         const formsInCurrentFY = existingForms.filter(f => f.fiscalYear === currentFiscalYear);
+        
+        // Calculate the next number
         const maxNum = formsInCurrentFY.reduce((max, f) => {
+            // Check for new format: NNNN-MF (e.g., 0001-MF)
+            const matchNew = f.formNo.match(/^(\d+)-MF$/);
+            if (matchNew) return Math.max(max, parseInt(matchNew[1], 10));
+
+            // Check for legacy format: FY-NNN (e.g., 2081082-001)
+            // This ensures continuity if switching mid-year, though 0001-MF style is preferred
             const parts = f.formNo.split('-');
-            const numPart = parts.length > 1 ? parseInt(parts[1]) : 0;
-            return isNaN(numPart) ? max : Math.max(max, numPart);
+            const numPart = parts.length > 1 ? parseInt(parts[parts.length - 1]) : 0;
+            if (!isNaN(numPart) && numPart > 0 && numPart < 10000) return Math.max(max, numPart); // Constraint to avoid confusing FY part with ID
+            
+            return max;
         }, 0);
-        setFormDetails(prev => ({ ...prev, formNo: `${fyClean}-${String(maxNum + 1).padStart(3, '0')}` }));
+
+        // Generate new Form No in "0001-MF" format
+        const nextNum = maxNum + 1;
+        setFormDetails(prev => ({ ...prev, formNo: `${String(nextNum).padStart(4, '0')}-MF` }));
     }
   }, [editingId, existingForms, currentFiscalYear, formDetails.id]);
 
@@ -194,12 +210,16 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
           <td style="border: 1px solid black; padding: 6px;">${item.specification || ''}</td>
           <td style="border: 1px solid black; padding: 6px; text-align: center;">${item.unit}</td>
           <td style="border: 1px solid black; padding: 6px; text-align: center; font-weight: bold;">${item.quantity}</td>
-          <td style="border: 1px solid black; padding: 6px; text-align: center;">${item.codeNo || ''}</td>
           <td style="border: 1px solid black; padding: 6px;">${item.remarks || ''}</td>
         </tr>
       `).join('');
 
-      const contactInfo = [generalSettings.address, generalSettings.phone ? `फोन: ${generalSettings.phone}` : null, generalSettings.email ? `ईमेल: ${generalSettings.email}` : null, generalSettings.panNo ? `पान नं: ${generalSettings.panNo}` : null].filter(Boolean).join(' | ');
+      const contactInfo = [
+        generalSettings.address, 
+        generalSettings.phone ? `फोन: ${generalSettings.phone}` : null, 
+        generalSettings.email ? `ईमेल: ${generalSettings.email}` : null, 
+        generalSettings.panNo ? `पान नं: ${generalSettings.panNo}` : null
+      ].filter(Boolean).join(' | ');
 
       const content = `
         <html>
@@ -226,7 +246,9 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" class="logo" />
               <h1 class="org-name">${generalSettings.orgNameNepali}</h1>
               <h2 class="org-sub">${generalSettings.subTitleNepali}</h2>
-              <div style="font-size: 10px;">${contactInfo}</div>
+              ${generalSettings.subTitleNepali2 ? `<h3 class="org-sub" style="font-size: 13px;">${generalSettings.subTitleNepali2}</h3>` : ''}
+              ${generalSettings.subTitleNepali3 ? `<h4 class="org-sub" style="font-size: 12px;">${generalSettings.subTitleNepali3}</h4>` : ''}
+              <div style="font-size: 10px; margin-top: 5px;">${contactInfo}</div>
               <div class="title">माग फारम</div>
             </div>
             <div style="text-align: right; margin-bottom: 10px;">
@@ -234,7 +256,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
             </div>
             <table>
               <thead>
-                <tr><th rowspan="2">क्र.सं.</th><th colspan="2">जिन्सी मालसामानको विवरण</th><th rowspan="2">एकाई</th><th rowspan="2">माग गरिएको परिमाण</th><th rowspan="2">जिन्सी खाता पाना नं.</th><th rowspan="2">कैफियत</th></tr>
+                <tr><th rowspan="2">क्र.सं.</th><th colspan="2">जिन्सी मालसामानको विवरण</th><th rowspan="2">एकाई</th><th rowspan="2">माग गरिएको परिमाण</th><th rowspan="2">कैफियत</th></tr>
                 <tr><th>नाम</th><th>स्पेसिफिकेसन</th></tr>
               </thead>
               <tbody>${rowsHtml}</tbody>
@@ -263,6 +285,51 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
       `;
       printWindow.document.write(content);
       printWindow.document.close();
+  };
+
+  const handleSnMouseEnter = (e: React.MouseEvent, itemName: string) => {
+    if (!itemName) return;
+    
+    // Calculate stock for the item name across all stores/batches
+    const matchingItems = inventoryItems.filter(i => i.itemName.trim().toLowerCase() === itemName.trim().toLowerCase());
+    
+    if (matchingItems.length === 0) {
+         setHoveredStock({
+            x: e.clientX + 15,
+            y: e.clientY + 15,
+            content: (
+                <div className="text-xs">
+                    <div className="font-bold text-slate-200 border-b border-slate-600 mb-1 pb-1">{itemName}</div>
+                    <div className="text-red-400 font-bold">स्टक रेकर्ड छैन (No Stock Record)</div>
+                </div>
+            )
+        });
+        return;
+    }
+
+    const totalQty = matchingItems.reduce((acc, i) => acc + (i.currentQuantity || 0), 0);
+    const unit = matchingItems[0]?.unit || '';
+
+    setHoveredStock({
+        x: e.clientX + 15, // Offset to not overlap cursor
+        y: e.clientY + 15,
+        content: (
+            <div className="text-xs">
+                <div className="font-bold text-slate-200 border-b border-slate-600 mb-1 pb-1">{itemName}</div>
+                <div className="flex justify-between gap-3 items-center">
+                    <span className="text-slate-400">मौज्दात (Stock):</span>
+                    <span className="font-bold text-green-400 text-sm">{totalQty} {unit}</span>
+                </div>
+                {matchingItems.length > 1 && (
+                    <div className="mt-1 text-[9px] text-slate-500 italic">Total from {matchingItems.length} batches</div>
+                )}
+            </div>
+        )
+    });
+  };
+
+  const handleSnMouseLeave = () => {
+      setHoveredStock(null);
   };
 
   if (!editingId) {
@@ -329,13 +396,32 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
        {successMessage && <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-xl shadow-sm flex items-center gap-3 animate-in slide-in-from-top-2 no-print"><CheckCircle2 size={24} className="text-green-500" /><div className="flex-1 font-bold text-green-800">{successMessage}</div><button onClick={() => setSuccessMessage(null)}><X size={20}/></button></div>}
        {validationError && <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm flex items-center gap-3 animate-in slide-in-from-top-2 no-print"><AlertCircle size={24} className="text-red-500" /><div className="flex-1 font-bold text-red-800">{validationError}</div><button onClick={() => setValidationError(null)}><X size={20}/></button></div>}
 
-       <div className="bg-white p-10 md:p-14 max-w-[210mm] mx-auto min-h-[297mm] font-nepali text-slate-900 shadow-2xl rounded-xl">
+       <div className="bg-white p-10 md:p-14 max-w-[210mm] mx-auto min-h-[297mm] font-nepali text-slate-900 shadow-2xl rounded-xl relative">
+          {/* Tooltip Portal / Floating Div */}
+          {hoveredStock && (
+              <div 
+                  className="fixed z-[9999] bg-slate-800 text-white p-2.5 rounded-lg shadow-xl pointer-events-none animate-in fade-in zoom-in-95 duration-150 no-print border border-slate-700/50 backdrop-blur-sm"
+                  style={{ top: hoveredStock.y, left: hoveredStock.x }}
+              >
+                  {hoveredStock.content}
+              </div>
+          )}
+
           <div className="flex justify-between items-start mb-6">
               <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" className="w-20 h-20 object-contain" />
               <div className="text-center flex-1">
                   <h1 className="text-xl font-black text-red-600 uppercase">{generalSettings.orgNameNepali}</h1>
                   <h2 className="text-base font-bold">{generalSettings.subTitleNepali}</h2>
-                  <div className="text-[10px] font-bold text-slate-500 mt-2">{generalSettings.address} | फोन: {generalSettings.phone}</div>
+                  {generalSettings.subTitleNepali2 && <h3 className="text-sm font-bold">{generalSettings.subTitleNepali2}</h3>}
+                  {generalSettings.subTitleNepali3 && <h4 className="text-xs font-bold">{generalSettings.subTitleNepali3}</h4>}
+                  <div className="text-[10px] font-bold text-slate-500 mt-2">
+                    {[
+                        generalSettings.address, 
+                        generalSettings.phone ? `फोन: ${generalSettings.phone}` : '', 
+                        generalSettings.email ? `ईमेल: ${generalSettings.email}` : '',
+                        generalSettings.panNo ? `पान नं: ${generalSettings.panNo}` : ''
+                    ].filter(Boolean).join(' | ')}
+                  </div>
                   <h2 className="text-2xl font-black underline underline-offset-8 mt-6">माग फारम</h2>
               </div>
               <p className="font-bold text-[10px] border border-black px-1 h-fit">म.ले.प.फा.नं. ४०१</p>
@@ -350,19 +436,24 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
           <table className="w-full border-collapse border border-black text-center text-xs">
               <thead>
                   <tr className="bg-slate-100">
-                      <th rowSpan={2} className="border border-black p-2 w-10">क्र.सं.</th><th colSpan={2} className="border border-black p-2">जिन्सी मालसामानको विवरण</th><th rowSpan={2} className="border border-black p-2 w-16">एकाई</th><th rowSpan={2} className="border border-black p-2 w-20">माग गरिएको परिमाण</th><th rowSpan={2} className="border border-black p-2 w-20">जिन्सी खाता पाना नं.</th><th rowSpan={2} className="border border-black p-2">कैफियत</th><th rowSpan={2} className="border border-black p-2 w-8 no-print"></th>
+                      <th rowSpan={2} className="border border-black p-2 w-10">क्र.सं.</th><th colSpan={2} className="border border-black p-2">जिन्सी मालसामानको विवरण</th><th rowSpan={2} className="border border-black p-2 w-16">एकाई</th><th rowSpan={2} className="border border-black p-2 w-20">माग गरिएको परिमाण</th><th rowSpan={2} className="border border-black p-2">कैफियत</th><th rowSpan={2} className="border border-black p-2 w-8 no-print"></th>
                   </tr>
                   <tr><th className="border border-black p-1">नाम</th><th className="border border-black p-1">स्पेसिफिकेसन</th></tr>
               </thead>
               <tbody>
                   {items.map((item, index) => (
                       <tr key={item.id}>
-                          <td className="border border-black p-2">{index + 1}</td>
+                          <td 
+                            className="border border-black p-2 cursor-help hover:bg-yellow-50 transition-colors"
+                            onMouseEnter={(e) => handleSnMouseEnter(e, item.name)}
+                            onMouseLeave={handleSnMouseLeave}
+                          >
+                            {index + 1}
+                          </td>
                           <td className="border border-black p-1 text-left font-bold">{!isViewOnly ? <SearchableSelect options={itemOptions} value={item.name} onChange={val => handleItemNameChange(item.id, val)} onSelect={opt => handleItemNameChange(item.id, opt.value)} placeholder="..." className="!border-none" /> : item.name}</td>
                           <td className="border border-black p-1"><input value={item.specification} onChange={e => updateItemField(item.id, 'specification', e.target.value)} disabled={isViewOnly || item.isFromInventory} className="w-full bg-transparent outline-none text-center" /></td>
                           <td className="border border-black p-1"><input value={item.unit} onChange={e => updateItemField(item.id, 'unit', e.target.value)} disabled={isViewOnly || item.isFromInventory} className="w-full bg-transparent outline-none text-center" /></td>
                           <td className="border border-black p-1 font-black"><input value={item.quantity} onChange={e => updateItemField(item.id, 'quantity', e.target.value)} disabled={isViewOnly} className="w-full bg-transparent outline-none text-center" /></td>
-                          <td className="border border-black p-1"><input value={item.codeNo} onChange={e => updateItemField(item.id, 'codeNo', e.target.value)} disabled={isViewOnly} className="w-full bg-transparent outline-none text-center" /></td>
                           <td className="border border-black p-1"><input value={item.remarks} onChange={e => updateItemField(item.id, 'remarks', e.target.value)} disabled={isViewOnly} className="w-full bg-transparent outline-none" /></td>
                           <td className="border border-black p-1 text-center no-print"><button onClick={() => handleRemoveItem(item.id)} className="text-red-400"><Trash2 size={14}/></button></td>
                       </tr>
