@@ -16,12 +16,12 @@ export interface LoginFormProps {
 export interface UserManagementProps {
   currentUser: User;
   users: User[];
-  onAddUser: (user: User) => void;
-  onUpdateUser: (user: User) => void;
-  onDeleteUser: (userId: string) => void;
+  onAddUser: (user: User) => Promise<void>;
+  onUpdateUser: (user: User) => Promise<void>;
+  onDeleteUser: (userId: string) => Promise<void>;
+  isDbLocked: boolean;
 }
 
-// Added users: User[] to SahayakJinshiKhataProps to fix prop type error
 export interface SahayakJinshiKhataProps {
   currentFiscalYear: string;
   currentUser: User;
@@ -30,7 +30,7 @@ export interface SahayakJinshiKhataProps {
   dakhilaReports: DakhilaPratibedanEntry[];
   returnEntries: ReturnEntry[];
   generalSettings: OrganizationSettings;
-  users: User[]; // Added to fix prop type error
+  users: User[];
 }
 
 export interface JinshiKhataProps {
@@ -41,7 +41,7 @@ export interface JinshiKhataProps {
   returnEntries: ReturnEntry[];
   stockEntryRequests: StockEntryRequest[];
   generalSettings: OrganizationSettings;
-  stores: Store[]; // Added to DashboardProps.tsx
+  stores: Store[];
 }
 
 export interface DashboardProps {
@@ -49,10 +49,11 @@ export interface DashboardProps {
   currentUser: User | null; 
   currentFiscalYear: string;
   users: User[];
-  onAddUser: (user: User) => void;
-  onUpdateUser: (user: User) => void;
-  onDeleteUser: (userId: string) => void;
+  onAddUser: (user: User) => Promise<void>;
+  onUpdateUser: (user: User) => Promise<void>;
+  onDeleteUser: (userId: string) => Promise<void>;
   onChangePassword: (userId: string, newPassword: string) => void;
+  isDbLocked: boolean;
   
   generalSettings: OrganizationSettings;
   onUpdateGeneralSettings: (settings: OrganizationSettings) => void;
@@ -69,7 +70,7 @@ export interface DashboardProps {
 
   rabiesPatients: RabiesPatient[];
   onAddRabiesPatient: (patient: RabiesPatient) => void;
-  onUpdatePatient: (patient: RabiesPatient) => void; // Corrected to match RabiesRegistration.tsx
+  onUpdatePatient: (patient: RabiesPatient) => void;
   onDeletePatient: (patientId: string) => void; 
 
   tbPatients: TBPatient[];

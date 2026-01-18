@@ -58,7 +58,7 @@ interface AppNotification {
 const READ_NOTIFS_KEY = 'smart_inv_read_notifs_v3';
 
 export const Dashboard: React.FC<ExtendedDashboardProps> = ({ 
-  onLogout, currentUser, currentFiscalYear, users, onAddUser, onUpdateUser, onDeleteUser, onChangePassword,
+  onLogout, currentUser, currentFiscalYear, users, onAddUser, onUpdateUser, onDeleteUser, onChangePassword, isDbLocked,
   generalSettings, onUpdateGeneralSettings, magForms, onSaveMagForm, onDeleteMagForm,
   purchaseOrders, onUpdatePurchaseOrder, issueReports, onUpdateIssueReport, 
   rabiesPatients, onAddRabiesPatient, onUpdatePatient, onDeletePatient,
@@ -430,7 +430,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'khop_sewa': return <VaccinationServiceTabs currentFiscalYear={currentFiscalYear} generalSettings={generalSettings} onUpdateGeneralSettings={onUpdateGeneralSettings} garbhawatiPatients={garbhawatiPatients} onAddGarbhawatiPatient={onAddGarbhawatiPatient} onUpdateGarbhawatiPatient={onUpdateGarbhawatiPatient} onDeleteGarbhawatiPatient={onDeleteGarbhawatiPatient} bachhaImmunizationRecords={bachhaImmunizationRecords} onAddBachhaImmunizationRecord={onAddBachhaImmunizationRecord} onUpdateBachhaImmunizationRecord={onUpdateBachhaImmunizationRecord} onDeleteBachhaImmunizationRecord={onDeleteBachhaImmunizationRecord} />;
       case 'immunization_tracking': return <ImmunizationTracking currentFiscalYear={currentFiscalYear} records={bachhaImmunizationRecords} generalSettings={generalSettings} />;
       case 'report_khop': return <ImmunizationReport currentFiscalYear={currentFiscalYear} bachhaRecords={bachhaImmunizationRecords} maternalRecords={garbhawatiPatients} generalSettings={generalSettings} />;
-      case 'user_management': return <UserManagement currentUser={currentUser} users={users} onAddUser={onAddUser} onUpdateUser={onUpdateUser} onDeleteUser={onDeleteUser} />;
+      case 'user_management': return <UserManagement currentUser={currentUser} users={users} onAddUser={onAddUser} onUpdateUser={onUpdateUser} onDeleteUser={onDeleteUser} isDbLocked={isDbLocked} />;
       case 'change_password': return <ChangePassword currentUser={currentUser} users={users} onChangePassword={onChangePassword} />;
       case 'store_setup': return <StoreSetup currentUser={currentUser} currentFiscalYear={currentFiscalYear} stores={stores} onAddStore={onAddStore} onUpdateStore={onUpdateStore} onDeleteStore={onDeleteStore} inventoryItems={inventoryItems} onUpdateInventoryItem={onUpdateInventoryItem} />;
       case 'tb_leprosy': return <TBPatientRegistration currentFiscalYear={currentFiscalYear} patients={tbPatients} onAddPatient={onAddTbPatient} onUpdatePatient={onUpdateTbPatient} onDeletePatient={onDeleteTbPatient} />;
