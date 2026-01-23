@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Printer, Calendar, Filter, FileText, Info, CheckSquare } from 'lucide-react';
 import { Select } from './Select';
@@ -99,25 +100,42 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
 
   const currentMonthLabel = nepaliMonthOptions.find(m => m.value === selectedMonth)?.label || '';
 
+  const handlePrint = () => {
+    const printContent = document.getElementById('rabies-report-content');
+    if (!printContent) return;
+
+    const originalContents = document.body.innerHTML;
+    document.body.innerHTML = printContent.innerHTML;
+
+    // Inject styles for printing
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @media print {
+        @page { size: A4 landscape; margin: 10mm; }
+        body { margin: 0; padding: 0; background: white; }
+        .no-print { display: none !important; }
+        .report-container { 
+            width: 100% !important; 
+            box-shadow: none !important; 
+            border: none !important; 
+            padding: 0 !important;
+        }
+        table { border-collapse: collapse; width: 100%; border: 1.5px solid black !important; margin-bottom: 20px; }
+        th, td { border: 1px solid black !important; padding: 6px !important; font-size: 11px !important; color: black !important; }
+        .bg-slate-50 { background-color: #f8fafc !important; -webkit-print-color-adjust: exact; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    window.print();
+
+    // Restore original content
+    document.body.innerHTML = originalContents;
+    window.location.reload(); // Reload to restore React event listeners
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in">
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-            @page { size: A4 landscape; margin: 1cm; }
-            .no-print { display: none !important; }
-            .report-container { 
-                width: 100% !important; 
-                padding: 0 !important; 
-                margin: 0 !important; 
-                box-shadow: none !important;
-                border: none !important;
-            }
-            table { border-collapse: collapse; width: 100%; border: 1.5px solid black !important; }
-            th, td { border: 1.5px solid black !important; padding: 6px !important; font-size: 11px !important; color: black !important; }
-            .header-text { font-family: 'Mukta', sans-serif !important; }
-        }
-      ` }} />
-
       {/* Control Panel */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-end gap-5 no-print">
         <div className="w-40">
@@ -133,138 +151,139 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
             <Input label="Expenditure Dose" type="number" value={stockData.expenditure} onChange={e => setStockData({...stockData, expenditure: e.target.value})} />
         </div>
 
-        <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 text-white rounded-xl font-bold shadow-lg hover:bg-slate-900 transition-all">
+        <button onClick={handlePrint} className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 text-white rounded-xl font-bold shadow-lg hover:bg-slate-900 transition-all">
             <Printer size={18} /> प्रिन्ट रिपोर्ट
         </button>
       </div>
 
       {/* Report View */}
-      <div className="bg-white p-12 rounded-3xl shadow-xl border border-slate-100 report-container font-nepali">
-        {/* HMIS Header */}
-        <div className="text-center mb-8">
-            <p className="text-sm font-bold mb-1">NG/MOH</p>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight">रेबिज पोस्ट एक्सपोजर प्रोफिलेक्सिसको मासिक प्रतिवेदन</h1>
-            <p className="text-sm font-bold text-slate-500 uppercase mt-1">(Monthly Report of Rabies Post Exposure Prophylaxis)</p>
-            
-            <div className="grid grid-cols-3 mt-8 text-sm font-bold border-b-2 border-slate-800 pb-2">
-                <div className="text-left">Institution: <span className="font-black text-primary-700">{currentUser.organizationName}</span></div>
-                <div className="text-center">Month: <span className="font-black text-primary-700">{currentMonthLabel}</span></div>
-                <div className="text-right">Fiscal Year: <span className="font-black text-primary-700">{selectedFiscalYear}</span></div>
+      <div id="rabies-report-content">
+        <div className="bg-white p-12 rounded-3xl shadow-xl border border-slate-100 report-container font-nepali">
+            {/* HMIS Header */}
+            <div className="text-center mb-8">
+                <p className="text-sm font-bold mb-1">NG/MOH</p>
+                <h1 className="text-2xl font-black text-slate-800 tracking-tight">रेबिज पोस्ट एक्सपोजर प्रोफिलेक्सिसको मासिक प्रतिवेदन</h1>
+                <p className="text-sm font-bold text-slate-500 uppercase mt-1">(Monthly Report of Rabies Post Exposure Prophylaxis)</p>
+                
+                <div className="grid grid-cols-3 mt-8 text-sm font-bold border-b-2 border-slate-800 pb-2">
+                    <div className="text-left">Institution: <span className="font-black text-primary-700">{currentUser.organizationName}</span></div>
+                    <div className="text-center">Month: <span className="font-black text-primary-700">{currentMonthLabel}</span></div>
+                    <div className="text-right">Fiscal Year: <span className="font-black text-primary-700">{selectedFiscalYear}</span></div>
+                </div>
             </div>
-        </div>
 
-        {/* Table 1 */}
-        <div className="mb-10">
-            <h3 className="font-black text-slate-700 mb-3 flex items-center gap-2">
-                <Info size={18} className="text-primary-600"/> १. स्रोत र विवरण (Source of Exposure)
-            </h3>
-            <table className="w-full text-center border-collapse">
-                <thead className="bg-slate-50">
-                    <tr>
-                        <th className="p-3" rowSpan={2}>Description</th>
-                        <th className="p-3" colSpan={10}>Source of Exposure to Rabies Animals</th>
-                        <th className="p-3" rowSpan={2}>Total cases</th>
-                    </tr>
-                    <tr>
-                        <th className="p-1 text-[10px]">Dog bite</th>
-                        <th className="p-1 text-[10px]">Monkey bite</th>
-                        <th className="p-1 text-[10px]">Cat bite</th>
-                        <th className="p-1 text-[10px]">Cattle bite</th>
-                        <th className="p-1 text-[10px]">Rodent bite</th>
-                        <th className="p-1 text-[10px]">Jackal bite</th>
-                        <th className="p-1 text-[10px]">Tiger bite</th>
-                        <th className="p-1 text-[10px]">Bear bite</th>
-                        <th className="p-1 text-[10px]">Saliva contact</th>
-                        <th className="p-1 text-[10px]">Other</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y">
-                    {/* Fixed errors by explicitly casting Object.entries(reportSummary) to [string, AnimalStats][] */}
-                    {(Object.entries(reportSummary) as [string, AnimalStats][]).map(([cat, stats]) => (
-                        <tr key={cat} className={cat === 'TOTAL' ? 'font-black bg-slate-50' : ''}>
-                            <td className="p-2 text-left font-bold">{cat}</td>
-                            <td className="p-2">{stats.dog || '-'}</td>
-                            <td className="p-2">{stats.monkey || '-'}</td>
-                            <td className="p-2">{stats.cat || '-'}</td>
-                            <td className="p-2">{stats.cattle || '-'}</td>
-                            <td className="p-2">{stats.rodent || '-'}</td>
-                            <td className="p-2">{stats.jackal || '-'}</td>
-                            <td className="p-2">{stats.tiger || '-'}</td>
-                            <td className="p-2">{stats.bear || '-'}</td>
-                            <td className="p-2">{stats.saliva || '-'}</td>
-                            <td className="p-2">{stats.other || '-'}</td>
-                            <td className="p-2 bg-slate-100/50">{stats.total || '-'}</td>
+            {/* Table 1 */}
+            <div className="mb-8">
+                <h3 className="font-black text-slate-700 mb-3 flex items-center gap-2 text-sm">
+                    <Info size={16} className="text-primary-600 no-print"/> १. स्रोत र विवरण (Source of Exposure)
+                </h3>
+                <table className="w-full text-center border-collapse">
+                    <thead className="bg-slate-50">
+                        <tr>
+                            <th className="p-3" rowSpan={2}>Description</th>
+                            <th className="p-3" colSpan={10}>Source of Exposure to Rabies Animals</th>
+                            <th className="p-3" rowSpan={2}>Total cases</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-
-        {/* Table 2 */}
-        <div className="mb-10">
-            <h3 className="font-black text-slate-700 mb-3 flex items-center gap-2">
-                <CheckSquare size={18} className="text-primary-600"/> २. खोप मौज्दात विवरण (Vaccine Dose Statistics)
-            </h3>
-            <table className="w-full text-center border-collapse">
-                <thead className="bg-slate-50">
-                    <tr>
-                        <th className="p-3">Previous month opening</th>
-                        <th className="p-3">Received dose</th>
-                        <th className="p-3">Expenditure dose</th>
-                        <th className="p-3">Balance dose</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td className="p-4 text-lg font-bold">{stockData.opening}</td>
-                        <td className="p-4 text-lg font-bold">{stockData.received}</td>
-                        <td className="p-4 text-lg font-bold">{stockData.expenditure}</td>
-                        <td className="p-4 text-lg font-black text-primary-700 bg-primary-50">{balance}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        {/* Table 3 */}
-        <div className="mb-10">
-            <h3 className="font-black text-slate-700 mb-3 flex items-center gap-2">
-                <FileText size={18} className="text-primary-600"/> ३. हाइड्रोफोबिया केस विवरण (If Hydrophobia cases reported)
-            </h3>
-            <table className="w-full text-center border-collapse">
-                <thead className="bg-slate-50">
-                    <tr>
-                        <th className="p-2 text-[10px]">Name</th>
-                        <th className="p-2 text-[10px]">Address</th>
-                        <th className="p-2 text-[10px]">Age</th>
-                        <th className="p-2 text-[10px]">Sex</th>
-                        <th className="p-2 text-[10px]">Biting Animal</th>
-                        <th className="p-2 text-[10px]">Date of Bite</th>
-                        <th className="p-2 text-[10px]">Site of Bite</th>
-                        <th className="p-2 text-[10px]">Date of Death</th>
-                        <th className="p-2 text-[10px]">Remarks</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td className="p-4 text-slate-300 italic" colSpan={9}>No cases reported in this month</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        {/* Footer */}
-        <div className="grid grid-cols-2 gap-20 mt-20 text-center">
-            <div className="border-t-2 border-slate-800 pt-3">
-                <p className="font-black text-slate-800">{currentUser.fullName}</p>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{currentUser.designation}</p>
-                <p className="text-xs mt-2 italic">Prepared By</p>
-                <p className="text-[10px] mt-1">Date: {new NepaliDate().format('YYYY-MM-DD')}</p>
+                        <tr>
+                            <th className="p-1 text-[10px]">Dog bite</th>
+                            <th className="p-1 text-[10px]">Monkey bite</th>
+                            <th className="p-1 text-[10px]">Cat bite</th>
+                            <th className="p-1 text-[10px]">Cattle bite</th>
+                            <th className="p-1 text-[10px]">Rodent bite</th>
+                            <th className="p-1 text-[10px]">Jackal bite</th>
+                            <th className="p-1 text-[10px]">Tiger bite</th>
+                            <th className="p-1 text-[10px]">Bear bite</th>
+                            <th className="p-1 text-[10px]">Saliva contact</th>
+                            <th className="p-1 text-[10px]">Other</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                        {(Object.entries(reportSummary) as [string, AnimalStats][]).map(([cat, stats]) => (
+                            <tr key={cat} className={cat === 'TOTAL' ? 'font-black bg-slate-50' : ''}>
+                                <td className="p-2 text-left font-bold">{cat}</td>
+                                <td className="p-2">{stats.dog || '-'}</td>
+                                <td className="p-2">{stats.monkey || '-'}</td>
+                                <td className="p-2">{stats.cat || '-'}</td>
+                                <td className="p-2">{stats.cattle || '-'}</td>
+                                <td className="p-2">{stats.rodent || '-'}</td>
+                                <td className="p-2">{stats.jackal || '-'}</td>
+                                <td className="p-2">{stats.tiger || '-'}</td>
+                                <td className="p-2">{stats.bear || '-'}</td>
+                                <td className="p-2">{stats.saliva || '-'}</td>
+                                <td className="p-2">{stats.other || '-'}</td>
+                                <td className="p-2 bg-slate-100/50">{stats.total || '-'}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
-            <div className="border-t-2 border-slate-800 pt-3">
-                <div className="h-6"></div>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Medical Officer / Chief</p>
-                <p className="text-xs mt-2 italic">Approved By</p>
-                <p className="text-[10px] mt-1">Date: {new NepaliDate().format('YYYY-MM-DD')}</p>
+
+            {/* Table 2 */}
+            <div className="mb-8">
+                <h3 className="font-black text-slate-700 mb-3 flex items-center gap-2 text-sm">
+                    <CheckSquare size={16} className="text-primary-600 no-print"/> २. खोप मौज्दात विवरण (Vaccine Dose Statistics)
+                </h3>
+                <table className="w-full text-center border-collapse">
+                    <thead className="bg-slate-50">
+                        <tr>
+                            <th className="p-3">Previous month opening</th>
+                            <th className="p-3">Received dose</th>
+                            <th className="p-3">Expenditure dose</th>
+                            <th className="p-3">Balance dose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td className="p-4 text-lg font-bold">{stockData.opening}</td>
+                            <td className="p-4 text-lg font-bold">{stockData.received}</td>
+                            <td className="p-4 text-lg font-bold">{stockData.expenditure}</td>
+                            <td className="p-4 text-lg font-black text-primary-700 bg-primary-50">{balance}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Table 3 */}
+            <div className="mb-8">
+                <h3 className="font-black text-slate-700 mb-3 flex items-center gap-2 text-sm">
+                    <FileText size={16} className="text-primary-600 no-print"/> ३. हाइड्रोफोबिया केस विवरण (If Hydrophobia cases reported)
+                </h3>
+                <table className="w-full text-center border-collapse">
+                    <thead className="bg-slate-50">
+                        <tr>
+                            <th className="p-2 text-[10px]">Name</th>
+                            <th className="p-2 text-[10px]">Address</th>
+                            <th className="p-2 text-[10px]">Age</th>
+                            <th className="p-2 text-[10px]">Sex</th>
+                            <th className="p-2 text-[10px]">Biting Animal</th>
+                            <th className="p-2 text-[10px]">Date of Bite</th>
+                            <th className="p-2 text-[10px]">Site of Bite</th>
+                            <th className="p-2 text-[10px]">Date of Death</th>
+                            <th className="p-2 text-[10px]">Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td className="p-4 text-slate-300 italic" colSpan={9}>No cases reported in this month</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Footer */}
+            <div className="grid grid-cols-2 gap-20 mt-16 text-center">
+                <div className="border-t-2 border-slate-800 pt-3">
+                    <p className="font-black text-slate-800">{currentUser.fullName}</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{currentUser.designation}</p>
+                    <p className="text-xs mt-2 italic">Prepared By</p>
+                    <p className="text-[10px] mt-1">Date: {new NepaliDate().format('YYYY-MM-DD')}</p>
+                </div>
+                <div className="border-t-2 border-slate-800 pt-3">
+                    <div className="h-6"></div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Medical Officer / Chief</p>
+                    <p className="text-xs mt-2 italic">Approved By</p>
+                    <p className="text-[10px] mt-1">Date: {new NepaliDate().format('YYYY-MM-DD')}</p>
+                </div>
             </div>
         </div>
       </div>
