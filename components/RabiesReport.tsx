@@ -104,34 +104,75 @@ export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, c
     const printContent = document.getElementById('rabies-report-content');
     if (!printContent) return;
 
-    const originalContents = document.body.innerHTML;
-    document.body.innerHTML = printContent.innerHTML;
+    // Create a hidden iframe for printing to avoid destroying React state/DOM
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
 
-    // Inject styles for printing
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @media print {
-        @page { size: A4 landscape; margin: 10mm; }
-        body { margin: 0; padding: 0; background: white; }
-        .no-print { display: none !important; }
-        .report-container { 
-            width: 100% !important; 
-            box-shadow: none !important; 
-            border: none !important; 
-            padding: 0 !important;
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Rabies Report</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+          @page { size: A4 landscape; margin: 10mm; }
+          body { 
+            font-family: 'Mukta', sans-serif; 
+            padding: 0; 
+            margin: 0;
+            background: white;
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact;
+          }
+          .report-container {
+             box-shadow: none !important;
+             border: none !important;
+             padding: 20px !important;
+             margin: 0 !important;
+             width: 100% !important;
+          }
+          table { width: 100%; border-collapse: collapse; border: 1.5px solid black; margin-bottom: 20px; }
+          th, td { border: 1px solid black; padding: 6px; font-size: 11px; color: black; }
+          .no-print { display: none !important; }
+          .bg-slate-50 { background-color: #f8fafc !important; }
+          .bg-slate-100 { background-color: #f1f5f9 !important; }
+          .text-slate-800 { color: #1e293b !important; }
+          .font-black { font-weight: 900 !important; }
+          .font-bold { font-weight: 700 !important; }
+        </style>
+      </head>
+      <body>
+        ${printContent.innerHTML}
+        <script>
+           // Print automatically once loaded
+           window.onload = function() {
+              setTimeout(function() {
+                 window.print();
+              }, 800);
+           };
+        </script>
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    // Clean up iframe after a delay to ensure print dialog has opened
+    setTimeout(() => {
+        if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
         }
-        table { border-collapse: collapse; width: 100%; border: 1.5px solid black !important; margin-bottom: 20px; }
-        th, td { border: 1px solid black !important; padding: 6px !important; font-size: 11px !important; color: black !important; }
-        .bg-slate-50 { background-color: #f8fafc !important; -webkit-print-color-adjust: exact; }
-      }
-    `;
-    document.head.appendChild(style);
-
-    window.print();
-
-    // Restore original content
-    document.body.innerHTML = originalContents;
-    window.location.reload(); // Reload to restore React event listeners
+    }, 5000); 
   };
 
   return (
