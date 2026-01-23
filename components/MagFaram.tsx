@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Printer, Save, Calendar, CheckCircle2, Send, Clock, FileText, Eye, Search, X, AlertCircle, ChevronRight, ArrowLeft, Check, Square, Warehouse, Layers, ShieldCheck, Info, ListFilter, ClipboardList, History } from 'lucide-react';
 import { User, Option, OrganizationSettings } from '../types/coreTypes';
@@ -214,7 +213,10 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
       const doc = iframe.contentWindow?.document;
       if (!doc) return;
 
-      const rowsHtml = items.map((item, idx) => `
+      // Filter items to ensure only those with names are printed (remove empty rows)
+      const printableItems = items.filter(item => item.name && item.name.trim() !== '');
+
+      const rowsHtml = printableItems.map((item, idx) => `
         <tr>
           <td class="text-center">${idx + 1}</td>
           <td class="text-left font-bold pl-2">${item.name}</td>
@@ -222,19 +224,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
           <td class="text-center">${item.unit}</td>
           <td class="text-center font-bold">${item.quantity}</td>
           <td class="text-left pl-2">${item.remarks || ''}</td>
-        </tr>
-      `).join('');
-
-      // Add empty rows if items are less than 12 to fill the page
-      const emptyRowsCount = Math.max(0, 12 - items.length);
-      const emptyRowsHtml = Array(emptyRowsCount).fill('').map((_, idx) => `
-        <tr>
-          <td class="text-center">${items.length + idx + 1}</td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
         </tr>
       `).join('');
 
@@ -340,7 +329,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
             </thead>
             <tbody>
               ${rowsHtml}
-              ${emptyRowsHtml}
             </tbody>
           </table>
 
