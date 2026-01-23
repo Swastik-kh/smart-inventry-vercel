@@ -76,6 +76,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ users, onLoginSuccess, ini
     }
   };
 
+  const handleUsernameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      passwordInputRef.current?.focus();
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {users.length === 1 && users[0].username === 'admin' && (
@@ -113,6 +120,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ users, onLoginSuccess, ini
           placeholder="admin"
           value={formData.username}
           onChange={handleChange}
+          onKeyDown={handleUsernameKeyDown}
           error={errors.username}
           icon={<User size={18} />}
         />
