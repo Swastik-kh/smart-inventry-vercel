@@ -89,6 +89,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
       ...prev, 
       patientId: generateId(activeTab),
       serviceType: activeTab, // Ensure serviceType matches active tab
+      fiscalYear: currentFiscalYear, // Ensure fiscal year is synced
       leprosyType: activeTab === 'Leprosy' 
                    ? (prev.leprosyType === 'MB' || prev.leprosyType === 'PB' ? prev.leprosyType : 'PB') 
                    : undefined,
@@ -117,10 +118,19 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
   const getSputumTestStatus = (p: TBPatient) => {
     if (p.serviceType !== 'TB') return { required: false, reason: '', scheduleMonth: -1 };
     
-    // Convert registration date to NepaliDate for calculations
+    // FIX: Manually parse the Nepali date string to avoid invalid date errors
     let regDateNepali;
     try {
-        regDateNepali = new NepaliDate(new Date(p.registrationDate));
+        if (!p.registrationDate) return { required: false, reason: '', scheduleMonth: -1 };
+        
+        const parts = p.registrationDate.split(/[-/]/);
+        if (parts.length !== 3) return { required: false, reason: '', scheduleMonth: -1 };
+        
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1; // NepaliDate month is 0-indexed
+        const d = parseInt(parts[2], 10);
+        
+        regDateNepali = new NepaliDate(y, m, d);
     } catch (e) {
         console.error("Invalid registration date for TB patient:", p.registrationDate);
         return { required: false, reason: '', scheduleMonth: -1 };
@@ -128,7 +138,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
     
     const today = new NepaliDate();
     
-    // Calculate difference in days (approximate)
+    // Calculate difference in days (approximate) using converted AD dates
     const diffDays = Math.ceil(Math.abs(today.toJsDate().getTime() - regDateNepali.toJsDate().getTime()) / (1000 * 60 * 60 * 24));
     
     // FIX: Use nullish coalescing for p.completedSchedule
@@ -184,14 +194,20 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
       return;
     }
 
-    const patientToSave: TBPatient = {
+    const rawPatientData = {
       ...formData,
       id: editingPatientId || Date.now().toString(), // Use existing ID if editing, otherwise new
-      // Fix: fiscalYear is already part of formData, no need to add it again
+      // Fix: Explicitly set fiscalYear from prop to ensure it's current even if formData is stale
+      fiscalYear: currentFiscalYear, 
       serviceType: activeTab,
       classification: activeTab === 'Leprosy' ? (formData.leprosyType || '') : formData.classification,
-      leprosyType: activeTab === 'Leprosy' ? formData.leprosyType : undefined,
+      // If activeTab is TB, leprosyType might be undefined. Firebase rejects undefined.
+      // We set it to null or use sanitization below.
+      leprosyType: activeTab === 'Leprosy' ? formData.leprosyType : null, 
     };
+
+    // Sanitize: Remove undefined values to prevent Firebase "set failed" error
+    const patientToSave = JSON.parse(JSON.stringify(rawPatientData));
 
     if (editingPatientId) {
         onUpdatePatient(patientToSave);
@@ -255,7 +271,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
           dateNepali: labFormData.testDateNepali
       };
 
-      const updatedPatient: TBPatient = {
+      const updatedPatientRaw = {
           ...patient,
           completedSchedule: [...new Set([...(patient.completedSchedule || []), scheduleMonth])], // Ensure unique months and nullish coalescing
           newReportAvailable: true,
@@ -264,6 +280,9 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
           reports: [newReport, ...(patient.reports || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // Sort by latest date, nullish coalescing
       };
       
+      // Sanitize before updating
+      const updatedPatient = JSON.parse(JSON.stringify(updatedPatientRaw));
+
       onUpdatePatient(updatedPatient); // Use the prop to update
       setSelectedPatientForLab(null);
       alert("ल्याब रिपोर्ट सफलतापूर्वक प्रविष्ट भयो!");
@@ -537,7 +556,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
                       <Input label="ल्याब नं." value={labFormData.labNo} onChange={e => setLabFormData({...labFormData, labNo: e.target.value})} required icon={<FileDigit size={16}/>} />
                       
                       <div className="grid grid-cols-2 gap-4">
-                        <Input label="मिति (AD)" type="date" value={labFormData.testDate} onChange={e => setLabFormData({...labFormData, testDate: e.target.value})} required />
+                        <Input label="मिति (AD)" type="date" value={labFormData.testDate} onChange={e => setLabFormData({...formData, testDate: e.target.value})} required />
                         <NepaliDatePicker label="मिति (BS)" value={labFormData.testDateNepali} onChange={val => setLabFormData({...labFormData, testDateNepali: val})} required />
                       </div>
 
