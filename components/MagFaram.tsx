@@ -201,90 +201,224 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
   };
 
   const printOfficialForm = () => {
-      const printWindow = window.open('', '_blank', 'width=900,height=1000');
-      if (!printWindow) return;
+      // Create a hidden iframe
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow?.document;
+      if (!doc) return;
+
       const rowsHtml = items.map((item, idx) => `
         <tr>
-          <td style="border: 1px solid black; padding: 6px; text-align: center;">${idx + 1}</td>
-          <td style="border: 1px solid black; padding: 6px; text-align: left; font-weight: bold;">${item.name}</td>
-          <td style="border: 1px solid black; padding: 6px;">${item.specification || ''}</td>
-          <td style="border: 1px solid black; padding: 6px; text-align: center;">${item.unit}</td>
-          <td style="border: 1px solid black; padding: 6px; text-align: center; font-weight: bold;">${item.quantity}</td>
-          <td style="border: 1px solid black; padding: 6px;">${item.remarks || ''}</td>
+          <td class="text-center">${idx + 1}</td>
+          <td class="text-left font-bold pl-2">${item.name}</td>
+          <td class="text-center">${item.specification || '-'}</td>
+          <td class="text-center">${item.unit}</td>
+          <td class="text-center font-bold">${item.quantity}</td>
+          <td class="text-left pl-2">${item.remarks || ''}</td>
         </tr>
       `).join('');
 
-      const contactInfo = [
-        generalSettings.address, 
-        generalSettings.phone ? `फोन: ${generalSettings.phone}` : null, 
-        generalSettings.email ? `ईमेल: ${generalSettings.email}` : null, 
-        generalSettings.panNo ? `पान नं: ${generalSettings.panNo}` : null
-      ].filter(Boolean).join(' | ');
+      // Add empty rows if items are less than 12 to fill the page
+      const emptyRowsCount = Math.max(0, 12 - items.length);
+      const emptyRowsHtml = Array(emptyRowsCount).fill('').map((_, idx) => `
+        <tr>
+          <td class="text-center">${items.length + idx + 1}</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      `).join('');
 
-      const content = `
+      // Checkboxes logic
+      const marketChecked = formDetails.storeKeeper?.marketRequired ? 'checked' : '';
+      const stockChecked = formDetails.storeKeeper?.inStock ? 'checked' : '';
+
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
         <html>
-          <head>
-            <title>माग फारम - ४०१</title>
-            <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;700;800&display=swap" rel="stylesheet">
-            <style>
-              body { font-family: 'Mukta', sans-serif; padding: 30px; line-height: 1.4; color: black; background: white; }
-              .header { text-align: center; margin-bottom: 20px; position: relative; }
-              .logo { position: absolute; left: 0; top: 0; width: 70px; }
-              .org-name { font-size: 20px; font-weight: 800; color: #ff0000; margin: 0; text-transform: uppercase; }
-              .org-sub { font-size: 14px; font-weight: bold; margin: 2px 0; }
-              .title { font-size: 22px; font-weight: 800; text-decoration: underline; margin-top: 15px; }
-              table { width: 100%; border-collapse: collapse; border: 1.5px solid black; margin-bottom: 30px; }
-              th { border: 1px solid black; padding: 8px; font-size: 12px; background: #f2f2f2; }
-              td { border: 1px solid black; padding: 4px; font-size: 12px; }
-              .footer { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 50px; }
-              .sig-block { border-top: 1px solid black; padding-top: 10px; min-height: 120px; }
-              .sig-label { font-weight: bold; font-size: 13px; margin-bottom: 10px; display: block; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" class="logo" />
-              <h1 class="org-name">${generalSettings.orgNameNepali}</h1>
-              <h2 class="org-sub">${generalSettings.subTitleNepali}</h2>
-              ${generalSettings.subTitleNepali2 ? `<h3 class="org-sub" style="font-size: 13px;">${generalSettings.subTitleNepali2}</h3>` : ''}
-              ${generalSettings.subTitleNepali3 ? `<h4 class="org-sub" style="font-size: 12px;">${generalSettings.subTitleNepali3}</h4>` : ''}
-              <div style="font-size: 10px; margin-top: 5px;">${contactInfo}</div>
-              <div class="title">माग फारम</div>
+        <head>
+          <title>Mag Faram Print</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+          <style>
+            @page { size: A4 portrait; margin: 10mm; }
+            body { 
+                font-family: 'Mukta', sans-serif; 
+                padding: 0; 
+                margin: 0; 
+                background: white; 
+                color: #000;
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact;
+            }
+            .header-red { color: #dc2626; } /* Red-600 */
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid black; padding: 4px 4px; font-size: 11px; }
+            th { background-color: #f3f4f6; font-weight: 700; }
+            .dotted-line { border-bottom: 1px dotted black; display: inline-block; min-width: 100px; }
+            .checkbox-box { display: inline-block; width: 12px; height: 12px; border: 1px solid black; margin-right: 4px; vertical-align: middle; position: relative; }
+            .checkbox-box.checked::after { content: '✓'; position: absolute; top: -4px; left: 1px; font-size: 14px; font-weight: bold; }
+            .text-center { text-align: center; }
+            .text-left { text-align: left; }
+            .text-right { text-align: right; }
+            .font-bold { font-weight: bold; }
+            .text-sm { font-size: 12px; }
+            .text-xs { font-size: 10px; }
+            .w-full { width: 100%; }
+            .flex { display: flex; }
+            .flex-col { flex-direction: column; }
+            .justify-between { justify-content: space-between; }
+            .items-center { align-items: center; }
+            .mb-1 { margin-bottom: 4px; }
+            .mb-2 { margin-bottom: 8px; }
+            .mb-4 { margin-bottom: 16px; }
+            .mt-1 { margin-top: 4px; }
+            .mt-4 { margin-top: 16px; }
+            .grid { display: grid; }
+            .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+            .gap-8 { gap: 32px; }
+            .gap-1 { gap: 4px; }
+            .pl-2 { padding-left: 8px; }
+          </style>
+        </head>
+        <body class="p-4">
+          <!-- Top Right Box -->
+          <div style="position: absolute; right: 0; top: 0; border: 1px solid black; padding: 2px 6px; font-size: 10px; font-weight: bold;">
+            म.ले.प.फा.नं. ४०१
+          </div>
+
+          <!-- Header -->
+          <div class="flex flex-col items-center mb-6 relative pt-4 text-center">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" 
+                 style="position: absolute; left: 0; top: 0; width: 60px; height: auto;" />
+            
+            <h1 class="text-xl font-bold header-red mb-0 leading-tight">${generalSettings.orgNameNepali}</h1>
+            <h2 class="text-base font-bold mb-0 leading-tight">नगरकार्यपालिकाको कार्यालय</h2>
+            <h3 class="text-sm font-bold mb-0 leading-tight">${generalSettings.subTitleNepali}</h3>
+            <h4 class="text-xs font-bold mb-1 leading-tight">${generalSettings.subTitleNepali2 || ''}</h4>
+            
+            <div class="text-[10px] text-slate-600 mt-1">
+               ${generalSettings.address} | फोन: ${generalSettings.phone || '-'} | ईमेल: ${generalSettings.email || '-'}
             </div>
-            <div style="text-align: right; margin-bottom: 10px;">
-              आर्थिक वर्ष: ${formDetails.fiscalYear} | माग नं: ${formDetails.formNo} | मिति: ${formDetails.date}
+
+            <h2 class="text-lg font-bold underline mt-4">माग फारम</h2>
+          </div>
+
+          <!-- Meta Data -->
+          <div class="flex justify-end mb-2 text-xs font-bold">
+            <div class="text-right leading-relaxed">
+              <div>आर्थिक वर्ष: <span class="dotted-line text-center">${formDetails.fiscalYear}</span></div>
+              <div>माग नं: <span class="dotted-line text-center header-red">#${formDetails.formNo}</span></div>
+              <div>मिति: <span class="dotted-line text-center">${formDetails.date}</span></div>
             </div>
-            <table>
-              <thead>
-                <tr><th rowspan="2">क्र.सं.</th><th colspan="2">जिन्सी मालसामानको विवरण</th><th rowspan="2">एकाई</th><th rowspan="2">माग गरिएको परिमाण</th><th rowspan="2">कैफियत</th></tr>
-                <tr><th>नाम</th><th>स्पेसिफिकेसन</th></tr>
-              </thead>
-              <tbody>${rowsHtml}</tbody>
-            </table>
-            <div class="footer">
-              <div class="sig-block">
-                <span class="sig-label">माग गर्नेको दस्तखत</span>
-                नाम: ${formDetails.demandBy?.name}<br/> पद: ${formDetails.demandBy?.designation}<br/> मिति: ${formDetails.demandBy?.date}<br/> प्रयोजन: ${formDetails.demandBy?.purpose || '................'}
+          </div>
+
+          <!-- Table -->
+          <table class="mb-6">
+            <thead>
+              <tr>
+                <th rowspan="2" style="width: 30px;">क्र.सं.</th>
+                <th colspan="2">जिन्सी मालसामानको विवरण</th>
+                <th rowspan="2" style="width: 50px;">एकाई</th>
+                <th rowspan="2" style="width: 60px;">माग गरिएको<br/>परिमाण</th>
+                <th rowspan="2">कैफियत</th>
+              </tr>
+              <tr>
+                <th>नाम</th>
+                <th>स्पेसिफिकेसन</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+              ${emptyRowsHtml}
+            </tbody>
+          </table>
+
+          <!-- Footer -->
+          <div class="grid grid-cols-2 gap-8 mt-2 text-[11px]">
+            
+            <!-- Left Column -->
+            <div class="space-y-6">
+              <!-- Requester -->
+              <div>
+                <div class="font-bold border-b border-black inline-block mb-2 text-xs">माग गर्नेको दस्तखत</div>
+                <div class="space-y-1 ml-1">
+                   <div class="flex"><span class="w-10">नाम:</span> <span class="font-bold">${formDetails.demandBy?.name || ''}</span></div>
+                   <div class="flex"><span class="w-10">पद:</span> <span>${formDetails.demandBy?.designation || ''}</span></div>
+                   <div class="flex"><span class="w-10">मिति:</span> <span>${formDetails.demandBy?.date || ''}</span></div>
+                   <div class="flex mt-1"><span class="w-10">प्रयोजन:</span> <span class="dotted-line" style="width: 150px;">${formDetails.demandBy?.purpose || ''}</span></div>
+                </div>
               </div>
-              <div class="sig-block">
-                <span class="sig-label">सिफारिस गर्नेको दस्तखत</span>
-                नाम: ${formDetails.recommendedBy?.name || '................'}<br/> पद: ${formDetails.recommendedBy?.designation || '................'}<br/> मिति: ${formDetails.recommendedBy?.date || '................'}
-              </div>
-              <div class="sig-block">
-                <span class="sig-label">मालसामान बुझिलिनेको दस्तखत</span>
-                नाम: ${formDetails.receiver?.name || '................'}<br/> पद: ${formDetails.receiver?.designation || '................'}<br/> मिति: ${formDetails.receiver?.date || '................'}
-              </div>
-              <div class="sig-block">
-                <span class="sig-label">स्वीकृत गर्नेको दस्तखत</span>
-                नाम: ${formDetails.approvedBy?.name || '................'}<br/> पद: ${formDetails.approvedBy?.designation || '................'}<br/> मिति: ${formDetails.approvedBy?.date || '................'}
+
+              <!-- Receiver -->
+              <div class="pt-2">
+                <div class="font-bold border-b border-black inline-block mb-2 text-xs">मालसामान बुझिलिनेको दस्तखत</div>
+                <div class="space-y-1 ml-1">
+                   <div class="flex"><span class="w-10">नाम:</span> <span class="dotted-line w-32 text-center">${formDetails.receiver?.name || ''}</span></div>
+                   <div class="flex"><span class="w-10">पद:</span> <span class="dotted-line w-32 text-center">${formDetails.receiver?.designation || ''}</span></div>
+                   <div class="flex"><span class="w-10">मिति:</span> <span class="dotted-line w-32 text-center">${formDetails.receiver?.date || ''}</span></div>
+                </div>
               </div>
             </div>
-            <script>window.onload = () => { window.print(); setTimeout(() => window.close(), 500); }</script>
-          </body>
+
+            <!-- Right Column -->
+            <div class="space-y-6">
+              
+              <!-- Checkboxes & Recommendation -->
+              <div>
+                <div class="mb-3 space-y-1 text-[10px]">
+                   <div><span class="checkbox-box ${marketChecked}"></span> बजारबाट खरिद गर्नु पर्ने</div>
+                   <div><span class="checkbox-box ${stockChecked}"></span> मौज्दातमा रहेको</div>
+                </div>
+
+                <div class="font-bold border-b border-black inline-block mb-2 text-xs">सिफारिस गर्नेको दस्तखत</div>
+                <div class="space-y-1 ml-1">
+                   <div class="flex"><span class="w-10">नाम:</span> <span class="dotted-line w-32 text-center">${formDetails.recommendedBy?.name || ''}</span></div>
+                   <div class="flex"><span class="w-10">पद:</span> <span class="dotted-line w-32 text-center">${formDetails.recommendedBy?.designation || ''}</span></div>
+                   <div class="flex"><span class="w-10">मिति:</span> <span class="dotted-line w-32 text-center">${formDetails.recommendedBy?.date || ''}</span></div>
+                </div>
+              </div>
+
+              <!-- Approver -->
+              <div class="pt-2">
+                <div class="font-bold border-b border-black inline-block mb-2 text-xs">स्वीकृत गर्नेको दस्तखत</div>
+                <div class="space-y-1 ml-1">
+                   <div class="flex"><span class="w-10">नाम:</span> <span class="dotted-line w-32 text-center">${formDetails.approvedBy?.name || ''}</span></div>
+                   <div class="flex"><span class="w-10">पद:</span> <span class="dotted-line w-32 text-center">${formDetails.approvedBy?.designation || ''}</span></div>
+                   <div class="flex"><span class="w-10">मिति:</span> <span class="dotted-line w-32 text-center">${formDetails.approvedBy?.date || ''}</span></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <script>
+             window.onload = function() {
+                setTimeout(function() {
+                   window.print();
+                }, 800);
+             };
+          </script>
+        </body>
         </html>
-      `;
-      printWindow.document.write(content);
-      printWindow.document.close();
+      `);
+      doc.close();
+
+      setTimeout(() => {
+          if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+          }
+      }, 5000);
   };
 
   const handleSnMouseEnter = (e: React.MouseEvent, itemName: string) => {
