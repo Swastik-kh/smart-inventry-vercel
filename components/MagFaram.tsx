@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Printer, Save, Calendar, CheckCircle2, Send, Clock, FileText, Eye, Search, X, AlertCircle, ChevronRight, ArrowLeft, Check, Square, Warehouse, Layers, ShieldCheck, Info, ListFilter, ClipboardList, History } from 'lucide-react';
 import { User, Option, OrganizationSettings } from '../types/coreTypes';
@@ -61,26 +62,31 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                              f.demandBy?.name?.toLowerCase().includes(searchTerm.toLowerCase());
         if (!matchesSearch) return false;
         if (!isPrivileged && f.demandBy?.name !== currentUser.fullName) return false;
+        
         if (activeTab === 'requests') {
+            // Storekeeper sees 'Pending' requests to Verify
             if (isStoreKeeper) return f.status === 'Pending';
-            if (isApprover || isAccount) return f.status === 'Verified';
+            // Approver sees 'Verified' requests to Approve
+            if (isApprover) return f.status === 'Verified';
+            // Fallback
             return f.status === 'Pending' || f.status === 'Verified';
         } else {
+            // History tab logic
             if (isStoreKeeper) return f.status !== 'Pending';
-            if (isApprover || isAccount) return f.status === 'Approved' || f.status === 'Rejected';
-            return f.status === 'Approved' || f.status === 'Rejected';
+            if (isApprover) return f.status === 'Approved' || f.status === 'Rejected';
+            return f.status === 'Approved' || f.status === 'Rejected' || f.status === 'Verified';
         }
     }).sort((a, b) => b.formNo.localeCompare(a.formNo));
-  }, [existingForms, activeTab, isStoreKeeper, isApprover, isAccount, isPrivileged, currentUser.fullName, searchTerm]);
+  }, [existingForms, activeTab, isStoreKeeper, isApprover, isPrivileged, currentUser.fullName, searchTerm]);
 
   const pendingBadgeCount = useMemo(() => {
       return existingForms.filter(f => {
           if (!isPrivileged) return f.demandBy?.name === currentUser.fullName && (f.status === 'Pending' || f.status === 'Verified');
           if (isStoreKeeper) return f.status === 'Pending';
-          if (isApprover || isAccount) return f.status === 'Verified';
+          if (isApprover) return f.status === 'Verified';
           return false;
       }).length;
-  }, [existingForms, isStoreKeeper, isApprover, isAccount, isPrivileged, currentUser.fullName]);
+  }, [existingForms, isStoreKeeper, isApprover, isPrivileged, currentUser.fullName]);
 
   const itemOptions = useMemo(() => {
     const itemMap = new Map<string, { totalQty: number, type: string, unit: string }>();
@@ -95,25 +101,15 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
 
   useEffect(() => {
     if (!editingId && !formDetails.id) {
-        // Filter forms strictly for the current fiscal year
         const formsInCurrentFY = existingForms.filter(f => f.fiscalYear === currentFiscalYear);
-        
-        // Calculate the next number
         const maxNum = formsInCurrentFY.reduce((max, f) => {
-            // Check for new format: NNNN-MF (e.g., 0001-MF)
             const matchNew = f.formNo.match(/^(\d+)-MF$/);
             if (matchNew) return Math.max(max, parseInt(matchNew[1], 10));
-
-            // Check for legacy format: FY-NNN (e.g., 2081082-001)
-            // This ensures continuity if switching mid-year, though 0001-MF style is preferred
             const parts = f.formNo.split('-');
             const numPart = parts.length > 1 ? parseInt(parts[parts.length - 1]) : 0;
-            if (!isNaN(numPart) && numPart > 0 && numPart < 10000) return Math.max(max, numPart); // Constraint to avoid confusing FY part with ID
-            
+            if (!isNaN(numPart) && numPart > 0 && numPart < 10000) return Math.max(max, numPart);
             return max;
         }, 0);
-
-        // Generate new Form No in "0001-MF" format
         const nextNum = maxNum + 1;
         setFormDetails(prev => ({ ...prev, formNo: `${String(nextNum).padStart(4, '0')}-MF` }));
     }
@@ -176,11 +172,23 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
     let finalStatus = formDetails.status || 'Pending';
     let finalRecommendedBy = { ...formDetails.recommendedBy };
     let finalApprovedBy = { ...formDetails.approvedBy };
+    let finalStoreKeeper = { ...formDetails.storeKeeper };
 
-    if (isStoreKeeper && (formDetails.storeKeeper?.marketRequired || formDetails.storeKeeper?.inStock)) {
+    // WORKFLOW LOGIC:
+    // 1. If Storekeeper is saving a 'Pending' form, it becomes 'Verified'.
+    if (isStoreKeeper && formDetails.status === 'Pending') {
         finalStatus = 'Verified';
         finalRecommendedBy = { name: currentUser.fullName, designation: currentUser.designation, date: todayBS };
-    } else if (isApprover && formDetails.status === 'Verified') {
+        // Ensure storekeeper details are captured
+        finalStoreKeeper = {
+            ...finalStoreKeeper,
+            name: currentUser.fullName,
+            date: todayBS,
+            verified: true
+        };
+    } 
+    // 2. If Approver is saving a 'Verified' form, it becomes 'Approved'.
+    else if (isApprover && formDetails.status === 'Verified') {
         finalStatus = 'Approved';
         finalApprovedBy = { name: currentUser.fullName, designation: currentUser.designation, date: todayBS };
     }
@@ -191,16 +199,16 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
         items: validItems.map(({ isFromInventory, ...rest }) => rest),
         status: finalStatus,
         recommendedBy: finalRecommendedBy,
+        storeKeeper: finalStoreKeeper,
         approvedBy: finalApprovedBy
     });
     
-    setSuccessMessage(finalStatus === 'Approved' ? "माग फारम सफलतापूर्वक स्वीकृत भयो।" : (finalStatus === 'Verified' ? "माग फारम प्रमाणित गरी पठाइयो।" : "माग फारम सुरक्षित गरियो।"));
+    setSuccessMessage(finalStatus === 'Approved' ? "माग फारम सफलतापूर्वक स्वीकृत भयो।" : (finalStatus === 'Verified' ? "माग फारम प्रमाणित गरी स्वीकृतिका लागि पठाइयो।" : "माग फारम सुरक्षित गरियो।"));
     setIsSaved(true);
     setTimeout(handleReset, 1500);
   };
 
   const printOfficialForm = () => {
-      // Create a hidden iframe
       const iframe = document.createElement('iframe');
       iframe.style.position = 'fixed';
       iframe.style.right = '0';
@@ -213,7 +221,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
       const doc = iframe.contentWindow?.document;
       if (!doc) return;
 
-      // Filter items to ensure only those with names are printed (remove empty rows)
       const printableItems = items.filter(item => item.name && item.name.trim() !== '');
 
       const rowsHtml = printableItems.map((item, idx) => `
@@ -227,7 +234,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
         </tr>
       `).join('');
 
-      // Checkboxes logic
       const marketChecked = formDetails.storeKeeper?.marketRequired ? 'checked' : '';
       const stockChecked = formDetails.storeKeeper?.inStock ? 'checked' : '';
 
@@ -241,16 +247,8 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
           <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
           <style>
             @page { size: A4 portrait; margin: 10mm; }
-            body { 
-                font-family: 'Mukta', sans-serif; 
-                padding: 0; 
-                margin: 0; 
-                background: white; 
-                color: #000;
-                -webkit-print-color-adjust: exact; 
-                print-color-adjust: exact;
-            }
-            .header-red { color: #dc2626; } /* Red-600 */
+            body { font-family: 'Mukta', sans-serif; padding: 0; margin: 0; background: white; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .header-red { color: #dc2626; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             th, td { border: 1px solid black; padding: 4px 4px; font-size: 11px; }
             th { background-color: #f3f4f6; font-weight: 700; }
@@ -281,29 +279,17 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
           </style>
         </head>
         <body class="p-4">
-          <!-- Top Right Box -->
           <div style="position: absolute; right: 0; top: 0; border: 1px solid black; padding: 2px 6px; font-size: 10px; font-weight: bold;">
             म.ले.प.फा.नं. ४०१
           </div>
-
-          <!-- Header -->
           <div class="flex flex-col items-center mb-6 relative pt-4 text-center">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" 
-                 style="position: absolute; left: 0; top: 0; width: 60px; height: auto;" />
-            
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" style="position: absolute; left: 0; top: 0; width: 60px; height: auto;" />
             <h1 class="text-xl font-bold header-red mb-0 leading-tight">${generalSettings.orgNameNepali}</h1>
             <h2 class="text-base font-bold mb-0 leading-tight">नगरकार्यपालिकाको कार्यालय</h2>
             <h3 class="text-sm font-bold mb-0 leading-tight">${generalSettings.subTitleNepali}</h3>
-            <h4 class="text-xs font-bold mb-1 leading-tight">${generalSettings.subTitleNepali2 || ''}</h4>
-            
-            <div class="text-[10px] text-slate-600 mt-1">
-               ${generalSettings.address} | फोन: ${generalSettings.phone || '-'} | ईमेल: ${generalSettings.email || '-'}
-            </div>
-
+            <div class="text-[10px] text-slate-600 mt-1">${generalSettings.address} | फोन: ${generalSettings.phone || '-'}</div>
             <h2 class="text-lg font-bold underline mt-4">माग फारम</h2>
           </div>
-
-          <!-- Meta Data -->
           <div class="flex justify-end mb-2 text-xs font-bold">
             <div class="text-right leading-relaxed">
               <div>आर्थिक वर्ष: <span class="dotted-line text-center">${formDetails.fiscalYear}</span></div>
@@ -311,8 +297,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               <div>मिति: <span class="dotted-line text-center">${formDetails.date}</span></div>
             </div>
           </div>
-
-          <!-- Table -->
           <table class="mb-6">
             <thead>
               <tr>
@@ -331,13 +315,8 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               ${rowsHtml}
             </tbody>
           </table>
-
-          <!-- Footer -->
           <div class="grid grid-cols-2 gap-8 mt-2 text-[11px]">
-            
-            <!-- Left Column -->
             <div class="space-y-6">
-              <!-- Requester -->
               <div>
                 <div class="font-bold border-b border-black inline-block mb-2 text-xs">माग गर्नेको दस्तखत</div>
                 <div class="space-y-1 ml-1">
@@ -347,8 +326,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                    <div class="flex mt-1"><span class="w-10">प्रयोजन:</span> <span class="dotted-line" style="width: 150px;">${formDetails.demandBy?.purpose || ''}</span></div>
                 </div>
               </div>
-
-              <!-- Receiver -->
               <div class="pt-2">
                 <div class="font-bold border-b border-black inline-block mb-2 text-xs">मालसामान बुझिलिनेको दस्तखत</div>
                 <div class="space-y-1 ml-1">
@@ -358,17 +335,12 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                 </div>
               </div>
             </div>
-
-            <!-- Right Column -->
             <div class="space-y-6">
-              
-              <!-- Checkboxes & Recommendation -->
               <div>
                 <div class="mb-3 space-y-1 text-[10px]">
                    <div><span class="checkbox-box ${marketChecked}"></span> बजारबाट खरिद गर्नु पर्ने</div>
                    <div><span class="checkbox-box ${stockChecked}"></span> मौज्दातमा रहेको</div>
                 </div>
-
                 <div class="font-bold border-b border-black inline-block mb-2 text-xs">सिफारिस गर्नेको दस्तखत</div>
                 <div class="space-y-1 ml-1">
                    <div class="flex"><span class="w-10">नाम:</span> <span class="dotted-line w-32 text-center">${formDetails.recommendedBy?.name || ''}</span></div>
@@ -376,8 +348,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                    <div class="flex"><span class="w-10">मिति:</span> <span class="dotted-line w-32 text-center">${formDetails.recommendedBy?.date || ''}</span></div>
                 </div>
               </div>
-
-              <!-- Approver -->
               <div class="pt-2">
                 <div class="font-bold border-b border-black inline-block mb-2 text-xs">स्वीकृत गर्नेको दस्तखत</div>
                 <div class="space-y-1 ml-1">
@@ -386,72 +356,35 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                    <div class="flex"><span class="w-10">मिति:</span> <span class="dotted-line w-32 text-center">${formDetails.approvedBy?.date || ''}</span></div>
                 </div>
               </div>
-
             </div>
           </div>
-
-          <script>
-             window.onload = function() {
-                setTimeout(function() {
-                   window.print();
-                }, 800);
-             };
-          </script>
+          <script>window.onload = function() { setTimeout(function() { window.print(); }, 800); };</script>
         </body>
         </html>
       `);
       doc.close();
-
-      setTimeout(() => {
-          if (document.body.contains(iframe)) {
-              document.body.removeChild(iframe);
-          }
-      }, 5000);
+      setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 5000);
   };
 
   const handleSnMouseEnter = (e: React.MouseEvent, itemName: string) => {
     if (!itemName) return;
-    
-    // Calculate stock for the item name across all stores/batches
     const matchingItems = inventoryItems.filter(i => i.itemName.trim().toLowerCase() === itemName.trim().toLowerCase());
-    
     if (matchingItems.length === 0) {
-         setHoveredStock({
-            x: e.clientX + 15,
-            y: e.clientY + 15,
-            content: (
-                <div className="text-xs">
-                    <div className="font-bold text-slate-200 border-b border-slate-600 mb-1 pb-1">{itemName}</div>
-                    <div className="text-red-400 font-bold">स्टक रेकर्ड छैन (No Stock Record)</div>
-                </div>
-            )
-        });
+         setHoveredStock({ x: e.clientX + 15, y: e.clientY + 15, content: (<div className="text-xs"><div className="font-bold text-slate-200 border-b border-slate-600 mb-1 pb-1">{itemName}</div><div className="text-red-400 font-bold">स्टक रेकर्ड छैन</div></div>) });
         return;
     }
-
     const totalQty = matchingItems.reduce((acc, i) => acc + (i.currentQuantity || 0), 0);
     const unit = matchingItems[0]?.unit || '';
-
-    setHoveredStock({
-        x: e.clientX + 15, // Offset to not overlap cursor
-        y: e.clientY + 15,
-        content: (
-            <div className="text-xs">
-                <div className="font-bold text-slate-200 border-b border-slate-600 mb-1 pb-1">{itemName}</div>
-                <div className="flex justify-between gap-3 items-center">
-                    <span className="text-slate-400">मौज्दात (Stock):</span>
-                    <span className="font-bold text-green-400 text-sm">{totalQty} {unit}</span>
-                </div>
-                {matchingItems.length > 1 && (
-                    <div className="mt-1 text-[9px] text-slate-500 italic">Total from {matchingItems.length} batches</div>
-                )}
-            </div>
-        )
-    });
+    setHoveredStock({ x: e.clientX + 15, y: e.clientY + 15, content: (<div className="text-xs"><div className="font-bold text-slate-200 border-b border-slate-600 mb-1 pb-1">{itemName}</div><div className="flex justify-between gap-3 items-center"><span className="text-slate-400">मौज्दात:</span><span className="font-bold text-green-400 text-sm">{totalQty} {unit}</span></div></div>) });
   };
 
-  const handleSnMouseLeave = () => {
-      setHoveredStock(null);
+  const handleSnMouseLeave = () => { setHoveredStock(null); };
+
+  const getButtonLabel = () => {
+    if (isSaved) return 'सुरक्षित भयो';
+    if (isStoreKeeper && formDetails.status === 'Pending') return 'प्रमाणित गरी पठाउनुहोस् (Verify)';
+    if (isApprover && formDetails.status === 'Verified') return 'स्वीकृत गर्नुहोस् (Approve)';
+    return 'सुरक्षित गर्नुहोस्';
   };
 
   if (!editingId) {
@@ -486,7 +419,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                                     <td className="px-6 py-4 font-mono font-bold text-indigo-600">#{f.formNo}</td>
                                     <td className="px-6 py-4 font-nepali text-slate-600">{f.date}</td>
                                     <td className="px-6 py-4"><div><p className="font-bold text-slate-800">{f.demandBy?.name}</p><p className="text-[10px] text-slate-400 uppercase font-black">{f.demandBy?.designation}</p></div></td>
-                                    <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-[10px] font-black border flex items-center gap-1 w-fit ${f.status === 'Approved' ? 'bg-green-50 text-green-700 border-green-200' : f.status === 'Pending' ? 'bg-orange-50 text-orange-700 border-orange-200' : f.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>{f.status === 'Approved' ? <CheckCircle2 size={12}/> : f.status === 'Pending' ? <Clock size={12}/> : <Send size={12}/>} {f.status}</span></td>
+                                    <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-[10px] font-black border flex items-center gap-1 w-fit ${f.status === 'Approved' ? 'bg-green-50 text-green-700 border-green-200' : f.status === 'Verified' ? 'bg-blue-50 text-blue-700 border-blue-200' : f.status === 'Pending' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{f.status === 'Approved' ? <CheckCircle2 size={12}/> : f.status === 'Verified' ? <ShieldCheck size={12}/> : <Clock size={12}/>} {f.status}</span></td>
                                     <td className="px-6 py-4 text-right"><div className="flex justify-end gap-2"><button onClick={() => handleLoadForm(f, activeTab === 'history' || (!isPrivileged && f.status === 'Approved'))} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-full"><Eye size={20} /></button><button onClick={() => { handleLoadForm(f, true); setTimeout(printOfficialForm, 300); }} className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full"><Printer size={20} /></button></div></td>
                                 </tr>
                             ))}
@@ -497,13 +430,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
         </div>
     );
   }
-
-  const getButtonLabel = () => {
-    if (isSaved) return 'सुरक्षित भयो';
-    if (isStoreKeeper && formDetails.status === 'Pending') return 'प्रमाणित गरी पठाउनुहोस्';
-    if (isApprover && formDetails.status === 'Verified') return 'स्वीकृत गर्नुहोस्';
-    return 'सुरक्षित गर्नुहोस्';
-  };
 
   return (
     <div className="space-y-6">
@@ -519,7 +445,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
        {validationError && <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm flex items-center gap-3 animate-in slide-in-from-top-2 no-print"><AlertCircle size={24} className="text-red-500" /><div className="flex-1 font-bold text-red-800">{validationError}</div><button onClick={() => setValidationError(null)}><X size={20}/></button></div>}
 
        <div className="bg-white p-10 md:p-14 max-w-[210mm] mx-auto min-h-[297mm] font-nepali text-slate-900 shadow-2xl rounded-xl relative">
-          {/* Tooltip Portal / Floating Div */}
           {hoveredStock && (
               <div 
                   className="fixed z-[9999] bg-slate-800 text-white p-2.5 rounded-lg shadow-xl pointer-events-none animate-in fade-in zoom-in-95 duration-150 no-print border border-slate-700/50 backdrop-blur-sm"
@@ -540,8 +465,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                     {[
                         generalSettings.address, 
                         generalSettings.phone ? `फोन: ${generalSettings.phone}` : '', 
-                        generalSettings.email ? `ईमेल: ${generalSettings.email}` : '',
-                        generalSettings.panNo ? `पान नं: ${generalSettings.panNo}` : ''
+                        generalSettings.email ? `ईमेल: ${generalSettings.email}` : ''
                     ].filter(Boolean).join(' | ')}
                   </div>
                   <h2 className="text-2xl font-black underline underline-offset-8 mt-6">माग फारम</h2>
@@ -601,8 +525,24 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               <div className="space-y-4">
                   <div className="border-t border-black pt-2">
                       <div className="flex flex-col gap-1 mb-2 no-print">
-                           <label className={`flex items-center gap-2 ${isViewOnly || !isStoreKeeper ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}><input type="checkbox" checked={formDetails.storeKeeper?.marketRequired} onChange={e => setFormDetails({...formDetails, storeKeeper: {...formDetails.storeKeeper!, marketRequired: e.target.checked}})} disabled={isViewOnly || !isStoreKeeper} className="w-3 h-3" /> बजारबाट खरिद गर्नु पर्ने</label>
-                           <label className={`flex items-center gap-2 ${isViewOnly || !isStoreKeeper ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}><input type="checkbox" checked={formDetails.storeKeeper?.inStock} onChange={e => setFormDetails({...formDetails, storeKeeper: {...formDetails.storeKeeper!, inStock: e.target.checked}})} disabled={isViewOnly || !isStoreKeeper} className="w-3 h-3" /> मौज्दातमा रहेको</label>
+                           <label className={`flex items-center gap-2 ${isViewOnly || (!isStoreKeeper && formDetails.status !== 'Pending') ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}>
+                               <input 
+                                   type="checkbox" 
+                                   checked={formDetails.storeKeeper?.marketRequired} 
+                                   onChange={e => setFormDetails({...formDetails, storeKeeper: {...formDetails.storeKeeper!, marketRequired: e.target.checked}})} 
+                                   disabled={isViewOnly || (!isStoreKeeper && formDetails.status !== 'Pending')} 
+                                   className="w-3 h-3" 
+                               /> बजारबाट खरिद गर्नु पर्ने
+                           </label>
+                           <label className={`flex items-center gap-2 ${isViewOnly || (!isStoreKeeper && formDetails.status !== 'Pending') ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}>
+                               <input 
+                                   type="checkbox" 
+                                   checked={formDetails.storeKeeper?.inStock} 
+                                   onChange={e => setFormDetails({...formDetails, storeKeeper: {...formDetails.storeKeeper!, inStock: e.target.checked}})} 
+                                   disabled={isViewOnly || (!isStoreKeeper && formDetails.status !== 'Pending')} 
+                                   className="w-3 h-3" 
+                               /> मौज्दातमा रहेको
+                           </label>
                       </div>
                       <p className="mb-6">सिफारिस गर्नेको दस्तखत</p>
                       <p>नाम: <span className="font-bold border-b border-dotted border-black px-2 min-w-[100px] inline-block">{formDetails.recommendedBy?.name || '................'}</span></p>

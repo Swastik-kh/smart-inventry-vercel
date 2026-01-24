@@ -91,9 +91,11 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
     return Array.from(uniqueVaccineNames).sort().map(name => ({ id: name, value: name, label: name }));
   }, []);
 
-  interface ChildVaccineDue {
+  // Updated Interface to support grouping
+  interface GroupedChildVaccineDue {
       child: ChildImmunizationRecord;
-      vaccine: ChildImmunizationVaccine;
+      vaccines: ChildImmunizationVaccine[];
+      scheduledDateBs: string;
   }
 
   // Filter records based on Center, Day, and Search
@@ -109,8 +111,10 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
       });
   }, [records, currentFiscalYear, searchTerm, filterCenter]);
 
+  // Grouped Upcoming List (Now strictly "Due List" - Date <= Today)
   const upcomingSessionList = useMemo(() => {
-    const list: ChildVaccineDue[] = [];
+    const groupedMap = new Map<string, GroupedChildVaccineDue>();
+
     filteredBaseRecords.forEach(child => {
         child.vaccines.forEach(vaccine => {
           // If a specific day is filtered, only show vaccines scheduled for that day of any month
@@ -121,19 +125,33 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
 
           if (
             vaccine.status === 'Pending' &&
-            vaccine.scheduledDateBs >= todayBsFormatted && // Future or today
+            vaccine.scheduledDateBs <= todayBsFormatted && // Logic Change: Only show if date has reached (<= Today)
             matchesDay &&
-            matchesVaccine // NEW: Apply vaccine filter
+            matchesVaccine 
           ) {
-            list.push({ child, vaccine });
+            // Create a unique key based on child ID and scheduled date to group
+            const key = `${child.id}-${vaccine.scheduledDateBs}`;
+            
+            if (!groupedMap.has(key)) {
+                groupedMap.set(key, {
+                    child,
+                    vaccines: [],
+                    scheduledDateBs: vaccine.scheduledDateBs
+                });
+            }
+            groupedMap.get(key)?.vaccines.push(vaccine);
           }
         });
       });
-    return list.sort((a, b) => a.vaccine.scheduledDateBs.localeCompare(b.vaccine.scheduledDateBs));
-  }, [filteredBaseRecords, todayBsFormatted, filterDay, filterVaccine]); // NEW: Add filterVaccine to deps
+    
+    // Sort by scheduled date ascending (oldest due first)
+    return Array.from(groupedMap.values()).sort((a, b) => a.scheduledDateBs.localeCompare(b.scheduledDateBs));
+  }, [filteredBaseRecords, todayBsFormatted, filterDay, filterVaccine]); 
 
+  // Grouped Defaulter List
   const defaulterList = useMemo(() => {
-    const list: ChildVaccineDue[] = [];
+    const groupedMap = new Map<string, GroupedChildVaccineDue>();
+
     filteredBaseRecords.forEach(child => {
         child.vaccines.forEach(vaccine => {
           const vaccineDay = vaccine.scheduledDateBs.split('-')[2];
@@ -141,19 +159,29 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
           // NEW: Filter by vaccine name
           const matchesVaccine = filterVaccine ? vaccine.name === filterVaccine : true;
 
-
           if (
             vaccine.status === 'Pending' &&
-            vaccine.scheduledDateBs < todayBsFormatted &&
+            vaccine.scheduledDateBs < todayBsFormatted && // Past date
             matchesDay &&
-            matchesVaccine // NEW: Apply vaccine filter
+            matchesVaccine 
           ) {
-            list.push({ child, vaccine });
+             // Create a unique key based on child ID and scheduled date to group
+             const key = `${child.id}-${vaccine.scheduledDateBs}`;
+            
+             if (!groupedMap.has(key)) {
+                 groupedMap.set(key, {
+                     child,
+                     vaccines: [],
+                     scheduledDateBs: vaccine.scheduledDateBs
+                 });
+             }
+             groupedMap.get(key)?.vaccines.push(vaccine);
           }
         });
       });
-    return list.sort((a, b) => a.vaccine.scheduledDateBs.localeCompare(b.vaccine.scheduledDateBs));
-  }, [filteredBaseRecords, todayBsFormatted, filterDay, filterVaccine]); // NEW: Add filterVaccine to deps
+    
+    return Array.from(groupedMap.values()).sort((a, b) => a.scheduledDateBs.localeCompare(b.scheduledDateBs));
+  }, [filteredBaseRecords, todayBsFormatted, filterDay, filterVaccine]); 
 
   const ficList = useMemo(() => {
     return filteredBaseRecords
@@ -249,7 +277,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                         onClick={() => { setActiveView('upcoming'); setSearchTerm(''); }}
                         className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeView === 'upcoming' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
                     >
-                        <CalendarClock size={18}/> आगामी खोप
+                        <CalendarClock size={18}/> आगामी खोप (Due List)
                     </button>
                     <button 
                         onClick={() => { setActiveView('defaulter'); setSearchTerm(''); }}
@@ -332,7 +360,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                         <div className="flex items-center gap-3 text-blue-800">
                             <CalendarDays className="text-blue-600" />
                             <span className="font-bold font-nepali">
-                                आगामी निर्धारित खोपहरू 
+                                खोप लगाउन योग्य (Due List - Scheduled Date Reached)
                                 {filterCenter && ` - केन्द्र: ${filterCenter}`}
                                 {filterDay && ` - गते: ${filterDay}`}
                                 {filterVaccine && ` - खोप: ${filterVaccine}`} {/* NEW: Display vaccine filter */}
@@ -346,7 +374,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                                 <tr>
                                     <th className="px-6 py-3">बच्चाको विवरण / केन्द्र</th>
                                     <th className="px-6 py-3">अभिभावक / ठेगाना</th>
-                                    <th className="px-6 py-3 text-center">लगाउनुपर्ने खोप</th>
+                                    <th className="px-6 py-3 text-center">लगाउनुपर्ने खोप (Vaccines Due)</th>
                                     <th className="px-6 py-3 text-center">निर्धारित मिति</th>
                                     <th className="px-6 py-3 text-right">सम्पर्क</th>
                                 </tr>
@@ -365,12 +393,16 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                                             <div className="text-[10px] text-slate-400">{item.child.address}</div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg font-black text-[11px] border border-blue-200">
-                                                {item.vaccine.name}
-                                            </span>
+                                            <div className="flex flex-wrap gap-1 justify-center">
+                                                {item.vaccines.map((vax, vIdx) => (
+                                                    <span key={vIdx} className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg font-black text-[11px] border border-blue-200">
+                                                        {vax.name}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-center font-bold text-slate-600 font-nepali">
-                                            {item.vaccine.scheduledDateBs}
+                                            {item.scheduledDateBs}
                                         </td>
                                         <td className="px-6 py-4 text-right font-mono font-bold text-slate-600">{item.child.phone}</td>
                                     </tr>
@@ -401,7 +433,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                             <thead className="bg-slate-50 text-slate-500 font-bold border-b">
                                 <tr>
                                     <th className="px-6 py-3">बच्चाको विवरण / केन्द्र</th>
-                                    <th className="px-6 py-3">नछुटेको खोप / मिति</th>
+                                    <th className="px-6 py-3">नछुटेको खोप (Missed Vaccines) / मिति</th>
                                     <th className="px-6 py-3 text-center">सम्पर्क</th>
                                     <th className="px-6 py-3 text-right">स्थिति</th>
                                 </tr>
@@ -414,8 +446,14 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                                             <div className="text-[10px] text-slate-500 flex items-center gap-1"><MapPinned size={10}/> {item.child.vaccinationCenter}</div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="font-black text-red-600 text-xs">{item.vaccine.name}</div>
-                                            <div className="text-[10px] text-slate-500">निर्धारित मिति: {item.vaccine.scheduledDateBs}</div>
+                                            <div className="flex flex-wrap gap-1 mb-1">
+                                                {item.vaccines.map((vax, vIdx) => (
+                                                    <span key={vIdx} className="font-black text-red-600 text-xs bg-red-50 px-1.5 rounded border border-red-100">
+                                                        {vax.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <div className="text-[10px] text-slate-500">निर्धारित मिति: {item.scheduledDateBs}</div>
                                         </td>
                                         <td className="px-6 py-4 text-center font-mono font-bold text-slate-600">{item.child.phone}</td>
                                         <td className="px-6 py-4 text-right">
@@ -588,14 +626,14 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                 <h2>खोप तालिका विवरण (Vaccination Schedule)</h2>
                 {filterCenter && <p>केन्द्र: {filterCenter}</p>}
                 {filterDay && <p>सत्र गते: {filterDay}</p>}
-                {filterVaccine && <p>खोपको नाम: {filterVaccine}</p>} {/* NEW: Print vaccine filter */}
+                {filterVaccine && <p>खोपको नाम: {filterVaccine}</p>}
             </div>
             <table className="print-table">
                 <thead>
                     <tr>
                         <th>बच्चाको नाम / दर्ता नं</th>
                         <th>केन्द्र</th>
-                        <th>खोपको नाम</th>
+                        <th>लगाउनुपर्ने खोपहरू (Vaccines Due)</th>
                         <th>निर्धारित मिति</th>
                         <th>फोन नं</th>
                     </tr>
@@ -605,8 +643,10 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                         <tr key={idx}>
                             <td>{item.child.childName} <br/> <small>{item.child.regNo}</small></td>
                             <td>{item.child.vaccinationCenter}</td>
-                            <td style={{fontWeight: 'bold'}}>{item.vaccine.name}</td>
-                            <td>{item.vaccine.scheduledDateBs}</td>
+                            <td style={{fontWeight: 'bold'}}>
+                                {item.vaccines.map(v => v.name).join(', ')}
+                            </td>
+                            <td>{item.scheduledDateBs}</td>
                             <td style={{fontFamily: 'monospace'}}>{item.child.phone}</td>
                         </tr>
                     ))}
@@ -620,14 +660,14 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                 <h2 style={{color: 'red'}}>खोप छुटेका बालबालिकाहरूको सूची (Defaulter List)</h2>
                 {filterCenter && <p>केन्द्र: {filterCenter}</p>}
                 {filterDay && <p>सत्र गते: {filterDay}</p>}
-                {filterVaccine && <p>खोपको नाम: {filterVaccine}</p>} {/* NEW: Print vaccine filter */}
+                {filterVaccine && <p>खोपको नाम: {filterVaccine}</p>}
             </div>
             <table className="print-table">
                 <thead>
                     <tr>
                         <th>बच्चाको नाम</th>
                         <th>केन्द्र</th>
-                        <th>छुटेको खोप</th>
+                        <th>छुटेका खोपहरू</th>
                         <th>निर्धारित मिति</th>
                         <th>फोन नं</th>
                     </tr>
@@ -637,8 +677,10 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                         <tr key={idx}>
                             <td>{item.child.childName}</td>
                             <td>{item.child.vaccinationCenter}</td>
-                            <td style={{color: 'red', fontWeight: 'bold'}}>{item.vaccine.name}</td>
-                            <td>{item.vaccine.scheduledDateBs}</td>
+                            <td style={{color: 'red', fontWeight: 'bold'}}>
+                                {item.vaccines.map(v => v.name).join(', ')}
+                            </td>
+                            <td>{item.scheduledDateBs}</td>
                             <td style={{fontFamily: 'monospace'}}>{item.child.phone}</td>
                         </tr>
                     ))}
