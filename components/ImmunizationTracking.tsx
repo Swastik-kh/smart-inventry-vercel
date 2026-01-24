@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 /* Added RotateCcw to the imports from lucide-react to fix the error on line 272 */
-import { Baby, Printer, AlertOctagon, Calendar, Clock, Info, User, Phone, MapPin, Search, CheckCircle2, ShieldCheck, Award, X, FileBadge, BadgeCheck, CalendarDays, CalendarClock, ListFilter, Users, MapPinned, Hash, RotateCcw } from 'lucide-react';
+import { Baby, Printer, AlertOctagon, Calendar, Clock, Info, User, Phone, MapPin, Search, CheckCircle2, ShieldCheck, Award, X, FileBadge, BadgeCheck, CalendarDays, CalendarClock, ListFilter, Users, MapPinned, Hash, RotateCcw, Filter } from 'lucide-react';
 import { ChildImmunizationRecord, ChildImmunizationVaccine } from '../types/healthTypes';
 import { Option, OrganizationSettings } from '../types/coreTypes';
 import { Input } from './Input';
@@ -10,6 +10,7 @@ import { Select } from './Select';
 import NepaliDate from 'nepali-date-converter';
 // Add missing import for NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE
 import { NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE } from './ChildImmunizationRegistration';
+import { FISCAL_YEARS } from '../constants';
 
 interface ImmunizationTrackingProps {
   currentFiscalYear: string;
@@ -17,9 +18,19 @@ interface ImmunizationTrackingProps {
   generalSettings: OrganizationSettings;
 }
 
-const NEPALI_MONTHS_NAMES = [
-    'बैशाख', 'जेठ', 'असार', 'साउन', 'भदौ', 'असोज', 
-    'कार्तिक', 'मंसिर', 'पुष', 'माघ', 'फागुन', 'चैत्र'
+const nepaliMonthOptions = [
+  { id: '01', value: '01', label: 'बैशाख (01)' },
+  { id: '02', value: '02', label: 'जेठ (02)' },
+  { id: '03', value: '03', label: 'असार (03)' },
+  { id: '04', value: '04', label: 'साउन (04)' },
+  { id: '05', value: '05', label: 'भदौ (05)' },
+  { id: '06', value: '06', label: 'असोज (06)' },
+  { id: '07', value: '07', label: 'कार्तिक (07)' },
+  { id: '08', value: '08', label: 'मंसिर (08)' },
+  { id: '09', value: '09', label: 'पुष (09)' },
+  { id: '10', value: '10', label: 'माघ (10)' },
+  { id: '11', value: '11', label: 'फागुन (11)' },
+  { id: '12', value: '12', label: 'चैत्र (12)' },
 ];
 
 const getTodayBsFormatted = () => {
@@ -61,12 +72,17 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
 }) => {
   const [activeView, setActiveView] = useState<'upcoming' | 'defaulter' | 'fic'>('upcoming');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Filters
   const [filterCenter, setFilterCenter] = useState('');
-  const [filterDay, setFilterDay] = useState('');
-  const [filterVaccine, setFilterVaccine] = useState(''); // NEW: State for vaccine filter
+  const [filterFiscalYear, setFilterFiscalYear] = useState(currentFiscalYear);
+  const [filterMonth, setFilterMonth] = useState(() => {
+      try { return new NepaliDate().format('MM'); } catch(e) { return '01'; }
+  });
+  const [filterVaccine, setFilterVaccine] = useState(''); 
+  
   const [selectedChildForCard, setSelectedChildForCard] = useState<ChildImmunizationRecord | null>(null);
 
-  const todayBs = useMemo(() => new NepaliDate(), []);
   const todayBsFormatted = useMemo(() => getTodayBsFormatted(), []);
 
   // Options for filters
@@ -75,19 +91,11 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
     [generalSettings.vaccinationCenters]
   );
 
-  const sessionDayOptions: Option[] = useMemo(() => 
-    (generalSettings.vaccinationSessions || [6, 20]).map(d => ({ id: d.toString(), value: d.toString(), label: `${d} गते` })),
-    [generalSettings.vaccinationSessions]
-  );
-
   // NEW: Vaccine Name Options
   const vaccineNameOptions: Option[] = useMemo(() => {
-    // Assuming NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE is accessible
     if (typeof NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE === 'undefined') return [];
-    
     const uniqueVaccineNames = new Set<string>();
     NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE.forEach(vax => uniqueVaccineNames.add(vax.name));
-    
     return Array.from(uniqueVaccineNames).sort().map(name => ({ id: name, value: name, label: name }));
   }, []);
 
@@ -95,48 +103,63 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
   interface GroupedChildVaccineDue {
       child: ChildImmunizationRecord;
       vaccines: ChildImmunizationVaccine[];
-      scheduledDateBs: string;
+      scheduledDateBs: string; // Will store the earliest date if multiple
   }
 
-  // Filter records based on Center, Day, and Search
+  // Filter records based on Center and Search
   const filteredBaseRecords = useMemo(() => {
     return records
-      .filter(r => r.fiscalYear === currentFiscalYear)
+      // Note: We don't filter by r.fiscalYear here because a child registered in prev year might have vaccine due in current year
       .filter(r => {
         const matchesSearch = r.childName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                              r.regNo.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCenter = filterCenter ? r.vaccinationCenter === filterCenter : true;
-        
         return matchesSearch && matchesCenter;
       });
-  }, [records, currentFiscalYear, searchTerm, filterCenter]);
+  }, [records, searchTerm, filterCenter]);
 
-  // Grouped Upcoming List (Now strictly "Due List" - Date <= Today)
+  // Logic to determine target year from FY and Month
+  const targetYearPrefix = useMemo(() => {
+      if (!filterFiscalYear || !filterMonth) return '';
+      const [y1, y2] = filterFiscalYear.split('/'); // e.g. "2081", "082"
+      const m = parseInt(filterMonth, 10);
+      
+      // In Nepal FY: Shrawan (4) to Chaitra (12) falls in first year (2081)
+      // Baishakh (1) to Ashad (3) falls in second year (2082)
+      let targetYear = '';
+      if (m >= 4) {
+          targetYear = y1;
+      } else {
+          // Construct full year 2082 from 2081/082
+          targetYear = y1.substring(0, 2) + y2;
+      }
+      return `${targetYear}-${filterMonth}`; // e.g., "2081-05"
+  }, [filterFiscalYear, filterMonth]);
+
+  // Grouped Upcoming List (Filtered by Year-Month)
   const upcomingSessionList = useMemo(() => {
     const groupedMap = new Map<string, GroupedChildVaccineDue>();
 
     filteredBaseRecords.forEach(child => {
         child.vaccines.forEach(vaccine => {
-          // If a specific day is filtered, only show vaccines scheduled for that day of any month
-          const vaccineDay = vaccine.scheduledDateBs.split('-')[2];
-          const matchesDay = filterDay ? vaccineDay === filterDay.padStart(2, '0') : true;
-          // NEW: Filter by vaccine name
           const matchesVaccine = filterVaccine ? vaccine.name === filterVaccine : true;
+          
+          // Check if vaccine matches the selected Year-Month
+          const matchesDate = vaccine.scheduledDateBs.startsWith(targetYearPrefix);
 
           if (
             vaccine.status === 'Pending' &&
-            vaccine.scheduledDateBs <= todayBsFormatted && // Logic Change: Only show if date has reached (<= Today)
-            matchesDay &&
+            matchesDate &&
             matchesVaccine 
           ) {
-            // Create a unique key based on child ID and scheduled date to group
-            const key = `${child.id}-${vaccine.scheduledDateBs}`;
+            // Group solely by Child ID to ensure one row per child for the month
+            const key = child.id;
             
             if (!groupedMap.has(key)) {
                 groupedMap.set(key, {
                     child,
                     vaccines: [],
-                    scheduledDateBs: vaccine.scheduledDateBs
+                    scheduledDateBs: vaccine.scheduledDateBs // Initialize with first found date
                 });
             }
             groupedMap.get(key)?.vaccines.push(vaccine);
@@ -144,30 +167,30 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
         });
       });
     
-    // Sort by scheduled date ascending (oldest due first)
+    // Sort by scheduled date
     return Array.from(groupedMap.values()).sort((a, b) => a.scheduledDateBs.localeCompare(b.scheduledDateBs));
-  }, [filteredBaseRecords, todayBsFormatted, filterDay, filterVaccine]); 
+  }, [filteredBaseRecords, targetYearPrefix, filterVaccine]); 
 
-  // Grouped Defaulter List
+  // Grouped Defaulter List (Logic: Due Date was in past, but not given)
   const defaulterList = useMemo(() => {
     const groupedMap = new Map<string, GroupedChildVaccineDue>();
 
     filteredBaseRecords.forEach(child => {
         child.vaccines.forEach(vaccine => {
-          const vaccineDay = vaccine.scheduledDateBs.split('-')[2];
-          const matchesDay = filterDay ? vaccineDay === filterDay.padStart(2, '0') : true;
-          // NEW: Filter by vaccine name
           const matchesVaccine = filterVaccine ? vaccine.name === filterVaccine : true;
+          
+          // For defaulters with filter: Show if due date was in the selected month AND is before today
+          // OR if no filter is strict, show all past due. 
+          // Based on user request, let's keep the filter consistent for "Monitoring".
+          const matchesDate = vaccine.scheduledDateBs.startsWith(targetYearPrefix);
 
           if (
             vaccine.status === 'Pending' &&
-            vaccine.scheduledDateBs < todayBsFormatted && // Past date
-            matchesDay &&
+            vaccine.scheduledDateBs < todayBsFormatted && // Strictly past due
+            matchesDate && // Matches the filter window
             matchesVaccine 
           ) {
-             // Create a unique key based on child ID and scheduled date to group
-             const key = `${child.id}-${vaccine.scheduledDateBs}`;
-            
+             const key = child.id;
              if (!groupedMap.has(key)) {
                  groupedMap.set(key, {
                      child,
@@ -181,7 +204,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
       });
     
     return Array.from(groupedMap.values()).sort((a, b) => a.scheduledDateBs.localeCompare(b.scheduledDateBs));
-  }, [filteredBaseRecords, todayBsFormatted, filterDay, filterVaccine]); 
+  }, [filteredBaseRecords, todayBsFormatted, targetYearPrefix, filterVaccine]); 
 
   const ficList = useMemo(() => {
     return filteredBaseRecords
@@ -190,17 +213,17 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
         const typhoid = child.vaccines.find(v => v.name.toLowerCase().includes('typhoid'));
         const isFullyVax = (mr2?.status === 'Given') || (typhoid?.status === 'Given');
         
-        // Day filter on FIC might be less relevant but we apply it to the completion date day if present
-        if (filterDay) {
+        // Filter by month (when they became FIC)
+        if (targetYearPrefix) {
             const lastVax = child.vaccines.find(v => v.name.toLowerCase().includes('mr-2')) || 
                            child.vaccines.find(v => v.name.toLowerCase().includes('typhoid'));
-            const completionDay = lastVax?.givenDateBs?.split('-')[2];
-            if (completionDay !== filterDay.padStart(2, '0')) return false;
+            if (!lastVax?.givenDateBs?.startsWith(targetYearPrefix)) return false;
         }
 
-        // Vaccine filter on FIC - only if the completed vaccine is the one being filtered
         if (filterVaccine) {
-            const completedVaccineMatchesFilter = child.vaccines.some(v => 
+            // If filtering by vaccine, only show if they took that vaccine in this period? 
+            // FIC logic usually ignores single vaccine filter, but we apply loosely
+             const completedVaccineMatchesFilter = child.vaccines.some(v => 
                 v.status === 'Given' && v.name === filterVaccine
             );
             if (!completedVaccineMatchesFilter) return false;
@@ -209,7 +232,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
         return isFullyVax;
       })
       .sort((a, b) => a.childName.localeCompare(b.childName));
-  }, [filteredBaseRecords, filterDay, filterVaccine]); // NEW: Add filterVaccine to deps
+  }, [filteredBaseRecords, targetYearPrefix, filterVaccine]); 
 
   const handlePrint = useCallback((listType: 'upcoming' | 'defaulter' | 'fic' | 'single-card') => {
     const printContentId = 
@@ -235,6 +258,10 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
     const lastVax = child.vaccines.find(v => v.name.toLowerCase().includes('mr-2')) || 
                   child.vaccines.find(v => v.name.toLowerCase().includes('typhoid'));
     return lastVax?.givenDateBs || '-';
+  };
+
+  const getSelectedMonthLabel = () => {
+      return nepaliMonthOptions.find(m => m.value === filterMonth)?.label || filterMonth;
   };
 
   return (
@@ -277,7 +304,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                         onClick={() => { setActiveView('upcoming'); setSearchTerm(''); }}
                         className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeView === 'upcoming' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
                     >
-                        <CalendarClock size={18}/> आगामी खोप (Due List)
+                        <CalendarClock size={18}/> आगामी खोप
                     </button>
                     <button 
                         onClick={() => { setActiveView('defaulter'); setSearchTerm(''); }}
@@ -307,7 +334,25 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
 
             {/* Filter Bar */}
             <div className="flex flex-wrap items-end gap-4 pt-4 border-t border-slate-100">
-                <div className="w-full md:w-64">
+                <div className="w-full md:w-40">
+                    <Select 
+                        label="आर्थिक वर्ष" 
+                        options={FISCAL_YEARS} 
+                        value={filterFiscalYear}
+                        onChange={e => setFilterFiscalYear(e.target.value)}
+                        icon={<Calendar size={16}/>}
+                    />
+                </div>
+                <div className="w-full md:w-40">
+                    <Select 
+                        label="महिना" 
+                        options={nepaliMonthOptions} 
+                        value={filterMonth}
+                        onChange={e => setFilterMonth(e.target.value)}
+                        icon={<Filter size={16}/>}
+                    />
+                </div>
+                <div className="w-full md:w-56">
                     <Select 
                         label="खोप केन्द्र फिल्टर" 
                         options={[{id: 'all', value: '', label: '-- सबै केन्द्रहरू --'}, ...centerOptions]} 
@@ -316,17 +361,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                         icon={<MapPinned size={16}/>}
                     />
                 </div>
-                <div className="w-full md:w-48">
-                    <Select 
-                        label="सत्रको गते फिल्टर" 
-                        options={[{id: 'all', value: '', label: '-- सबै गतेहरू --'}, ...sessionDayOptions]} 
-                        value={filterDay}
-                        onChange={e => setFilterDay(e.target.value)}
-                        icon={<Hash size={16}/>}
-                    />
-                </div>
-                {/* NEW: Vaccine Name Filter */}
-                <div className="w-full md:w-64">
+                <div className="w-full md:w-56">
                     <Select 
                         label="खोपको नाम फिल्टर" 
                         options={[{id: 'all', value: '', label: '-- सबै खोपहरू --'}, ...vaccineNameOptions]} 
@@ -336,10 +371,10 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                     />
                 </div>
                 <button 
-                    onClick={() => { setFilterCenter(''); setFilterDay(''); setFilterVaccine(''); setSearchTerm(''); }} // NEW: Reset filterVaccine
+                    onClick={() => { setFilterCenter(''); setFilterVaccine(''); setSearchTerm(''); setFilterFiscalYear(currentFiscalYear); }} 
                     className="flex items-center gap-2 px-4 py-2.5 text-slate-500 hover:text-slate-700 font-bold text-xs"
                 >
-                    <RotateCcw size={14}/> रिसेट फिल्टर
+                    <RotateCcw size={14}/> रिसेट
                 </button>
                 <div className="ml-auto">
                     <button 
@@ -360,13 +395,14 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                         <div className="flex items-center gap-3 text-blue-800">
                             <CalendarDays className="text-blue-600" />
                             <span className="font-bold font-nepali">
-                                खोप लगाउन योग्य (Due List - Scheduled Date Reached)
-                                {filterCenter && ` - केन्द्र: ${filterCenter}`}
-                                {filterDay && ` - गते: ${filterDay}`}
-                                {filterVaccine && ` - खोप: ${filterVaccine}`} {/* NEW: Display vaccine filter */}
+                                खोप तालिका (Vaccination Schedule)
+                                <span className="ml-2 text-sm font-normal bg-blue-100 px-2 py-0.5 rounded-md border border-blue-200">
+                                    {filterFiscalYear} - {getSelectedMonthLabel()}
+                                </span>
+                                {filterCenter && ` - ${filterCenter}`}
                             </span>
                         </div>
-                        <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">{upcomingSessionList.length} रेकर्डहरू</span>
+                        <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">{upcomingSessionList.length} बच्चाहरू</span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
@@ -375,7 +411,6 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                                     <th className="px-6 py-3">बच्चाको विवरण / केन्द्र</th>
                                     <th className="px-6 py-3">अभिभावक / ठेगाना</th>
                                     <th className="px-6 py-3 text-center">लगाउनुपर्ने खोप (Vaccines Due)</th>
-                                    <th className="px-6 py-3 text-center">निर्धारित मिति</th>
                                     <th className="px-6 py-3 text-right">सम्पर्क</th>
                                 </tr>
                             </thead>
@@ -393,21 +428,21 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                                             <div className="text-[10px] text-slate-400">{item.child.address}</div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <div className="flex flex-wrap gap-1 justify-center">
+                                            <div className="flex flex-wrap gap-2 justify-center">
                                                 {item.vaccines.map((vax, vIdx) => (
-                                                    <span key={vIdx} className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg font-black text-[11px] border border-blue-200">
-                                                        {vax.name}
-                                                    </span>
+                                                    <div key={vIdx} className="flex flex-col items-center bg-blue-50 px-2 py-1 rounded border border-blue-100">
+                                                        <span className="text-blue-700 font-black text-[11px]">{vax.name}</span>
+                                                        <span className="text-[9px] text-slate-500 font-bold font-nepali">
+                                                            {vax.scheduledDateBs.split('-')[2]} गते
+                                                        </span>
+                                                    </div>
                                                 ))}
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center font-bold text-slate-600 font-nepali">
-                                            {item.scheduledDateBs}
                                         </td>
                                         <td className="px-6 py-4 text-right font-mono font-bold text-slate-600">{item.child.phone}</td>
                                     </tr>
                                 ))}
-                                {upcomingSessionList.length === 0 && <tr><td colSpan={5} className="p-12 text-center text-slate-400 italic font-nepali text-lg">छानिएको फिल्टरमा कुनै विवरण फेला परेन।</td></tr>}
+                                {upcomingSessionList.length === 0 && <tr><td colSpan={4} className="p-12 text-center text-slate-400 italic font-nepali text-lg">छानिएको मितिमा कुनै खोप तालिका छैन।</td></tr>}
                             </tbody>
                         </table>
                     </div>
@@ -420,20 +455,17 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                         <div className="flex items-center gap-3 text-red-800">
                             <AlertOctagon className="text-red-600" />
                             <span className="font-bold font-nepali">
-                                छुटेका बालबालिकाहरू (Defaulter List)
-                                {filterCenter && ` - केन्द्र: ${filterCenter}`}
-                                {filterDay && ` - गते: ${filterDay}`}
-                                {filterVaccine && ` - खोप: ${filterVaccine}`} {/* NEW: Display vaccine filter */}
+                                छुटेका बालबालिकाहरू (Defaulter List) - {getSelectedMonthLabel()}
                             </span>
                         </div>
-                        <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">{defaulterList.length} जना बाँकी</span>
+                        <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">{defaulterList.length} जना</span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
                             <thead className="bg-slate-50 text-slate-500 font-bold border-b">
                                 <tr>
                                     <th className="px-6 py-3">बच्चाको विवरण / केन्द्र</th>
-                                    <th className="px-6 py-3">नछुटेको खोप (Missed Vaccines) / मिति</th>
+                                    <th className="px-6 py-3">छुटेको खोप विवरण</th>
                                     <th className="px-6 py-3 text-center">सम्पर्क</th>
                                     <th className="px-6 py-3 text-right">स्थिति</th>
                                 </tr>
@@ -448,12 +480,11 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                                         <td className="px-6 py-4">
                                             <div className="flex flex-wrap gap-1 mb-1">
                                                 {item.vaccines.map((vax, vIdx) => (
-                                                    <span key={vIdx} className="font-black text-red-600 text-xs bg-red-50 px-1.5 rounded border border-red-100">
-                                                        {vax.name}
+                                                    <span key={vIdx} className="font-black text-red-600 text-xs bg-red-50 px-1.5 rounded border border-red-100" title={`Date: ${vax.scheduledDateBs}`}>
+                                                        {vax.name} <span className="text-[9px] text-slate-400">({vax.scheduledDateBs})</span>
                                                     </span>
                                                 ))}
                                             </div>
-                                            <div className="text-[10px] text-slate-500">निर्धारित मिति: {item.scheduledDateBs}</div>
                                         </td>
                                         <td className="px-6 py-4 text-center font-mono font-bold text-slate-600">{item.child.phone}</td>
                                         <td className="px-6 py-4 text-right">
@@ -463,7 +494,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                                         </td>
                                     </tr>
                                 ))}
-                                {defaulterList.length === 0 && <tr><td colSpan={4} className="p-12 text-center text-slate-400 italic font-nepali">हाल खोप छुटेका कोही छैनन्।</td></tr>}
+                                {defaulterList.length === 0 && <tr><td colSpan={4} className="p-12 text-center text-slate-400 italic font-nepali">यो महिनामा खोप छुटेका कोही छैनन्।</td></tr>}
                             </tbody>
                         </table>
                     </div>
@@ -475,7 +506,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                     <div className="p-4 bg-teal-50 border-b border-teal-100 flex items-center justify-between">
                         <div className="flex items-center gap-3 text-teal-800">
                             <BadgeCheck className="text-teal-600" />
-                            <span className="font-bold font-nepali">पूर्ण खोप पुरा गरेका बालबालिकाहरू (FIC)</span>
+                            <span className="font-bold font-nepali">पूर्ण खोप पुरा गरेका बालबालिकाहरू (FIC) - {getSelectedMonthLabel()}</span>
                         </div>
                     </div>
                     <div className="overflow-x-auto">
@@ -624,9 +655,8 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
             <div className="print-header">
                 <h1>{generalSettings.orgNameNepali}</h1>
                 <h2>खोप तालिका विवरण (Vaccination Schedule)</h2>
+                <p>अवधि: {filterFiscalYear} - {getSelectedMonthLabel()}</p>
                 {filterCenter && <p>केन्द्र: {filterCenter}</p>}
-                {filterDay && <p>सत्र गते: {filterDay}</p>}
-                {filterVaccine && <p>खोपको नाम: {filterVaccine}</p>}
             </div>
             <table className="print-table">
                 <thead>
@@ -644,9 +674,9 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                             <td>{item.child.childName} <br/> <small>{item.child.regNo}</small></td>
                             <td>{item.child.vaccinationCenter}</td>
                             <td style={{fontWeight: 'bold'}}>
-                                {item.vaccines.map(v => v.name).join(', ')}
+                                {item.vaccines.map(v => `${v.name}`).join(', ')}
                             </td>
-                            <td>{item.scheduledDateBs}</td>
+                            <td>{item.scheduledDateBs} (Main)</td>
                             <td style={{fontFamily: 'monospace'}}>{item.child.phone}</td>
                         </tr>
                     ))}
@@ -658,9 +688,8 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
             <div className="print-header">
                 <h1 style={{color: 'red'}}>{generalSettings.orgNameNepali}</h1>
                 <h2 style={{color: 'red'}}>खोप छुटेका बालबालिकाहरूको सूची (Defaulter List)</h2>
+                <p>अवधि: {filterFiscalYear} - {getSelectedMonthLabel()}</p>
                 {filterCenter && <p>केन्द्र: {filterCenter}</p>}
-                {filterDay && <p>सत्र गते: {filterDay}</p>}
-                {filterVaccine && <p>खोपको नाम: {filterVaccine}</p>}
             </div>
             <table className="print-table">
                 <thead>
