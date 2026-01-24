@@ -180,8 +180,6 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
           const matchesVaccine = filterVaccine ? vaccine.name === filterVaccine : true;
           
           // For defaulters with filter: Show if due date was in the selected month AND is before today
-          // OR if no filter is strict, show all past due. 
-          // Based on user request, let's keep the filter consistent for "Monitoring".
           const matchesDate = vaccine.scheduledDateBs.startsWith(targetYearPrefix);
 
           if (
@@ -206,30 +204,54 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
     return Array.from(groupedMap.values()).sort((a, b) => a.scheduledDateBs.localeCompare(b.scheduledDateBs));
   }, [filteredBaseRecords, todayBsFormatted, targetYearPrefix, filterVaccine]); 
 
+  // FIC List: Fully Immunized Children (Excluding HPV)
   const ficList = useMemo(() => {
+    if (typeof NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE === 'undefined') return [];
+    
+    const requiredVaccines = NATIONAL_IMMUNIZATION_SCHEDULE_TEMPLATE.filter(v => !v.name.includes('HPV'));
+
     return filteredBaseRecords
       .filter(child => {
-        const mr2 = child.vaccines.find(v => v.name.toLowerCase().includes('mr-2'));
-        const typhoid = child.vaccines.find(v => v.name.toLowerCase().includes('typhoid'));
-        const isFullyVax = (mr2?.status === 'Given') || (typhoid?.status === 'Given');
-        
-        // Filter by month (when they became FIC)
+        // 1. Check if child has taken ALL required vaccines (excluding HPV)
+        const isFullyImmunized = requiredVaccines.every(reqVax => {
+            const childVax = child.vaccines.find(v => v.name === reqVax.name);
+            return childVax?.status === 'Given';
+        });
+
+        if (!isFullyImmunized) return false;
+
+        // 2. Check if the completion date (specifically 15-month vaccines) falls in the selected month
         if (targetYearPrefix) {
-            const lastVax = child.vaccines.find(v => v.name.toLowerCase().includes('mr-2')) || 
-                           child.vaccines.find(v => v.name.toLowerCase().includes('typhoid'));
-            if (!lastVax?.givenDateBs?.startsWith(targetYearPrefix)) return false;
+            // Find 15-month vaccines (MR-2 and Typhoid)
+            const fifteenMonthVaccines = child.vaccines.filter(v => 
+                (v.name.includes('MR-2') || v.name.includes('Typhoid')) && 
+                v.status === 'Given'
+            );
+
+            // If no 15-month vaccine recorded, can't verify date match
+            if (fifteenMonthVaccines.length === 0) return false;
+
+            // Sort dates to find the latest administration date of the 15-month vaccines
+            // The child is considered "Fully Immunized" in the month they receive the LAST of these.
+            const dates = fifteenMonthVaccines
+                .map(v => v.givenDateBs || '')
+                .filter(d => d !== '')
+                .sort();
+            
+            const last15MonthDate = dates[dates.length - 1];
+
+            if (!last15MonthDate?.startsWith(targetYearPrefix)) return false;
         }
 
+        // Optional: Filter by specific vaccine if selected (though FIC implies all)
         if (filterVaccine) {
-            // If filtering by vaccine, only show if they took that vaccine in this period? 
-            // FIC logic usually ignores single vaccine filter, but we apply loosely
              const completedVaccineMatchesFilter = child.vaccines.some(v => 
                 v.status === 'Given' && v.name === filterVaccine
             );
             if (!completedVaccineMatchesFilter) return false;
         }
 
-        return isFullyVax;
+        return true;
       })
       .sort((a, b) => a.childName.localeCompare(b.childName));
   }, [filteredBaseRecords, targetYearPrefix, filterVaccine]); 
@@ -255,9 +277,19 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
   }, []);
 
   const getCompletionDate = (child: ChildImmunizationRecord) => {
-    const lastVax = child.vaccines.find(v => v.name.toLowerCase().includes('mr-2')) || 
-                  child.vaccines.find(v => v.name.toLowerCase().includes('typhoid'));
-    return lastVax?.givenDateBs || '-';
+    const relevantVaccines = child.vaccines.filter(v => 
+        (v.name.includes('MR-2') || v.name.includes('Typhoid')) && 
+        v.status === 'Given'
+    );
+    if (relevantVaccines.length === 0) return '-';
+    
+    // Sort dates to find the latest
+    const dates = relevantVaccines
+        .map(v => v.givenDateBs || '')
+        .filter(d => d !== '')
+        .sort();
+        
+    return dates[dates.length - 1] || '-';
   };
 
   const getSelectedMonthLabel = () => {
@@ -340,7 +372,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                         options={FISCAL_YEARS} 
                         value={filterFiscalYear}
                         onChange={e => setFilterFiscalYear(e.target.value)}
-                        icon={<Calendar size={16}/>}
+                        icon={<Calendar size={16} />}
                     />
                 </div>
                 <div className="w-full md:w-40">
@@ -349,7 +381,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                         options={nepaliMonthOptions} 
                         value={filterMonth}
                         onChange={e => setFilterMonth(e.target.value)}
-                        icon={<Filter size={16}/>}
+                        icon={<Filter size={16} />}
                     />
                 </div>
                 <div className="w-full md:w-56">
@@ -358,7 +390,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                         options={[{id: 'all', value: '', label: '-- सबै केन्द्रहरू --'}, ...centerOptions]} 
                         value={filterCenter}
                         onChange={e => setFilterCenter(e.target.value)}
-                        icon={<MapPinned size={16}/>}
+                        icon={<MapPinned size={16} />}
                     />
                 </div>
                 <div className="w-full md:w-56">
@@ -367,7 +399,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                         options={[{id: 'all', value: '', label: '-- सबै खोपहरू --'}, ...vaccineNameOptions]} 
                         value={filterVaccine}
                         onChange={e => setFilterVaccine(e.target.value)}
-                        icon={<Baby size={16}/>}
+                        icon={<Baby size={16} />}
                     />
                 </div>
                 <button 
@@ -537,7 +569,7 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                                         </td>
                                     </tr>
                                 ))}
-                                {ficList.length === 0 && <tr><td colSpan={4} className="p-12 text-center text-slate-400 italic font-nepali">कुनै रेकर्ड छैन।</td></tr>}
+                                {ficList.length === 0 && <tr><td colSpan={4} className="p-12 text-center text-slate-400 italic font-nepali">कुनै रेकर्ड छैन। (यो महिनामा)</td></tr>}
                             </tbody>
                         </table>
                     </div>
@@ -711,6 +743,39 @@ export const ImmunizationTracking: React.FC<ImmunizationTrackingProps> = ({
                             </td>
                             <td>{item.scheduledDateBs}</td>
                             <td style={{fontFamily: 'monospace'}}>{item.child.phone}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="fic-list-print" className="hidden print-container">
+            <div className="print-header">
+                <h1 style={{color: 'teal'}}>{generalSettings.orgNameNepali}</h1>
+                <h2 style={{color: 'teal'}}>पूर्ण खोप पुरा गरेका बालबालिकाहरूको सूची (FIC List)</h2>
+                <p>अवधि: {filterFiscalYear} - {getSelectedMonthLabel()}</p>
+                {filterCenter && <p>केन्द्र: {filterCenter}</p>}
+            </div>
+            <table className="print-table">
+                <thead>
+                    <tr>
+                        <th>बच्चाको नाम</th>
+                        <th>दर्ता नं</th>
+                        <th>केन्द्र</th>
+                        <th>आमाको नाम</th>
+                        <th>ठेगाना</th>
+                        <th>सम्पन्न मिति</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {ficList.map((child, idx) => (
+                        <tr key={idx}>
+                            <td>{child.childName}</td>
+                            <td>{child.regNo}</td>
+                            <td>{child.vaccinationCenter}</td>
+                            <td>{child.motherName}</td>
+                            <td>{child.address}</td>
+                            <td>{getCompletionDate(child)}</td>
                         </tr>
                     ))}
                 </tbody>
