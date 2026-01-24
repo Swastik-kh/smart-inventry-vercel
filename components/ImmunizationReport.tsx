@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Printer, Calendar, Filter, BarChart, Download, Baby, Droplets, Users, UsersRound, MapPinned } from 'lucide-react';
 import { Select } from './Select';
@@ -42,7 +43,7 @@ const jatLabels: Record<string, string> = {
 export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({ 
   currentFiscalYear, 
   bachhaRecords, 
-  maternalRecords,
+  maternalRecords, 
   generalSettings 
 }) => {
   const [selectedMonth, setSelectedMonth] = useState('01');
@@ -139,21 +140,81 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
 
   const currentMonthLabel = nepaliMonthOptions.find(m => m.value === selectedMonth)?.label || '';
 
+  const handlePrint = () => {
+    const printContent = document.getElementById('immunization-report-print-content');
+    if (!printContent) return;
+
+    // Create a hidden iframe for printing
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Immunization Report</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+          @page { margin: 10mm; size: A4 portrait; }
+          body { 
+            font-family: 'Mukta', sans-serif; 
+            background: white; 
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact;
+            padding: 20px;
+          }
+          /* Ensure table styles are explicitly applied for print */
+          table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; }
+          th, td { border: 1px solid #000; padding: 4px 8px; }
+          thead th { background-color: #f0f0f0; font-weight: bold; }
+          .no-print { display: none; }
+          /* Utility replacements if tailwind fails to load fast enough */
+          .text-center { text-align: center; }
+          .text-right { text-align: right; }
+          .font-bold { font-weight: bold; }
+          .mb-6 { margin-bottom: 24px; }
+          .pb-4 { padding-bottom: 16px; }
+          .border-b-2 { border-bottom-width: 2px; }
+          .border-slate-900 { border-color: #0f172a; }
+        </style>
+      </head>
+      <body>
+        ${printContent.innerHTML}
+        <script>
+           // Wait for resources (fonts/tailwind) to load slightly
+           window.onload = function() {
+              setTimeout(function() {
+                 window.print();
+              }, 800);
+           };
+        </script>
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    // Clean up iframe after printing
+    setTimeout(() => {
+        if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+        }
+    }, 5000);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-      {/* Print Styling */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          @page { margin: 10mm; size: A4 portrait; }
-          body { background: white !important; }
-          .no-print { display: none !important; }
-          .print-full { width: 100% !important; max-width: none !important; box-shadow: none !important; border: none !important; }
-          table { width: 100% !important; border-collapse: collapse !important; font-size: 12px !important; }
-          th, td { border: 1px solid black !important; padding: 4px 8px !important; }
-          thead th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; }
-        }
-      `}} />
-
+      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
         <div className="flex flex-wrap gap-4">
           <div className="w-40"><Select label="आर्थिक वर्ष" options={FISCAL_YEARS} value={selectedFiscalYear} onChange={(e) => setSelectedFiscalYear(e.target.value)} icon={<Calendar size={18} />} /></div>
@@ -168,10 +229,10 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
             />
           </div>
         </div>
-        <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 text-white rounded-lg font-medium shadow-sm"><Printer size={18} /> प्रिन्ट</button>
+        <button onClick={handlePrint} className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 text-white rounded-lg font-medium shadow-sm"><Printer size={18} /> प्रिन्ट</button>
       </div>
 
-      <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-100 max-w-[210mm] mx-auto print-full print:p-0">
+      <div id="immunization-report-print-content" className="bg-white p-8 rounded-2xl shadow-xl border border-slate-100 max-w-[210mm] mx-auto print-full">
         {/* Header */}
         <div className="text-center mb-6 border-b-2 border-slate-900 pb-4">
             <h1 className="text-xl font-bold text-slate-900">{generalSettings.orgNameNepali}</h1>
