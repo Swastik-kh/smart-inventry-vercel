@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 /* Added AlertTriangle to the imports */
 import { Save, RotateCcw, Syringe, Calendar, FileDigit, User, Phone, MapPin, CalendarRange, Clock, CheckCircle2, Search, X, AlertCircle, Trash2, Pencil, Check, Info, AlertTriangle, Bone } from 'lucide-react';
@@ -393,6 +394,35 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
           dateBs: modalDateBs, // <--- UPDATED AS PER REQUEST: Set dateBs to the given date
           givenDate: modalDateBs 
       };
+
+      // NEW LOGIC: Update D7 schedule if D3 is given
+      if (dose.day === 3) {
+          try {
+              // Convert given date (modalDateBs) to Date object
+              const d3GivenDate = new NepaliDate(modalDateBs).toJsDate();
+              
+              // Calculate D7 Date = D3 Given Date + 4 Days
+              const d7Date = new Date(d3GivenDate);
+              d7Date.setDate(d7Date.getDate() + 4);
+              
+              const d7DateAdStr = formatDateLocal(d7Date);
+              const d7DateBsStr = new NepaliDate(d7Date).format('YYYY-MM-DD');
+
+              // Find D7 index
+              const d7Index = updatedSchedule.findIndex(d => d.day === 7);
+              if (d7Index !== -1) {
+                  updatedSchedule[d7Index] = {
+                      ...updatedSchedule[d7Index],
+                      date: d7DateAdStr,
+                      dateBs: d7DateBsStr
+                      // Keep status as pending (or whatever it was)
+                  };
+              }
+          } catch (e) {
+              console.error("Error recalculating D7 date:", e);
+          }
+      }
+
       onUpdatePatient({ ...patient, schedule: updatedSchedule });
       setSelectedDoseInfo(null);
   };
