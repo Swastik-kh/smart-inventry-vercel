@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useCallback } from 'react';
 import { ShoppingCart, FilePlus, ChevronRight, ArrowLeft, Printer, Save, Calculator, CheckCircle2, Send, ShieldCheck, CheckCheck, Eye, FileText, Clock, Archive, AlertCircle, X, Maximize2, Minimize2 } from 'lucide-react';
 import { User, Option, OrganizationSettings } from '../types/coreTypes';
@@ -420,19 +419,173 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({ orders, currentFiscalY
     if (isViewOnlyMode) { actionLabel = 'View Only'; ActionIcon = Eye; }
 
     const printDocument = useCallback((orientation: 'portrait' | 'landscape') => {
-        const style = document.createElement('style');
-        style.id = 'print-orientation-style';
-        style.innerHTML = `@page { size: A4 ${orientation}; margin: 1cm; }`;
-        document.head.appendChild(style);
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
 
-        window.print();
+        const doc = iframe.contentWindow?.document;
+        if (!doc) return;
 
-        // Delay removal of style to ensure print dialog closes
+        // Content Generation
+        const itemsRows = poItems.map((item, idx) => `
+            <tr>
+                <td class="text-center">${idx + 1}</td>
+                <td class="text-center">${item.codeNo || '-'}</td>
+                <td class="pl-2 text-left">
+                    <div class="font-bold">${item.name}</div>
+                    <div class="text-[10px]">${item.specification || ''}</div>
+                    ${item.model ? `<div class="text-[10px]">Model: ${item.model}</div>` : ''}
+                </td>
+                <td class="text-center">${item.unit}</td>
+                <td class="text-center font-bold">${item.quantity}</td>
+                <td class="text-right pr-2">${item.rate}</td>
+                <td class="text-right pr-2 font-bold">${item.total}</td>
+                <td class="text-left pl-2 text-[10px]">${item.remarks || ''}</td>
+            </tr>
+        `).join('');
+
+        const totalAmount = poItems.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
+
+        doc.open();
+        doc.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Purchase Order Print</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+                <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+                <style>
+                    @page { size: A4 ${orientation}; margin: 10mm; }
+                    body { font-family: 'Mukta', sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .border-black { border-color: #000; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+                    th, td { border: 1px solid black; padding: 4px; font-size: 11px; }
+                    .dotted-bottom { border-bottom: 1px dotted black; }
+                    .text-center { text-align: center; }
+                    .text-right { text-align: right; }
+                    .text-left { text-align: left; }
+                </style>
+            </head>
+            <body class="p-4 bg-white text-black">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="w-1/4"></div>
+                    <div class="w-2/4 text-center">
+                        <div class="flex justify-center mb-2">
+                             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" class="h-20 w-auto" />
+                        </div>
+                        <h1 class="text-xl font-black text-red-600">${generalSettings.orgNameNepali}</h1>
+                        <h2 class="text-sm font-bold">${generalSettings.subTitleNepali}</h2>
+                        ${generalSettings.address ? `<p class="text-xs">${generalSettings.address}</p>` : ''}
+                        ${generalSettings.phone ? `<p class="text-xs">फोन: ${generalSettings.phone}</p>` : ''}
+                        <h3 class="text-lg font-black underline mt-4">खरिद आदेश (Purchase Order)</h3>
+                    </div>
+                    <div class="w-1/4 text-right">
+                        <div class="text-xs font-bold border border-black px-2 py-1 inline-block">म.ले.प.फा.नं ४०५</div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-end mb-4 text-xs">
+                    <div class="w-1/2 space-y-2">
+                        <div class="flex"><span class="w-24 font-bold">श्री:</span> <span class="dotted-bottom flex-1 font-bold">${poDetails.vendorName}</span></div>
+                        <div class="flex"><span class="w-24 font-bold">ठेगाना:</span> <span class="dotted-bottom flex-1">${poDetails.vendorAddress}</span></div>
+                        <div class="flex"><span class="w-24 font-bold">पान/भ्याट नं:</span> <span class="dotted-bottom flex-1">${poDetails.vendorPan}</span></div>
+                        <div class="flex"><span class="w-24 font-bold">फोन:</span> <span class="dotted-bottom flex-1">${poDetails.vendorPhone}</span></div>
+                    </div>
+                    <div class="w-1/3 space-y-2 text-right">
+                        <div class="flex justify-end gap-2"><span>आर्थिक वर्ष:</span> <span class="font-bold">${poDetails.fiscalYear}</span></div>
+                        <div class="flex justify-end gap-2"><span class="font-bold">खरिद आदेश नं:</span> <span class="font-bold text-red-600">${poDetails.orderNo}</span></div>
+                        <div class="flex justify-end gap-2"><span class="font-bold">मिति:</span> <span class="font-bold">${poDetails.orderDate}</span></div>
+                        <div class="flex justify-end gap-2"><span>निर्णय नं:</span> <span>${poDetails.decisionNo || '-'}</span></div>
+                    </div>
+                </div>
+
+                <div class="mb-4 text-xs">
+                    <span class="font-bold">तपसिल:</span>
+                </div>
+
+                <table class="mb-4">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="w-8">क्र.सं.</th>
+                            <th class="w-20">सङ्केत नं</th>
+                            <th>विवरण (नाम / स्पेसिफिकेसन)</th>
+                            <th class="w-16">एकाई</th>
+                            <th class="w-16">परिमाण</th>
+                            <th class="w-20">दर</th>
+                            <th class="w-24">जम्मा रकम</th>
+                            <th class="w-24">कैफियत</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsRows}
+                        <tr class="font-bold bg-gray-50">
+                            <td colspan="6" class="text-right pr-4">कुल जम्मा (Total)</td>
+                            <td class="text-right pr-2">${totalAmount.toFixed(2)}</td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="text-xs mb-8">
+                    <p class="mb-1"><span class="font-bold">बजेट उपशीर्षक नं:</span> ${poDetails.budgetSubHeadNo || '-'}</p>
+                    <p class="mb-1"><span class="font-bold">खर्च शीर्षक नं:</span> ${poDetails.expHeadNo || '-'}</p>
+                    <p class="mb-1">माथि उल्लेखित सामानहरु मिति ........................... भित्र यस कार्यालयमा दाखिला गरि बिल पेश गर्नुहोला ।</p>
+                </div>
+
+                <div class="grid grid-cols-4 gap-4 text-xs mt-16 text-center">
+                    <div>
+                        <div class="border-t border-black pt-2 font-bold">फाँटवाला / तयार गर्ने</div>
+                        <div class="mt-1">${poDetails.preparedBy?.name || ''}</div>
+                        <div class="text-[10px]">${poDetails.preparedBy?.designation || ''}</div>
+                        <div class="text-[10px] italic">${poDetails.preparedBy?.date || ''}</div>
+                    </div>
+                    <div>
+                        <div class="border-t border-black pt-2 font-bold">सिफारिस गर्ने</div>
+                        <div class="mt-1">${poDetails.recommendedBy?.name || ''}</div>
+                        <div class="text-[10px]">${poDetails.recommendedBy?.designation || ''}</div>
+                        <div class="text-[10px] italic">${poDetails.recommendedBy?.date || ''}</div>
+                    </div>
+                    <div>
+                        <div class="border-t border-black pt-2 font-bold">लेखा प्रमुख</div>
+                        <div class="mt-1">${poDetails.financeBy?.name || ''}</div>
+                        <div class="text-[10px]">${poDetails.financeBy?.designation || ''}</div>
+                        <div class="text-[10px] italic">${poDetails.financeBy?.date || ''}</div>
+                    </div>
+                    <div>
+                        <div class="border-t border-black pt-2 font-bold">कार्यालय प्रमुख / स्वीकृत गर्ने</div>
+                        <div class="mt-1">${poDetails.approvedBy?.name || ''}</div>
+                        <div class="text-[10px]">${poDetails.approvedBy?.designation || ''}</div>
+                        <div class="text-[10px] italic">${poDetails.approvedBy?.date || ''}</div>
+                    </div>
+                </div>
+
+                <script>
+                    window.onload = function() {
+                        setTimeout(function() {
+                            window.print();
+                        }, 500);
+                    };
+                </script>
+            </body>
+            </html>
+        `);
+        doc.close();
+
+        // Close modal after initiating print
         setTimeout(() => {
-            document.head.removeChild(style);
-            setShowPrintOptionsModal(false); // Close the modal after print command
-        }, 500); 
-    }, []);
+            if (document.body.contains(iframe)) {
+                // Keep iframe for a bit if needed for debugging or printing delay, but usually removing it is fine
+                // document.body.removeChild(iframe); 
+            }
+            setShowPrintOptionsModal(false);
+        }, 1000);
+
+    }, [poDetails, poItems, generalSettings]);
 
     if (selectedOrder) {
         return (
