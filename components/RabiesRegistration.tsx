@@ -391,7 +391,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
       updatedSchedule[doseIndex] = {
           ...updatedSchedule[doseIndex],
           status: 'Given',
-          dateBs: modalDateBs, // <--- UPDATED AS PER REQUEST: Set dateBs to the given date
+          dateBs: modalDateBs, // <--- UPDATED AS PER REQUEST: Set dateBs to the given date (Actual Date)
           givenDate: modalDateBs 
       };
 
@@ -399,6 +399,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
       if (dose.day === 3) {
           try {
               // Convert given date (modalDateBs) to Date object
+              // nepali-date-converter parses YYYY-MM-DD correctly
               const d3GivenDate = new NepaliDate(modalDateBs).toJsDate();
               
               // Calculate D7 Date = D3 Given Date + 4 Days
@@ -576,6 +577,13 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                                   <div className="flex flex-wrap gap-1">
                                       {(p.schedule || []).map((dose, idx) => {
                                           const isOverdue = dose.status === 'Pending' && new Date(dose.date) < new Date(todayAd);
+                                          // Display scheduled date OR actual given date if administered
+                                          // For display in button: Use dateBs if present (either scheduled or actual)
+                                          // If it's the actual given date, it's already in dose.dateBs from the update logic
+                                          
+                                          // Helper to get day/month string
+                                          const displayDate = dose.dateBs ? dose.dateBs.split('-').slice(1).join('-') : 'N/A';
+
                                           return (
                                               <button
                                                   key={idx}
@@ -593,7 +601,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                                                       ${(dose.status === 'Given' && !isAdmin) ? 'opacity-70 cursor-not-allowed' : ''}
                                                   `}
                                               >
-                                                  D{dose.day} ({formatAdDateToBsDisplay(dose.date)})
+                                                  D{dose.day} ({displayDate})
                                                   {dose.status === 'Given' && <Check size={10} className="inline-block ml-1" />}
                                               </button>
                                           );
