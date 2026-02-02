@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 /* Added AlertTriangle to the imports */
-import { Save, RotateCcw, Syringe, Calendar, FileDigit, User, Phone, MapPin, CalendarRange, Clock, CheckCircle2, Search, X, AlertCircle, Trash2, Pencil, Check, Info, AlertTriangle, Bone } from 'lucide-react';
+import { Save, RotateCcw, Syringe, Calendar, FileDigit, User, Phone, MapPin, CalendarRange, Clock, CheckCircle2, Search, X, AlertCircle, Trash2, Pencil, Check, Info, AlertTriangle, Bone, History } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
 import { NepaliDatePicker } from './NepaliDatePicker';
@@ -138,7 +138,9 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
     bodyPart: '', // Initialized new field
     exposureDateBs: '',
     regimen: 'Intradermal',
-    schedule: []
+    schedule: [],
+    hasPreviousVaccine: false,
+    previousVaccineDateBs: ''
   });
 
   useEffect(() => {
@@ -156,7 +158,9 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
           regDateAd: todayAd,
           vaccineStartDateBs: todayBs,
           vaccineStartDateAd: todayAd,
-          exposureDateBs: todayBs
+          exposureDateBs: todayBs,
+          hasPreviousVaccine: false,
+          previousVaccineDateBs: ''
         }));
     }
   }, [currentFiscalYear, patients.length, editingPatientId]);
@@ -292,6 +296,24 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
       return schedule.sort((a, b) => a.day - b.day); // Ensure schedule is ordered by day
   };
 
+  const calculatePreviousVaccineGap = useMemo(() => {
+      if (!formData.hasPreviousVaccine || !formData.previousVaccineDateBs || !formData.vaccineStartDateBs) return null;
+      try {
+          // Convert both BS dates to AD using nepali-date-converter to ensure correct diff
+          const prevDate = new NepaliDate(formData.previousVaccineDateBs).toJsDate();
+          const currDate = new NepaliDate(formData.vaccineStartDateBs).toJsDate();
+          
+          // Difference in milliseconds
+          const diffTime = Math.abs(currDate.getTime() - prevDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          const diffMonths = Math.floor(diffDays / 30);
+          
+          return { days: diffDays, months: diffMonths };
+      } catch (e) {
+          return null;
+      }
+  }, [formData.hasPreviousVaccine, formData.previousVaccineDateBs, formData.vaccineStartDateBs]);
+
   const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       if (!formData.name || !formData.regDateBs || !formData.exposureCategory) {
@@ -342,7 +364,9 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
         animalType: '', exposureCategory: '', bodyPart: '', // Reset new field
         exposureDateBs: today.format('YYYY-MM-DD'),
         regimen: 'Intradermal',
-        schedule: []
+        schedule: [],
+        hasPreviousVaccine: false,
+        previousVaccineDateBs: ''
     });
   };
 
@@ -525,6 +549,37 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
               {/* NEW FIELD: Body Part */}
               <Input label="टोकेको भाग / ठाउँ (Body Part)" value={formData.bodyPart} onChange={e => setFormData({...formData, bodyPart: e.target.value})} placeholder="e.g. हात, खुट्टा, अनुहार" icon={<Bone size={16} />} />
 
+              {/* SECTION: PREVIOUS VACCINATION HISTORY */}
+              <div className="md:col-span-3 mt-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <h4 className="font-bold text-slate-700 font-nepali mb-3 flex items-center gap-2"><History size={18} className="text-orange-600"/> विगतको खोप विवरण (Previous Vaccination History)</h4>
+                  <div className="grid md:grid-cols-2 gap-6">
+                      <Select 
+                          label="के यसअघि रेबिज खोप लगाउनुभएको छ?"
+                          options={[{id: 'yes', value: 'yes', label: 'छ (Yes)'}, {id: 'no', value: 'no', label: 'छैन (No)'}]}
+                          value={formData.hasPreviousVaccine ? 'yes' : 'no'}
+                          onChange={e => setFormData({...formData, hasPreviousVaccine: e.target.value === 'yes'})}
+                      />
+                      {formData.hasPreviousVaccine && (
+                          <div className="space-y-2">
+                              <NepaliDatePicker 
+                                  label="अन्तिम खोप लगाएको मिति (BS)"
+                                  value={formData.previousVaccineDateBs || ''}
+                                  onChange={val => setFormData({...formData, previousVaccineDateBs: val})}
+                              />
+                              {calculatePreviousVaccineGap && (
+                                  <div className={`text-xs p-2 rounded flex items-start gap-2 ${calculatePreviousVaccineGap.months < 3 ? 'bg-orange-100 text-orange-800' : 'bg-green-50 text-green-800'}`}>
+                                      <Info size={14} className="mt-0.5 shrink-0" />
+                                      <div>
+                                          <strong>समयावधि:</strong> {calculatePreviousVaccineGap.months} महिना {calculatePreviousVaccineGap.days % 30} दिन अगाडि
+                                          {calculatePreviousVaccineGap.months < 3 && <div className="font-bold mt-1">⚠️ ३ महिना भन्दा कम समय भएकोले बुस्टर मात्र दिन सकिन्छ (Check Protocol)</div>}
+                                      </div>
+                                  </div>
+                              )}
+                          </div>
+                      )}
+                  </div>
+              </div>
+
               <div className="md:col-span-3 pt-4 border-t border-slate-100 flex justify-end gap-3">
                   <button type="button" className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg flex items-center gap-2" onClick={handleReset}><RotateCcw size={18} /> {editingPatientId ? 'रद्द गर्नुहोस्' : 'रिसेट'}</button>
                   <button type="submit" className="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg shadow-lg shadow-indigo-100 transition-all font-bold text-sm"><Save size={16}/> {editingPatientId ? 'अपडेट गर्नुहोस्' : 'दर्ता गर्नुहोस्'}</button>
@@ -572,6 +627,11 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                                       {p.exposureCategory}
                                     </span>
                                   </div>
+                                  {p.hasPreviousVaccine && (
+                                      <div className="mt-1 text-[10px] text-orange-700 flex items-center gap-1 font-bold">
+                                          <History size={10} /> Prev. Vaccine: Yes ({p.previousVaccineDateBs})
+                                      </div>
+                                  )}
                               </td>
                               <td className="px-6 py-4">
                                   <div className="flex flex-wrap gap-1">

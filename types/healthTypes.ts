@@ -30,6 +30,9 @@ export interface RabiesPatient {
   exposureDateBs: string; 
   regimen: 'Intradermal' | 'Intramuscular';
   schedule: VaccinationDose[];
+  // New fields for previous history
+  hasPreviousVaccine?: boolean;
+  previousVaccineDateBs?: string;
 }
 
 export interface TBReport {

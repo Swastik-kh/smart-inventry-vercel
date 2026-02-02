@@ -1,16 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { LoginForm } from './components/LoginForm';
-import { Dashboard } from './components/Dashboard';
-import { APP_NAME, ORG_NAME } from './constants';
+import { LoginForm } from './LoginForm';
+import { Dashboard } from './Dashboard';
+import { APP_NAME, ORG_NAME } from '../constants';
 import { Landmark, ShieldCheck } from 'lucide-react';
 import { 
   User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, 
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
   DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord 
-} from './types';
-import { db } from './firebase';
+} from '../types';
+import { db } from '../firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe } from "firebase/database";
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
@@ -265,7 +265,7 @@ const App: React.FC = () => {
                       // Ensure purpose is explicitly set, even if empty, for consistency with Signature type
                       recommendedBy: { name: '', designation: '', date: '', purpose: '' }, 
                       financeBy: { name: '', designation: '', date: '', purpose: '' },       
-                      approvedBy: { name: '', designation: '', date: '', '', purpose: '' }      
+                      approvedBy: { name: '', designation: '', date: '', purpose: '' }      
                   };
               }
           }
@@ -696,7 +696,7 @@ const App: React.FC = () => {
           onUpdateIssueReport={handleUpdateIssueReport}
           rabiesPatients={rabiesPatients}
           onAddRabiesPatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}
-          onUpdateRabiesPatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}
+          onUpdatePatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}
           onDeletePatient={(id) => remove(getOrgRef(`rabiesPatients/${id}`))}
           tbPatients={tbPatients} // Pass TB patients
           onAddTbPatient={handleAddTbPatient} // Pass TB add handler

@@ -166,16 +166,9 @@ const App: React.FC = () => {
 
   const handleSaveUser = async (u: User) => {
       try {
-          console.log(`Attempting to save user: ${u.username} at path users/${u.id}`);
           await set(ref(db, `users/${u.id}`), u);
-          console.log(`Successfully saved user: ${u.username}`);
       } catch (err: any) {
-          console.error("Firebase User Save Error:", err);
-          if (err.message.includes("permission_denied")) {
-              alert("त्रुटि: डेटाबेसमा लेख्न अनुमति छैन (Permission Denied)। कृपया Firebase Rules जाँच गर्नुहोस्।");
-          } else {
-              alert(`त्रुटि: प्रयोगकर्ता सुरक्षित गर्न सकिएन। (${err.message})`);
-          }
+          alert(`त्रुटि: प्रयोगकर्ता सुरक्षित गर्न सकिएन। (${err.message})`);
           throw err;
       }
   };
@@ -189,7 +182,6 @@ const App: React.FC = () => {
       }
   };
 
-  // Added handleDeleteMagForm to fix "Cannot find name 'handleDeleteMagForm'" error
   const handleDeleteMagForm = async (formId: string) => {
       if (!currentUser) return;
       try {
@@ -199,7 +191,6 @@ const App: React.FC = () => {
       }
   };
 
-  // Added handleDeleteInventoryItem to fix "Cannot find name 'handleDeleteInventoryItem'" error
   const handleDeleteInventoryItem = async (itemId: string) => {
       if (!currentUser) return;
       try {
@@ -404,6 +395,79 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSaveReturnEntry = async (entry: ReturnEntry) => {
+      if (!currentUser) return;
+      try {
+          const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
+          const orgPath = `orgData/${safeOrgName}`;
+          const updates: Record<string, any> = {};
+          
+          updates[`${orgPath}/returnEntries/${entry.id}`] = entry;
+
+          if (entry.status === 'Approved') {
+              const invAllSnap = await get(ref(db, `${orgPath}/inventory`));
+              const currentInvData = invAllSnap.val() || {};
+              const currentInvList: InventoryItem[] = Object.keys(currentInvData).map(k => ({ ...currentInvData[k], id: k }));
+
+              for (const returnedItem of entry.items) {
+                  if (returnedItem.itemType !== 'Non-Expendable') continue; 
+
+                  const existingItem = currentInvList.find(i => 
+                      i.id === returnedItem.inventoryId || 
+                      (i.itemName.trim().toLowerCase() === returnedItem.name.trim().toLowerCase() && 
+                       (i.uniqueCode?.trim().toLowerCase() === returnedItem.codeNo?.trim().toLowerCase() ||
+                        i.sanketNo?.trim().toLowerCase() === returnedItem.codeNo?.trim().toLowerCase()) &&
+                        i.itemType === returnedItem.itemType
+                      )
+                  );
+
+                  if (existingItem) {
+                      const newQty = (Number(existingItem.currentQuantity) || 0) + (Number(returnedItem.quantity) || 0);
+                      const newTotalAmount = (Number(existingItem.totalAmount) || 0) + (Number(returnedItem.totalAmount) || 0);
+
+                      updates[`${orgPath}/inventory/${existingItem.id}`] = { 
+                          ...existingItem, 
+                          currentQuantity: newQty, 
+                          totalAmount: newTotalAmount, 
+                          lastUpdateDateBs: entry.date, 
+                          lastUpdateDateAd: new Date().toISOString().split('T')[0],
+                          receiptSource: 'Returned'
+                      };
+                  } else {
+                      const newInventoryId = returnedItem.inventoryId || `ITEM-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+                      updates[`${orgPath}/inventory/${newInventoryId}`] = {
+                          id: newInventoryId,
+                          itemName: returnedItem.name,
+                          uniqueCode: returnedItem.codeNo,
+                          sanketNo: returnedItem.codeNo,
+                          ledgerPageNo: "", 
+                          itemType: returnedItem.itemType || "Non-Expendable", 
+                          itemClassification: returnedItem.itemClassification || "", 
+                          specification: returnedItem.specification || "", 
+                          unit: returnedItem.unit,
+                          currentQuantity: returnedItem.quantity,
+                          rate: returnedItem.rate,
+                          tax: 0, 
+                          totalAmount: returnedItem.totalAmount,
+                          batchNo: "",
+                          expiryDateAd: "",
+                          expiryDateBs: "",
+                          lastUpdateDateAd: new Date().toISOString().split('T')[0],
+                          lastUpdateDateBs: entry.date,
+                          fiscalYear: entry.fiscalYear,
+                          receiptSource: 'Returned',
+                          remarks: `Returned via form ${entry.formNo}. Original remarks: ${returnedItem.remarks}`,
+                          storeId: "" 
+                      };
+                  }
+              }
+          }
+          await update(ref(db), updates);
+      } catch (error) {
+          alert("जिन्सी फिर्ता सुरक्षित गर्दा समस्या आयो।");
+      }
+  };
+
   return (
     <>
       {currentUser ? (
@@ -427,7 +491,7 @@ const App: React.FC = () => {
           stockEntryRequests={stockEntryRequests} onRequestStockEntry={(r) => set(getOrgRef(`stockRequests/${r.id}`), r)} onApproveStockEntry={handleApproveStockEntry}
           onRejectStockEntry={(id, res, app) => update(getOrgRef(`stockRequests/${id}`), { status: 'Rejected', rejectionReason: res, approvedBy: app })}
           stores={stores} onAddStore={(s) => set(getOrgRef(`stores/${s.id}`), s)} onUpdateStore={(s) => set(getOrgRef(`stores/${s.id}`), s)} onDeleteStore={(id) => remove(getOrgRef(`stores/${id}`))}
-          dakhilaReports={dakhilaReports} onSaveDakhilaReport={(r) => set(getOrgRef(`dakhilaReports/${r.id}`), r)} returnEntries={returnEntries} onSaveReturnEntry={(e) => set(getOrgRef(`returnEntries/${e.id}`), e)}
+          dakhilaReports={dakhilaReports} onSaveDakhilaReport={(r) => set(getOrgRef(`dakhilaReports/${r.id}`), r)} returnEntries={returnEntries} onSaveReturnEntry={handleSaveReturnEntry}
           marmatEntries={marmatEntries} onSaveMarmatEntry={(e) => set(getOrgRef(`marmatEntries/${e.id}`), e)} dhuliyaunaEntries={dhuliyaunaEntries} onSaveDhuliyaunaEntry={(e) => set(getOrgRef(`disposalEntries/${e.id}`), e)}
           logBookEntries={logBookEntries} onSaveLogBookEntry={(e) => set(getOrgRef(`logBook/${e.id}`), e)} onClearData={(p) => remove(getOrgRef(p))} onUploadData={handleUploadDatabase}
         />
