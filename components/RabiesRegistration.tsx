@@ -617,7 +617,15 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                               <td className="px-6 py-4 font-mono font-medium text-indigo-600">{p.regNo}</td>
                               <td className="px-6 py-4">
                                   <div className="font-medium text-slate-800">{p.name}</div>
-                                  <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
+                                  
+                                  {/* ADDED: Age and Address Display */}
+                                  <div className="text-xs text-slate-600 mt-0.5 flex flex-wrap gap-1">
+                                     <span>{p.age} बर्ष ({p.sex.charAt(0)})</span>
+                                     <span className="text-slate-300">|</span>
+                                     <span>{p.address}</span>
+                                  </div>
+
+                                  <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-1">
                                     <span className="bg-slate-100 px-1 rounded">{p.animalType}</span>
                                     <span className={`px-1 rounded font-bold border ${
                                         p.exposureCategory === 'Category III' ? 'bg-red-50 text-red-700 border-red-200' :
