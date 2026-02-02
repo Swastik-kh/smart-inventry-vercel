@@ -544,6 +544,8 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                   <Input label="ठेगाना" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} required placeholder="Municipality-Ward" icon={<MapPin size={16} />} />
               </div>
 
+              <NepaliDatePicker label="टोकेको मिति (Bite Date)" value={formData.exposureDateBs} onChange={val => setFormData({...formData, exposureDateBs: val})} required />
+
               <Select label="टोक्ने जनावर" value={formData.animalType} onChange={e => setFormData({...formData, animalType: e.target.value})} options={animalTypeOptions} required />
               <Select label="WHO Category (Exposure)" value={formData.exposureCategory} onChange={e => setFormData({...formData, exposureCategory: e.target.value})} options={whoCategoryOptions} required icon={<AlertTriangle size={16} />} />
               {/* NEW FIELD: Body Part */}
@@ -618,7 +620,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
                               <td className="px-6 py-4">
                                   <div className="font-medium text-slate-800">{p.name}</div>
                                   
-                                  {/* ADDED: Age and Address Display */}
+                                  {/* Age and Address Display */}
                                   <div className="text-xs text-slate-600 mt-0.5 flex flex-wrap gap-1">
                                      <span>{p.age} बर्ष ({p.sex.charAt(0)})</span>
                                      <span className="text-slate-300">|</span>
@@ -627,6 +629,7 @@ export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({
 
                                   <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-1">
                                     <span className="bg-slate-100 px-1 rounded">{p.animalType}</span>
+                                    {p.exposureDateBs && <span className="bg-slate-100 px-1 rounded text-slate-600 font-medium">Bite: {p.exposureDateBs}</span>}
                                     <span className={`px-1 rounded font-bold border ${
                                         p.exposureCategory === 'Category III' ? 'bg-red-50 text-red-700 border-red-200' :
                                         p.exposureCategory === 'Category II' ? 'bg-orange-50 text-orange-700 border-orange-200' :
