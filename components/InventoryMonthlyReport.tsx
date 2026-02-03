@@ -215,25 +215,72 @@ export const InventoryMonthlyReport: React.FC<InventoryMonthlyReportProps> = ({
 
   const handlePrint = useCallback((orientation: 'portrait' | 'landscape') => {
     const printContentId = 'inventory-monthly-report-print';
-    const style = document.createElement('style');
-    style.id = 'print-orientation-style';
-    style.innerHTML = `@page { size: A4 ${orientation}; margin: 1cm; }`;
-    document.head.appendChild(style);
+    const printContent = document.getElementById(printContentId);
 
-    const originalContents = document.body.innerHTML;
-    const printContents = document.getElementById(printContentId)?.innerHTML;
-
-    if (!printContents) {
+    if (!printContent) {
         alert('प्रिन्ट गर्नको लागि कुनै डाटा छैन।');
-        const existingStyle = document.getElementById('print-orientation-style');
-        if (existingStyle) document.head.removeChild(existingStyle);
         return;
     }
 
-    document.body.innerHTML = printContents;
-    window.print();
-    document.body.innerHTML = originalContents;
-    window.location.reload();
+    // Create a hidden iframe for printing to avoid destroying React state/DOM
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Inventory Monthly Report</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+          @page { size: A4 ${orientation}; margin: 1cm; }
+          body { font-family: 'Mukta', sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 20px; }
+          /* Helper to hide print elements in app but show here */
+          .print-container { display: block !important; }
+          /* Ensure table borders are visible */
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #e2e8f0; padding: 4px; text-align: left; font-size: 10px; }
+          th { background-color: #f8fafc; font-weight: bold; }
+          .text-center { text-align: center; }
+          .text-right { text-align: right; }
+          .font-bold { font-weight: 700; }
+          .text-red-600 { color: #dc2626; }
+          .border-slate-900 { border-color: #0f172a; }
+        </style>
+      </head>
+      <body>
+        ${printContent.innerHTML}
+        <script>
+           // Wait for resources (fonts/tailwind) to load slightly
+           window.onload = function() {
+              setTimeout(function() {
+                 window.print();
+              }, 1000);
+           };
+        </script>
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    // Clean up iframe after a delay to ensure print dialog has opened
+    setTimeout(() => {
+        if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+        }
+        setShowPrintModal(false);
+    }, 5000); 
   }, []);
 
   return (
