@@ -556,7 +556,7 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
                       <Input label="ल्याब नं." value={labFormData.labNo} onChange={e => setLabFormData({...labFormData, labNo: e.target.value})} required icon={<FileDigit size={16}/>} />
                       
                       <div className="grid grid-cols-2 gap-4">
-                        <Input label="मिति (AD)" type="date" value={labFormData.testDate} onChange={e => setLabFormData({...formData, testDate: e.target.value})} required />
+                        <Input label="मिति (AD)" type="date" value={labFormData.testDate} onChange={e => setLabFormData({...labFormData, testDate: e.target.value})} required />
                         <NepaliDatePicker label="मिति (BS)" value={labFormData.testDateNepali} onChange={val => setLabFormData({...labFormData, testDateNepali: val})} required />
                       </div>
 

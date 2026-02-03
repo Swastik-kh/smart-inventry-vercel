@@ -116,8 +116,8 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
   }, [editingId, existingForms, currentFiscalYear, formDetails.id]);
 
   const handleAddItem = () => {
-    // Limit changed from 14 to 7
-    if (isViewOnly || items.length >= 7) return;
+    // Limit restored to 14
+    if (isViewOnly || items.length >= 14) return;
     setItems([...items, { id: Date.now() + Math.random(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }]);
   };
 
@@ -541,8 +541,8 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                   ))}
               </tbody>
           </table>
-          {/* UPDATED: Limit to 7 items */}
-          {!isViewOnly && <button onClick={handleAddItem} disabled={items.length >= 7} className={`no-print font-bold text-xs mt-3 flex items-center gap-1 ${items.length >= 7 ? 'text-slate-400 cursor-not-allowed' : 'text-primary-600'}`}><Plus size={14}/> थप थप्नुहोस्</button>}
+          {/* UPDATED: Limit restored to 14 items */}
+          {!isViewOnly && <button onClick={handleAddItem} disabled={items.length >= 14} className={`no-print font-bold text-xs mt-3 flex items-center gap-1 ${items.length >= 14 ? 'text-slate-400 cursor-not-allowed' : 'text-primary-600'}`}><Plus size={14}/> थप थप्नुहोस्</button>}
           
           <div className="grid grid-cols-2 gap-x-12 gap-y-16 mt-16 text-[11px] font-bold">
               <div className="space-y-4">
