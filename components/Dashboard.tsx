@@ -793,18 +793,29 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                       </div>
                       <button onClick={() => setShowExpiryModal(false)} className="p-2 hover:bg-white/50 rounded-full transition-colors"><X size={24} /></button>
                   </div>
-                  <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 overflow-y-auto" id={expiryModalType === 'expired' ? 'expired-items-print' : 'near-expiry-items-print'}>
+                      {/* Print Header */}
+                      <div className="hidden print:block text-center mb-6 pt-4">
+                          <h1 className="text-2xl font-bold text-red-600">{generalSettings.orgNameNepali}</h1>
+                          <h2 className="text-xl font-bold underline mt-2 mb-4">
+                              {expiryModalType === 'expired' ? 'म्याद सकिएका सामानहरूको सूची (Expired Items)' : 'म्याद सकिन लागेका सामानहरूको सूची (Near Expiry)'}
+                          </h2>
+                          <div className="text-sm font-bold text-slate-600 mb-6">
+                              मिति: {new NepaliDate().format('YYYY-MM-DD')}
+                          </div>
+                      </div>
+                      
                       <table className="w-full text-sm text-left">
-                          <thead className="bg-slate-50 text-slate-500 font-bold sticky top-0 z-10">
-                              <tr><th className="px-8 py-4 border-b">सामानको नाम</th><th className="px-6 py-4 border-b">ब्याच नं</th><th className="px-6 py-4 border-b text-center">मौज्दात</th><th className="px-6 py-4 border-b text-right">म्याद सकिने मिति</th></tr>
+                          <thead className="bg-slate-50 text-slate-500 font-bold sticky top-0 z-10 print:static print:bg-slate-100">
+                              <tr><th className="px-8 py-4 border-b print:border print:px-2">सामानको नाम</th><th className="px-6 py-4 border-b print:border print:px-2">ब्याच नं</th><th className="px-6 py-4 border-b text-center print:border print:px-2">मौज्दात</th><th className="px-6 py-4 border-b text-right print:border print:px-2">म्याद सकिने मिति</th></tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
                               {(expiryModalType === 'expired' ? expiredItems : nearExpiryItems).map(item => (
-                                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                                      <td className="px-8 py-4 font-bold text-slate-800">{item.itemName}</td>
-                                      <td className="px-6 py-4 font-mono text-slate-500">{item.batchNo || '-'}</td>
-                                      <td className="px-6 py-4 text-center"><span className="px-2.5 py-1 rounded-lg bg-slate-100 font-black text-slate-700">{item.currentQuantity} {item.unit}</span></td>
-                                      <td className="px-6 py-4 text-right"><span className={`font-black font-nepali ${expiryModalType === 'expired' ? 'text-red-600' : 'text-orange-600'}`}>{item.expiryDateBs}</span><br/><span className="text-[10px] text-slate-400 font-mono">({item.expiryDateAd})</span></td>
+                                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors print:hover:bg-transparent">
+                                      <td className="px-8 py-4 font-bold text-slate-800 print:border print:px-2 print:py-1">{item.itemName}</td>
+                                      <td className="px-6 py-4 font-mono text-slate-500 print:border print:px-2 print:py-1">{item.batchNo || '-'}</td>
+                                      <td className="px-6 py-4 text-center print:border print:px-2 print:py-1"><span className="px-2.5 py-1 rounded-lg bg-slate-100 font-black text-slate-700 print:bg-transparent print:p-0">{item.currentQuantity} {item.unit}</span></td>
+                                      <td className="px-6 py-4 text-right print:border print:px-2 print:py-1"><span className={`font-black font-nepali ${expiryModalType === 'expired' ? 'text-red-600' : 'text-orange-600'}`}>{item.expiryDateBs}</span><br/><span className="text-[10px] text-slate-400 font-mono">({item.expiryDateAd})</span></td>
                                   </tr>
                               ))}
                           </tbody>
