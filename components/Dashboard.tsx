@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { 
   LogOut, Menu, Calendar, Stethoscope, Package, FileText, Settings, LayoutDashboard, 
@@ -6,7 +5,7 @@ import {
   ClipboardList, FileSpreadsheet, FilePlus, ShoppingCart, FileOutput, 
   BookOpen, Book, Archive, RotateCcw, Wrench, Scroll, BarChart3,
   Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, AlertTriangle, Calculator, Trash2, TrendingUp, AlertOctagon, Timer, Printer, Baby, Flame, CalendarClock, List,
-  Eye, ShieldAlert
+  Eye, ShieldAlert, ChevronLeft
 } from 'lucide-react';
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
@@ -89,6 +88,11 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   
   const [previewDakhila, setPreviewDakhila] = useState<DakhilaPratibedanEntry | null>(null);
 
+  // New State for Dashboard Date Selection
+  const [selectedStatsDate, setSelectedStatsDate] = useState<string>(() => {
+      try { return new NepaliDate().format('YYYY-MM-DD'); } catch (e) { return ''; }
+  });
+
   const mainContentRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
@@ -114,6 +118,23 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Date Manipulation Handlers
+  const handlePrevDate = () => {
+      try {
+          const nd = new NepaliDate(selectedStatsDate);
+          nd.setDate(nd.getDate() - 1);
+          setSelectedStatsDate(nd.format('YYYY-MM-DD'));
+      } catch (e) {}
+  };
+
+  const handleNextDate = () => {
+      try {
+          const nd = new NepaliDate(selectedStatsDate);
+          nd.setDate(nd.getDate() + 1);
+          setSelectedStatsDate(nd.format('YYYY-MM-DD'));
+      } catch (e) {}
+  };
 
   const allDakhilaNotifs = useMemo(() => {
       if (!currentUser) return [];
@@ -241,11 +262,11 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   const rabiesDoseStats = useMemo(() => {
     const stats = { d0Total: 0, d0Received: 0, d0Progress: 0, d3Total: 0, d3Received: 0, d3Progress: 0, d7Total: 0, d7Received: 0, d7Progress: 0 };
-    let todayBs = '';
-    try { todayBs = new NepaliDate().format('YYYY-MM-DD'); } catch (e) { return stats; }
-    const fixedTodayBs = fixDate(todayBs);
+    // Use selectedStatsDate instead of just today
+    const targetDate = fixDate(selectedStatsDate);
+    
     rabiesPatients.forEach(p => (p.schedule || []).forEach(dose => {
-        if (fixDate(dose.dateBs || '') === fixedTodayBs) {
+        if (fixDate(dose.dateBs || '') === targetDate) {
             if (dose.day === 0) { stats.d0Total++; if (dose.status === 'Given') stats.d0Received++; }
             else if (dose.day === 3) { stats.d3Total++; if (dose.status === 'Given') stats.d3Received++; }
             else if (dose.day === 7) { stats.d7Total++; if (dose.status === 'Given') stats.d7Received++; }
@@ -255,7 +276,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     stats.d3Progress = stats.d3Total > 0 ? Math.round((stats.d3Received / stats.d3Total) * 100) : 0;
     stats.d7Progress = stats.d7Total > 0 ? Math.round((stats.d7Received / stats.d7Total) * 100) : 0;
     return stats;
-  }, [rabiesPatients, fixDate]);
+  }, [rabiesPatients, fixDate, selectedStatsDate]);
 
   const vaccineForecast = useMemo(() => {
       const mlPerDose = 0.2;
@@ -438,7 +459,41 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 print:grid-cols-2 print:gap-4 print:mb-6">
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
-                <div className="relative z-10"><div className="flex items-center justify-between mb-4"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Clinic Progress</p><h3 className="text-sm font-bold text-slate-700 font-nepali">आजको खोप प्रगति</h3></div><div className="bg-red-100 p-2.5 rounded-xl text-red-600"><Syringe size={20} /></div></div><div className="space-y-3">{['D0', 'D3', 'D7'].map((d, idx) => { const stats = idx === 0 ? { p: rabiesDoseStats.d0Progress, r: rabiesDoseStats.d0Received, t: rabiesDoseStats.d0Total } : idx === 1 ? { p: rabiesDoseStats.d3Progress, r: rabiesDoseStats.d3Received, t: rabiesDoseStats.d3Total } : { p: rabiesDoseStats.d7Progress, r: rabiesDoseStats.d7Received, t: rabiesDoseStats.d7Total }; return ( <div key={d} className="space-y-1"> <div className="flex justify-between text-[10px] font-bold"> <span className="text-slate-500">{d} Dose:</span> <span className={stats.p === 100 ? 'text-green-600' : 'text-orange-600'}>{stats.r}/{stats.t}</span> </div> <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden"> <div className={`h-full transition-all duration-700 ${stats.p === 100 ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${stats.p}%` }}></div> </div> </div> ); })} </div></div>
+                <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Clinic Progress</p>
+                            <div className="flex items-center gap-2">
+                                <button onClick={handlePrevDate} className="p-1 hover:bg-slate-100 rounded-full transition-colors text-slate-500">
+                                    <ChevronLeft size={14}/>
+                                </button>
+                                <h3 className="text-sm font-bold text-slate-700 font-nepali">{selectedStatsDate}</h3>
+                                <button onClick={handleNextDate} className="p-1 hover:bg-slate-100 rounded-full transition-colors text-slate-500">
+                                    <ChevronRight size={14}/>
+                                </button>
+                            </div>
+                        </div>
+                        <div className="bg-red-100 p-2.5 rounded-xl text-red-600"><Syringe size={20} /></div>
+                    </div>
+                    <div className="space-y-3">
+                        {['D0', 'D3', 'D7'].map((d, idx) => { 
+                            const stats = idx === 0 ? { p: rabiesDoseStats.d0Progress, r: rabiesDoseStats.d0Received, t: rabiesDoseStats.d0Total } 
+                                : idx === 1 ? { p: rabiesDoseStats.d3Progress, r: rabiesDoseStats.d3Received, t: rabiesDoseStats.d3Total } 
+                                : { p: rabiesDoseStats.d7Progress, r: rabiesDoseStats.d7Received, t: rabiesDoseStats.d7Total }; 
+                            return ( 
+                                <div key={d} className="space-y-1"> 
+                                    <div className="flex justify-between text-[10px] font-bold"> 
+                                        <span className="text-slate-500">{d} Dose:</span> 
+                                        <span className={stats.p === 100 ? 'text-green-600' : 'text-orange-600'}>{stats.r}/{stats.t}</span> 
+                                    </div> 
+                                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden"> 
+                                        <div className={`h-full transition-all duration-700 ${stats.p === 100 ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${stats.p}%` }}></div> 
+                                    </div> 
+                                </div> 
+                            ); 
+                        })} 
+                    </div>
+                </div>
               </div>
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm group hover:border-blue-300 transition-all cursor-pointer" onClick={() => setActiveItem('jinshi_maujdat')}><div className="flex items-center justify-between mb-6"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Inventory</p><h3 className="text-sm font-bold text-slate-700 font-nepali">जिन्सी मौज्दात</h3></div><div className="bg-blue-100 p-2.5 rounded-xl text-blue-600"><Warehouse size={20} /></div></div><div className="flex items-baseline gap-2"><span className="text-5xl font-black text-blue-600">{inventoryTotalCount}</span><span className="text-[10px] text-slate-400 font-bold uppercase">Items</span></div></div>
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><div className="flex items-center justify-between mb-4"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Forecast (Month)</p><h3 className="text-sm font-bold text-slate-700 font-nepali">खोप पूर्वानुमान</h3></div><div className="bg-cyan-100 p-2.5 rounded-xl text-cyan-600"><Calculator size={20} /></div></div><div className="space-y-3"><div className="flex justify-between items-center"><span className="text-[11px] font-bold text-slate-500">कुल मात्रा:</span><span className="text-xs font-black text-indigo-600">{vaccineForecast.totalMl} ml</span></div><div className="grid grid-cols-2 gap-2"><div className="bg-slate-50 p-1.5 rounded-lg border text-center"><p className="text-[8px] font-bold text-slate-400">1.0 ml Vials</p><p className="text-sm font-black text-indigo-700">{vaccineForecast.vials10}</p></div><div className="bg-slate-50 p-1.5 rounded-lg border text-center"><p className="text-[8px] font-bold text-slate-400">0.5 ml Vials</p><p className="text-sm font-black text-indigo-700">{vaccineForecast.vials05}</p></div></div></div></div>
@@ -448,14 +503,17 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 print:grid-cols-1 print:gap-4 print:mt-6">
                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                  <h4 className="font-bold text-slate-800 font-nepali mb-4 flex items-center gap-2"><Syringe size={18} className="text-indigo-600"/> आजका खोप सेवाग्राहीहरू (D0, D3, D7)</h4>
+                  <h4 className="font-bold text-slate-800 font-nepali mb-4 flex items-center gap-2">
+                      <Syringe size={18} className="text-indigo-600"/> 
+                      {selectedStatsDate === new NepaliDate().format('YYYY-MM-DD') ? 'आजका' : `${selectedStatsDate} का`} खोप सेवाग्राहीहरू (D0, D3, D7)
+                  </h4>
                   <table className="w-full text-xs text-left print-table">
                       <thead className="bg-slate-50 font-bold"><tr><th className="p-2 border-b">बिरामीको नाम</th><th className="p-2 border-b text-center">डोज</th><th className="p-2 border-b text-right">सम्पर्क</th></tr></thead>
                       <tbody className="divide-y">
-                          {rabiesPatients.filter(p => p.schedule.some(d => fixDate(d.dateBs || '') === fixDate(new NepaliDate().format('YYYY-MM-DD')))).map(p => (
-                              <tr key={p.id} className="hover:bg-slate-50"><td className="p-2 font-bold">{p.name}</td><td className="p-2 text-center"><div className="flex justify-center gap-1">{p.schedule.filter(d => fixDate(d.dateBs || '') === fixDate(new NepaliDate().format('YYYY-MM-DD'))).map(d => ( <span key={d.day} className={`px-2 py-0.5 rounded-full font-black text-[10px] ${d.status === 'Given' ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'}`}>D{d.day}</span> ))}</div></td><td className="p-2 text-right font-mono">{p.phone}</td></tr>
+                          {rabiesPatients.filter(p => p.schedule.some(d => fixDate(d.dateBs || '') === fixDate(selectedStatsDate))).map(p => (
+                              <tr key={p.id} className="hover:bg-slate-50"><td className="p-2 font-bold">{p.name}</td><td className="p-2 text-center"><div className="flex justify-center gap-1">{p.schedule.filter(d => fixDate(d.dateBs || '') === fixDate(selectedStatsDate)).map(d => ( <span key={d.day} className={`px-2 py-0.5 rounded-full font-black text-[10px] ${d.status === 'Given' ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'}`}>D{d.day}</span> ))}</div></td><td className="p-2 text-right font-mono">{p.phone}</td></tr>
                           ))}
-                          {rabiesPatients.filter(p => p.schedule.some(d => fixDate(d.dateBs || '') === fixDate(new NepaliDate().format('YYYY-MM-DD')))).length === 0 && <tr><td colSpan={3} className="p-8 text-center text-slate-400 italic">आज कुनै सेवाग्राही छैनन्।</td></tr>}
+                          {rabiesPatients.filter(p => p.schedule.some(d => fixDate(d.dateBs || '') === fixDate(selectedStatsDate))).length === 0 && <tr><td colSpan={3} className="p-8 text-center text-slate-400 italic">छानिएको मितिमा कुनै सेवाग्राही छैनन्।</td></tr>}
                       </tbody>
                   </table>
                </div>
