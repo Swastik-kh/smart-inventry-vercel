@@ -116,7 +116,8 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
   }, [editingId, existingForms, currentFiscalYear, formDetails.id]);
 
   const handleAddItem = () => {
-    if (isViewOnly || items.length >= 14) return;
+    // Limit changed from 14 to 7
+    if (isViewOnly || items.length >= 7) return;
     setItems([...items, { id: Date.now() + Math.random(), name: '', specification: '', unit: '', quantity: '', remarks: '', isFromInventory: false }]);
   };
 
@@ -273,8 +274,8 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
             
             .form-title { margin-top: 20px; font-size: 24px; font-weight: 900; text-decoration: underline; text-underline-offset: 6px; }
             
-            .meta-info { display: flex; justify-content: flex-end; margin-bottom: 10px; font-size: 14px; font-weight: bold; margin-top: 15px; }
-            .meta-row { margin-bottom: 6px; display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+            /* Updated Meta Info for Print */
+            .meta-info-container { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 20px; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
             
             .signatures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 40px; font-size: 14px; }
             .sig-block { margin-bottom: 30px; }
@@ -311,12 +312,14 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                </div>
             </div>
 
-            <!-- Date and Demand No Section -->
-            <div class="meta-info">
+            <!-- Meta Info Section (Fiscal Year Left, Date/No Right) -->
+            <div class="meta-info-container">
+               <div>
+                  आर्थिक वर्ष: <span class="dotted-line">${formDetails.fiscalYear}</span>
+               </div>
                <div style="text-align: right;">
-                  <div class="meta-row">आर्थिक वर्ष: <span class="dotted-line">${formDetails.fiscalYear}</span></div>
-                  <div class="meta-row">माग नं: <span class="header-red dotted-line">#${formDetails.formNo}</span></div>
-                  <div class="meta-row">मिति: <span class="dotted-line">${formDetails.date}</span></div>
+                  <div style="margin-bottom: 6px;">माग नं: <span class="header-red dotted-line">#${formDetails.formNo}</span></div>
+                  <div>मिति: <span class="dotted-line">${formDetails.date}</span></div>
                </div>
             </div>
 
@@ -499,13 +502,18 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               </div>
               <p className="font-bold text-[10px] border border-black px-1 h-fit">म.ले.प.फा.नं. ४०१</p>
           </div>
-          <div className="flex justify-end mb-6 text-sm">
+          
+          {/* UPDATED: Meta Info Layout */}
+          <div className="flex justify-between items-end mb-6 text-sm font-bold">
+              <div>
+                  आर्थिक वर्ष: <span className="border-b border-dotted border-black px-4">{formDetails.fiscalYear}</span>
+              </div>
               <div className="text-right space-y-1">
-                  <p>आर्थिक वर्ष: <span className="font-bold border-b border-dotted border-black px-4">{formDetails.fiscalYear}</span></p>
-                  <p>माग नं: <span className="font-bold text-red-600 border-b border-dotted border-black px-4">#{formDetails.formNo}</span></p>
-                  <p>मिति: <input value={formDetails.date} onChange={e => setFormDetails({...formDetails, date: e.target.value})} disabled={isViewOnly} className="font-bold border-b border-dotted border-black px-1 outline-none w-32 text-right bg-transparent" /></p>
+                  <p>माग नं: <span className="text-red-600 border-b border-dotted border-black px-4">#{formDetails.formNo}</span></p>
+                  <p>मिति: <input value={formDetails.date} onChange={e => setFormDetails({...formDetails, date: e.target.value})} disabled={isViewOnly} className="border-b border-dotted border-black px-1 outline-none w-32 text-right bg-transparent" /></p>
               </div>
           </div>
+
           <table className="w-full border-collapse border border-black text-center text-xs">
               <thead>
                   <tr className="bg-slate-100">
@@ -533,7 +541,9 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
                   ))}
               </tbody>
           </table>
-          {!isViewOnly && <button onClick={handleAddItem} disabled={items.length >= 14} className="no-print font-bold text-xs mt-3 text-primary-600 flex items-center gap-1"><Plus size={14}/> थप थप्नुहोस्</button>}
+          {/* UPDATED: Limit to 7 items */}
+          {!isViewOnly && <button onClick={handleAddItem} disabled={items.length >= 7} className={`no-print font-bold text-xs mt-3 flex items-center gap-1 ${items.length >= 7 ? 'text-slate-400 cursor-not-allowed' : 'text-primary-600'}`}><Plus size={14}/> थप थप्नुहोस्</button>}
+          
           <div className="grid grid-cols-2 gap-x-12 gap-y-16 mt-16 text-[11px] font-bold">
               <div className="space-y-4">
                   <div className="border-t border-black pt-2">
