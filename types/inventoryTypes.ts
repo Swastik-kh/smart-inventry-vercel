@@ -11,6 +11,7 @@ export interface MagItem {
   codeNo?: string;
   rate?: number;
   totalAmount?: number;
+  model?: string; // Added model field
 }
 
 export interface StoreKeeperSignature {
@@ -65,6 +66,7 @@ export interface PurchaseOrderEntry {
     expHeadNo?: string;
     activityNo?: string;
   };
+  vatAmount?: number; // Added VAT amount field
   preparedBy?: Signature; // Storekeeper
   recommendedBy?: Signature; // (Optional)
   financeBy?: Signature; // Account

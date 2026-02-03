@@ -1,1086 +1,614 @@
 
-import React, { useState, useMemo, useCallback } from 'react';
-import { ShoppingCart, FilePlus, ChevronRight, ArrowLeft, Printer, Save, Calculator, CheckCircle2, Send, ShieldCheck, CheckCheck, Eye, FileText, Clock, Archive, AlertCircle, X, Maximize2, Minimize2 } from 'lucide-react';
-import { User, Option, OrganizationSettings } from '../types/coreTypes';
-import { PurchaseOrderEntry, MagItem, FirmEntry, QuotationEntry, InventoryItem } from '../types/inventoryTypes';
-import { FISCAL_YEARS } from '../constants';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ShoppingCart, Printer, Save, ArrowLeft, CheckCircle2, X, Clock, FileText, Send, User, Building2, Calculator, Info, Package, AlertCircle, Search, ShieldCheck } from 'lucide-react';
+import { PurchaseOrderEntry, FirmEntry, QuotationEntry, InventoryItem } from '../types/inventoryTypes';
+import { User as UserType, OrganizationSettings, Option } from '../types/coreTypes';
+import { Input } from './Input';
+import { Select } from './Select';
 import { SearchableSelect } from './SearchableSelect';
 import { NepaliDatePicker } from './NepaliDatePicker';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
 interface KharidAdeshProps {
-    orders: PurchaseOrderEntry[];
-    currentFiscalYear: string;
-    onSave: (order: PurchaseOrderEntry) => void;
-    currentUser: User;
-    firms: FirmEntry[];
-    quotations: QuotationEntry[];
-    onDakhilaClick?: (order: PurchaseOrderEntry) => void;
-    generalSettings: OrganizationSettings;
-    inventoryItems: InventoryItem[]; // Added to access inventory details
+  orders: PurchaseOrderEntry[];
+  currentFiscalYear: string;
+  onSave: (order: PurchaseOrderEntry) => void;
+  currentUser: UserType;
+  firms: FirmEntry[];
+  quotations: QuotationEntry[];
+  onDakhilaClick: (po: PurchaseOrderEntry) => void;
+  generalSettings: OrganizationSettings;
+  inventoryItems: InventoryItem[];
 }
 
-// Local interface for form items to handle string inputs
-interface FormPOItem {
-    id: number; // Unique ID for React keys, from MagItem.id
-    name: string; // From MagItem
-    specification: string; // From MagItem
-    unit: string; // From MagItem
-    quantity: string; // String for input field
-    remarks: string; // From MagItem
-    codeNo: string; // From MagItem.codeNo, treated as always string in form
-    model: string; // New field for PO
-    rate: string; // String for input field
-    total: string; // Calculated total as a string for display
-}
+export const KharidAdesh: React.FC<KharidAdeshProps> = ({
+  orders,
+  currentFiscalYear,
+  onSave,
+  currentUser,
+  firms,
+  quotations,
+  onDakhilaClick,
+  generalSettings,
+  inventoryItems
+}) => {
+  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrderEntry | null>(null);
+  const [isViewOnly, setIsViewOnly] = useState(false);
+  const [formData, setFormData] = useState<PurchaseOrderEntry | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-// Print Options Modal Component
-const PrintOptionsModal: React.FC<{ onClose: () => void; onPrint: (orientation: 'portrait' | 'landscape') => void }> = ({ onClose, onPrint }) => {
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-primary-50/50">
-                    <div className="flex items-center gap-3">
-                        <Printer size={20} className="text-primary-600"/>
-                        <h3 className="font-bold text-slate-800 text-lg font-nepali">प्रिन्ट विकल्पहरू (Print Options)</h3>
-                    </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/50 rounded-full"><X size={20} className="text-slate-400"/></button>
-                </div>
-                <div className="p-6 space-y-4">
-                    <p className="text-sm text-slate-600">कृपया प्रिन्ट ओरिएन्टेशन छान्नुहोस् (Please select print orientation):</p>
-                    <button onClick={() => onPrint('portrait')} className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg font-bold shadow-md hover:bg-primary-700 transition-colors">
-                        <Minimize2 size={18} /> प्रिन्ट पोर्ट्रेट (Print Portrait)
-                    </button>
-                    <button onClick={() => onPrint('landscape')} className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-lg font-bold shadow-md hover:bg-slate-900 transition-colors">
-                        <Maximize2 size={18} /> प्रिन्ट ल्यान्डस्केप (Print Landscape)
-                    </button>
-                </div>
-                <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
-                    <button onClick={onClose} className="px-6 py-2 bg-slate-800 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-slate-900 transition-all">बन्द गर्नुहोस्</button>
-                </div>
-            </div>
-        </div>
-    );
-};
+  // Role Logic
+  const isStoreKeeper = currentUser.role === 'STOREKEEPER';
+  const isAccount = currentUser.role === 'ACCOUNT';
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
 
+  // Edit Permission: 
+  const canEdit = !isViewOnly && (
+      (isStoreKeeper && (formData?.status === 'Pending' || formData?.status === 'Pending Account'))
+  );
 
-export const KharidAdesh: React.FC<KharidAdeshProps> = ({ orders, currentFiscalYear, onSave, currentUser, firms, quotations, onDakhilaClick, generalSettings, inventoryItems }) => {
-    const [selectedOrder, setSelectedOrder] = useState<PurchaseOrderEntry | null>(null);
-    const [isSaved, setIsSaved] = useState(false);
-    const [isViewOnlyMode, setIsViewOnlyMode] = useState(false);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
-    const [validationError, setValidationError] = useState<string | null>(null);
-    const [showPrintOptionsModal, setShowPrintOptionsModal] = useState(false); // New state for print modal
-
-    // Calculate Today in Nepali for Restrictions
-    const todayBS = useMemo(() => {
-        try {
-            return new NepaliDate().format('YYYY-MM-DD');
-        } catch (e) {
-            return '';
-        }
-    }, []);
-
-    const [poDetails, setPoDetails] = useState({
-        fiscalYear: '',
-        orderNo: '',
-        orderDate: todayBS, // Auto-fill with today's date
-        decisionNo: '',
-        decisionDate: '',
-        vendorName: '',
-        vendorAddress: '',
-        vendorPan: '',
-        vendorPhone: '',
-        budgetSubHeadNo: '',
-        expHeadNo: '',
-        activityNo: '',
-        preparedBy: { name: '', designation: '', date: '' },
-        recommendedBy: { name: '', designation: '', date: '' },
-        financeBy: { name: '', designation: '', date: '' },
-        approvedBy: { name: '', designation: '', date: '' }
-    });
-
-    const [poItems, setPoItems] = useState<FormPOItem[]>([]);
-
-    const isStoreKeeper = currentUser.role === 'STOREKEEPER';
-    const isAccount = currentUser.role === 'ACCOUNT';
-    const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
-
-    const vendorOptions: Option[] = useMemo(() => {
-        return firms.map(f => ({
-            id: f.id,
-            value: f.firmName,
-            label: `${f.firmName} (PAN: ${f.vatPan})`
-        }));
-    }, [firms]);
-
-    // Item options for SearchableSelect, including full item data
-    const itemOptions: Option[] = useMemo(() => {
-        return inventoryItems.map(item => ({
-            id: item.id,
-            value: item.itemName,
-            label: `${item.itemName} (${item.unit}) - ${item.uniqueCode || item.sanketNo || ''}`,
-            itemData: item // Pass the full item object
-        }));
-    }, [inventoryItems]);
-
-    const getFiscalYearLabel = (val: string) => {
-        return FISCAL_YEARS.find(fy => fy.value === val)?.label || val;
-    }
-
-    const getLowestQuoteTooltip = (itemName: string) => {
-        if (!itemName) return undefined;
-        const relevantQuotes = quotations.filter(q => 
-            q.fiscalYear === currentFiscalYear &&
-            q.itemName.toLowerCase().trim() === itemName.toLowerCase().trim()
-        );
-
-        if (relevantQuotes.length === 0) return "कुनै कोटेशन भेटिएन (No Quotations)";
-
-        const lowest = relevantQuotes.reduce((min, curr) => 
-            parseFloat(curr.rate) < parseFloat(min.rate) ? curr : min
-        );
-
-        return `न्यूनतम कबुल गर्ने (Lowest Quote):\nफर्म: ${lowest.firmName}\nदर: रु. ${lowest.rate}`;
-    };
-
-    const handleLoadOrder = (order: PurchaseOrderEntry, viewOnly: boolean = false) => {
-        setSelectedOrder(order);
-        setIsSaved(false);
-        setIsViewOnlyMode(viewOnly);
-        setSuccessMessage(null);
-        setValidationError(null);
-
-        const fyToUse = order.fiscalYear || currentFiscalYear;
-        const fyLabel = getFiscalYearLabel(fyToUse);
-
-        const existingNumbers = orders
-            .filter(o => o.status === 'Generated' && o.fiscalYear === fyToUse)
-            .map(o => {
-                const orderNo = String(o.orderNo); // Ensure it's a string
-                // Extract number part if it has a prefix like 'PO-'
-                const match = orderNo.match(/^(?:PO-)?(\d+)$/);
-                return match ? parseInt(match[1]) : 0;
-            })
-            .filter(num => !isNaN(num)); // Filter out NaN values
-        
-        const maxNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
-        // If order.orderNo is already defined, use it directly, otherwise generate the next sequential number.
-        const nextOrderNo = order.orderNo ? order.orderNo : (maxNum + 1).toString();
-
-        // Map MagItem[] to FormPOItem[] for internal form state
-        setPoItems(order.items.map(item => ({
-            id: item.id,
-            name: item.name,
-            specification: item.specification,
-            unit: item.unit,
-            quantity: item.quantity.toString(), // Convert number to string
-            remarks: item.remarks,
-            codeNo: item.codeNo || '', // MagItem.codeNo is optional
-            model: '', // Not in MagItem, initialize empty
-            rate: item.rate ? item.rate.toString() : '', // Convert number to string
-            total: item.totalAmount ? item.totalAmount.toString() : '' // Convert number to string
-        })));
-        
-        let defaultOrderDate = order.requestDate || '';
-        if (!defaultOrderDate) {
-            defaultOrderDate = todayBS;
-        }
-
-        setPoDetails(prev => ({
-            ...prev,
-            fiscalYear: fyLabel,
-            orderNo: nextOrderNo, 
-            orderDate: defaultOrderDate, 
-            decisionNo: order.decisionNo || '',
-            decisionDate: order.decisionDate || '',
-            vendorName: order.vendorDetails?.name || '',
-            vendorAddress: order.vendorDetails?.address || '',
-            vendorPan: order.vendorDetails?.pan || '',
-            vendorPhone: order.vendorDetails?.phone || '',
-            budgetSubHeadNo: order.budgetDetails?.budgetSubHeadNo || '',
-            expHeadNo: order.budgetDetails?.expHeadNo || '',
-            activityNo: order.budgetDetails?.activityNo || '',
-            
-            // Auto-fill PreparedBy for Storekeeper
-            preparedBy: (order.status === 'Pending' && isStoreKeeper && !viewOnly)
-                ? { name: currentUser.fullName, designation: currentUser.designation, date: defaultOrderDate }
-                : (order.preparedBy ? {
-                    name: order.preparedBy.name,
-                    designation: order.preparedBy.designation || '',
-                    date: order.preparedBy.date || ''
-                } : { name: '', designation: '', date: '' }),
-
-            recommendedBy: order.recommendedBy ? {
-                name: order.recommendedBy.name,
-                designation: order.recommendedBy.designation || '',
-                date: order.recommendedBy.date || ''
-            } : { name: '', designation: '', date: '' },
-
-            // Auto-fill FinanceBy for Account
-            financeBy: (order.status === 'Pending Account' && isAccount && !viewOnly)
-                ? { name: currentUser.fullName, designation: currentUser.designation, date: todayBS }
-                : (order.financeBy ? {
-                    name: order.financeBy.name,
-                    designation: order.financeBy.designation || '',
-                    date: order.financeBy.date || ''
-                } : { name: '', designation: '', date: '' }),
-
-            // Auto-fill ApprovedBy for Admin/Approval
-            approvedBy: (order.status === 'Account Verified' && isAdmin && !viewOnly)
-                ? { name: currentUser.fullName, designation: currentUser.designation, date: todayBS }
-                : (order.approvedBy ? {
-                    name: order.approvedBy.name,
-                    designation: order.approvedBy.designation || '',
-                    date: order.approvedBy.date || ''
-                } : { name: '', designation: '', date: '' })
-        }));
-    };
-
-    const handleBack = () => {
-        setSelectedOrder(null);
-        setIsViewOnlyMode(false);
-        setSuccessMessage(null);
-        setValidationError(null);
-        setPoItems([]); // Clear items on back
-        setPoDetails(prev => ({ // Reset poDetails
-            ...prev,
-            orderNo: '',
-            orderDate: todayBS,
-            decisionNo: '',
-            decisionDate: '',
-            vendorName: '',
-            vendorAddress: '',
-            vendorPan: '',
-            vendorPhone: '',
-            budgetSubHeadNo: '',
-            expHeadNo: '',
-            activityNo: '',
-            preparedBy: { name: '', designation: '', date: '' },
-            recommendedBy: { name: '', designation: '', date: '' },
-            financeBy: { name: '', designation: '', date: '' },
-            approvedBy: { name: '', designation: '', date: '' }
-        }));
-    };
-
-    const handleSavePO = () => {
-        if (!selectedOrder || isViewOnlyMode) return;
-        setValidationError(null);
-
-        const date = poDetails.orderDate.trim();
-        if (!date) {
-            setValidationError('खरिद आदेश मिति अनिवार्य छ (Order Date is required)।');
-            return;
-        }
-        
-        let nextStatus = selectedOrder.status;
-        let successMessageText = "Saved successfully!";
-
-        if (isStoreKeeper && selectedOrder.status === 'Pending') {
-            nextStatus = 'Pending Account';
-            successMessageText = "अर्डर लेखा शाखामा पठाइयो (Sent to Account Branch)";
-        } else if (isAccount && selectedOrder.status === 'Pending Account') {
-            nextStatus = 'Account Verified';
-            successMessageText = "अर्डर प्रमाणिकरण गरियो र स्वीकृतिको लागि पठाइयो (Verified and Forwarded for Approval)";
-        } else if (isAdmin && selectedOrder.status === 'Account Verified') {
-            nextStatus = 'Generated';
-            successMessageText = "खरिद आदेश स्वीकृत र जारी गरियो (PO Approved and Generated)";
-        }
-
-        // Map FormPOItem[] back to MagItem[] for saving
-        const mappedItems: MagItem[] = poItems.map(i => ({
-            id: i.id,
-            name: i.name,
-            specification: i.specification,
-            unit: i.unit,
-            quantity: i.quantity, // Correct: maps string to string
-            remarks: i.remarks,
-            codeNo: i.codeNo,
-            rate: parseFloat(i.rate) || 0, // Correct: converts string to number
-            totalAmount: parseFloat(i.total) || 0 // Correct: converts string to number
-        }));
-
-        const updatedOrder: PurchaseOrderEntry = {
-            ...selectedOrder,
-            status: nextStatus,
-            orderNo: poDetails.orderNo,
-            requestDate: poDetails.orderDate,
-            fiscalYear: currentFiscalYear, 
-            items: mappedItems, // Use mapped items
-            decisionNo: poDetails.decisionNo,
-            decisionDate: poDetails.decisionDate,
-            vendorDetails: {
-                name: poDetails.vendorName,
-                address: poDetails.vendorAddress,
-                pan: poDetails.vendorPan,
-                phone: poDetails.vendorPhone
-            },
-            budgetDetails: {
-                budgetSubHeadNo: poDetails.budgetSubHeadNo,
-                expHeadNo: poDetails.expHeadNo,
-                activityNo: poDetails.activityNo
-            },
-            preparedBy: poDetails.preparedBy,
-            recommendedBy: poDetails.recommendedBy,
-            financeBy: poDetails.financeBy,
-            approvedBy: poDetails.approvedBy
-        };
-
-        onSave(updatedOrder);
-        setIsSaved(true);
-        setSuccessMessage(successMessageText);
-        
-        if (nextStatus === 'Generated' || nextStatus !== selectedOrder.status) {
-             setTimeout(() => {
-                 setSelectedOrder(null);
-                 setSuccessMessage(null);
-             }, 2000);
-        }
-    };
-
-    const handleItemChange = useCallback((index: number, field: keyof FormPOItem, value: string) => {
-        setPoItems(prevItems => {
-            const newItems = [...prevItems];
-            newItems[index] = { ...newItems[index], [field]: value };
-
-            if (field === 'rate' || field === 'quantity') {
-                const qty = parseFloat(newItems[index].quantity) || 0;
-                const rate = parseFloat(newItems[index].rate) || 0;
-                newItems[index].total = (qty * rate).toFixed(2);
-            }
-            return newItems;
-        });
-    }, []);
-
-    const handlePoItemSelect = useCallback((index: number, option: Option) => {
-        const invItem = option.itemData as InventoryItem;
-        if (invItem) {
-            setPoItems(prevItems => {
-                const newItems = [...prevItems];
-                newItems[index] = {
-                    ...newItems[index],
-                    name: invItem.itemName, // Auto-fill name
-                    codeNo: invItem.uniqueCode || invItem.sanketNo || '', // Auto-fill codeNo
-                    unit: invItem.unit, // Auto-fill unit
-                    specification: invItem.specification || '', // Auto-fill specification
-                    rate: invItem.rate ? invItem.rate.toString() : newItems[index].rate, // Use inventory rate if available, else keep existing
-                };
-                // Recalculate total if rate was updated
-                const qty = parseFloat(newItems[index].quantity) || 0;
-                const rate = parseFloat(newItems[index].rate) || 0;
-                newItems[index].total = (qty * rate).toFixed(2);
-                return newItems;
-            });
-        }
-    }, []);
-
-
-    const handleOrderDateChange = (val: string) => {
-        setPoDetails(prev => ({
-            ...prev, 
-            orderDate: val,
-            // Sync preparedBy date if it's the current user making the change
-            preparedBy: (currentUser.role === 'STOREKEEPER' && selectedOrder?.status === 'Pending' && !isViewOnlyMode)
-                ? { ...prev.preparedBy, date: val }
-                : prev.preparedBy
-        }));
-    };
-
-    const grandTotal = poItems.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
-
-    const actionableOrders = orders.filter(order => {
-        if (isStoreKeeper) return order.status === 'Pending';
-        if (isAccount) return order.status === 'Pending Account';
-        if (isAdmin) return order.status === 'Account Verified';
-        return false;
-    }).sort((a, b) => parseInt(String(b.magFormNo)) - parseInt(String(a.magFormNo))); // Explicitly cast to string
-
-    const trackedOrders = orders.filter(order => {
-        // Storekeeper sees all statuses except 'Pending' (which is in actionable)
-        if (isStoreKeeper) return order.status !== 'Pending';
-        // Account sees 'Account Verified', 'Generated', 'Stock Entry Requested', 'Completed'
-        if (isAccount) return ['Account Verified', 'Generated', 'Stock Entry Requested', 'Completed'].includes(order.status);
-        // Admin sees 'Generated', 'Stock Entry Requested', 'Completed'
-        if (isAdmin) return ['Generated', 'Stock Entry Requested', 'Completed'].includes(order.status);
-        return false;
-    }).sort((a, b) => parseInt(String(b.magFormNo)) - parseInt(String(a.magFormNo))); // Explicitly cast to string
-
-    const canEditVendor = isStoreKeeper && !isViewOnlyMode && selectedOrder?.status === 'Pending';
-    const canEditBudget = isStoreKeeper && !isViewOnlyMode && selectedOrder?.status === 'Pending';
-    
-    let actionLabel = 'Save';
-    let ActionIcon = Save;
-    if (isStoreKeeper) { actionLabel = 'Save & Send to Account'; ActionIcon = Send; }
-    if (isAccount) { actionLabel = 'Verify & Forward'; ActionIcon = ShieldCheck; }
-    if (isAdmin) { actionLabel = 'Approve & Generate'; ActionIcon = CheckCheck; }
-    // If in view only mode, the button will simply indicate it
-    if (isViewOnlyMode) { actionLabel = 'View Only'; ActionIcon = Eye; }
-
-    const printDocument = useCallback((orientation: 'portrait' | 'landscape') => {
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.right = '0';
-        iframe.style.bottom = '0';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = '0';
-        document.body.appendChild(iframe);
-
-        const doc = iframe.contentWindow?.document;
-        if (!doc) return;
-
-        // Content Generation
-        const itemsRows = poItems.map((item, idx) => `
-            <tr>
-                <td class="text-center">${idx + 1}</td>
-                <td class="text-center">${item.codeNo || '-'}</td>
-                <td class="pl-2 text-left">
-                    <div class="font-bold">${item.name}</div>
-                    <div class="text-[10px]">${item.specification || ''}</div>
-                    ${item.model ? `<div class="text-[10px]">Model: ${item.model}</div>` : ''}
-                </td>
-                <td class="text-center">${item.unit}</td>
-                <td class="text-center font-bold">${item.quantity}</td>
-                <td class="text-right pr-2">${item.rate}</td>
-                <td class="text-right pr-2 font-bold">${item.total}</td>
-                <td class="text-left pl-2 text-[10px]">${item.remarks || ''}</td>
-            </tr>
-        `).join('');
-
-        const totalAmount = poItems.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
-
-        doc.open();
-        doc.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Purchase Order Print</title>
-                <script src="https://cdn.tailwindcss.com"></script>
-                <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-                <style>
-                    @page { size: A4 ${orientation}; margin: 10mm; }
-                    body { font-family: 'Mukta', sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .border-black { border-color: #000; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-                    th, td { border: 1px solid black; padding: 4px; font-size: 11px; }
-                    .dotted-bottom { border-bottom: 1px dotted black; }
-                    .text-center { text-align: center; }
-                    .text-right { text-align: right; }
-                    .text-left { text-align: left; }
-                </style>
-            </head>
-            <body class="p-4 bg-white text-black">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="w-1/4"></div>
-                    <div class="w-2/4 text-center">
-                        <div class="flex justify-center mb-2">
-                             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" class="h-20 w-auto" />
-                        </div>
-                        <h1 class="text-xl font-black text-red-600">${generalSettings.orgNameNepali}</h1>
-                        <h2 class="text-sm font-bold">${generalSettings.subTitleNepali}</h2>
-                        ${generalSettings.address ? `<p class="text-xs">${generalSettings.address}</p>` : ''}
-                        ${generalSettings.phone ? `<p class="text-xs">फोन: ${generalSettings.phone}</p>` : ''}
-                        <h3 class="text-lg font-black underline mt-4">खरिद आदेश (Purchase Order)</h3>
-                    </div>
-                    <div class="w-1/4 text-right">
-                        <div class="text-xs font-bold border border-black px-2 py-1 inline-block">म.ले.प.फा.नं ४०५</div>
-                    </div>
-                </div>
-
-                <div class="flex justify-between items-end mb-4 text-xs">
-                    <div class="w-1/2 space-y-2">
-                        <div class="flex"><span class="w-24 font-bold">श्री:</span> <span class="dotted-bottom flex-1 font-bold">${poDetails.vendorName}</span></div>
-                        <div class="flex"><span class="w-24 font-bold">ठेगाना:</span> <span class="dotted-bottom flex-1">${poDetails.vendorAddress}</span></div>
-                        <div class="flex"><span class="w-24 font-bold">पान/भ्याट नं:</span> <span class="dotted-bottom flex-1">${poDetails.vendorPan}</span></div>
-                        <div class="flex"><span class="w-24 font-bold">फोन:</span> <span class="dotted-bottom flex-1">${poDetails.vendorPhone}</span></div>
-                    </div>
-                    <div class="w-1/3 space-y-2 text-right">
-                        <div class="flex justify-end gap-2"><span>आर्थिक वर्ष:</span> <span class="font-bold">${poDetails.fiscalYear}</span></div>
-                        <div class="flex justify-end gap-2"><span class="font-bold">खरिद आदेश नं:</span> <span class="font-bold text-red-600">${poDetails.orderNo}</span></div>
-                        <div class="flex justify-end gap-2"><span class="font-bold">मिति:</span> <span class="font-bold">${poDetails.orderDate}</span></div>
-                        <div class="flex justify-end gap-2"><span>निर्णय नं:</span> <span>${poDetails.decisionNo || '-'}</span></div>
-                    </div>
-                </div>
-
-                <div class="mb-4 text-xs">
-                    <span class="font-bold">तपसिल:</span>
-                </div>
-
-                <table class="mb-4">
-                    <thead>
-                        <tr class="bg-gray-100">
-                            <th class="w-8">क्र.सं.</th>
-                            <th class="w-20">सङ्केत नं</th>
-                            <th>विवरण (नाम / स्पेसिफिकेसन)</th>
-                            <th class="w-16">एकाई</th>
-                            <th class="w-16">परिमाण</th>
-                            <th class="w-20">दर</th>
-                            <th class="w-24">जम्मा रकम</th>
-                            <th class="w-24">कैफियत</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${itemsRows}
-                        <tr class="font-bold bg-gray-50">
-                            <td colspan="6" class="text-right pr-4">कुल जम्मा (Total)</td>
-                            <td class="text-right pr-2">${totalAmount.toFixed(2)}</td>
-                            <td></td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div class="text-xs mb-8">
-                    <p class="mb-1"><span class="font-bold">बजेट उपशीर्षक नं:</span> ${poDetails.budgetSubHeadNo || '-'}</p>
-                    <p class="mb-1"><span class="font-bold">खर्च शीर्षक नं:</span> ${poDetails.expHeadNo || '-'}</p>
-                    <p class="mb-1">माथि उल्लेखित सामानहरु मिति ........................... भित्र यस कार्यालयमा दाखिला गरि बिल पेश गर्नुहोला ।</p>
-                </div>
-
-                <div class="grid grid-cols-4 gap-4 text-xs mt-16 text-center">
-                    <div>
-                        <div class="border-t border-black pt-2 font-bold">फाँटवाला / तयार गर्ने</div>
-                        <div class="mt-1">${poDetails.preparedBy?.name || ''}</div>
-                        <div class="text-[10px]">${poDetails.preparedBy?.designation || ''}</div>
-                        <div class="text-[10px] italic">${poDetails.preparedBy?.date || ''}</div>
-                    </div>
-                    <div>
-                        <div class="border-t border-black pt-2 font-bold">सिफारिस गर्ने</div>
-                        <div class="mt-1">${poDetails.recommendedBy?.name || ''}</div>
-                        <div class="text-[10px]">${poDetails.recommendedBy?.designation || ''}</div>
-                        <div class="text-[10px] italic">${poDetails.recommendedBy?.date || ''}</div>
-                    </div>
-                    <div>
-                        <div class="border-t border-black pt-2 font-bold">लेखा प्रमुख</div>
-                        <div class="mt-1">${poDetails.financeBy?.name || ''}</div>
-                        <div class="text-[10px]">${poDetails.financeBy?.designation || ''}</div>
-                        <div class="text-[10px] italic">${poDetails.financeBy?.date || ''}</div>
-                    </div>
-                    <div>
-                        <div class="border-t border-black pt-2 font-bold">कार्यालय प्रमुख / स्वीकृत गर्ने</div>
-                        <div class="mt-1">${poDetails.approvedBy?.name || ''}</div>
-                        <div class="text-[10px]">${poDetails.approvedBy?.designation || ''}</div>
-                        <div class="text-[10px] italic">${poDetails.approvedBy?.date || ''}</div>
-                    </div>
-                </div>
-
-                <script>
-                    window.onload = function() {
-                        setTimeout(function() {
-                            window.print();
-                        }, 500);
-                    };
-                </script>
-            </body>
-            </html>
-        `);
-        doc.close();
-
-        // Close modal after initiating print
-        setTimeout(() => {
-            if (document.body.contains(iframe)) {
-                // Keep iframe for a bit if needed for debugging or printing delay, but usually removing it is fine
-                // document.body.removeChild(iframe); 
-            }
-            setShowPrintOptionsModal(false);
-        }, 1000);
-
-    }, [poDetails, poItems, generalSettings]);
-
+  // Load form data when an order is selected
+  useEffect(() => {
     if (selectedOrder) {
-        return (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-                <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
-                    <div className="flex items-center gap-4">
-                        <button onClick={handleBack} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
-                            <ArrowLeft size={20} />
-                        </button>
-                        <div>
-                            <h2 className="font-bold text-slate-700 font-nepali text-lg">खरिद आदेश तयार गर्नुहोस् (Generate Purchase Order)</h2>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-600 border-slate-200">
-                                    Status: {selectedOrder.status}
-                                </span>
-                                {isViewOnlyMode && <span className="text-xs font-bold text-slate-500">PREVIEW MODE</span>}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                         <button onClick={() => setShowPrintOptionsModal(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-medium shadow-sm transition-colors">
-                            <Printer size={18} /> Print
-                        </button>
-                        {isStoreKeeper && selectedOrder.status === 'Generated' && onDakhilaClick && (
-                            <button onClick={() => {
-                                    const orderWithRates = {
-                                        ...selectedOrder,
-                                        items: selectedOrder.items.map((item, idx) => ({
-                                            ...item,
-                                            rate: parseFloat(poItems[idx]?.rate) || 0,
-                                        }))
-                                    }
-                                    onDakhilaClick(orderWithRates);
-                                }}
-                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium shadow-sm transition-colors"
-                            >
-                                <Archive size={18} /> दाखिला गर्नुहोस् (Entry to Stock)
-                            </button>
-                        )}
-                        {!isViewOnlyMode && (
-                            <button onClick={handleSavePO} disabled={isSaved} className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium shadow-sm transition-colors ${isSaved ? 'bg-green-600 cursor-not-allowed' : 'bg-primary-600 hover:bg-primary-700'}`}>
-                                {isSaved ? <CheckCircle2 size={18} /> : <ActionIcon size={18} />}
-                                {isSaved ? 'प्रक्रियामा...' : actionLabel}
-                            </button>
-                        )}
-                    </div>
-                </div>
-
-                {validationError && (
-                    <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm flex items-start gap-3 animate-in slide-in-from-top-2 mx-4">
-                        <div className="text-red-500 mt-0.5"><AlertCircle size={24} /></div>
-                        <div className="flex-1">
-                           <h3 className="text-red-800 font-bold text-sm">मिति मिलेन (Date Error)</h3>
-                           <p className="text-red-700 text-sm mt-1 whitespace-pre-line leading-relaxed">{validationError}</p>
-                        </div>
-                        <button onClick={() => setValidationError(null)} className="text-red-400 hover:text-red-600 transition-colors"><X size={20} /></button>
-                    </div>
-                )}
-
-                {successMessage && (
-                    <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-4 rounded-r-xl shadow-sm flex items-center gap-3 animate-in slide-in-from-top-2 mx-4 mt-4">
-                        <div className="text-green-500"><CheckCircle2 size={24} /></div>
-                        <div className="flex-1">
-                           <h3 className="text-green-800 font-bold text-lg font-nepali">सफल भयो (Success)</h3>
-                           <p className="text-green-700 text-sm">{successMessage}</p>
-                        </div>
-                    </div>
-                )}
-
-                <div className="bg-white p-8 md:p-12 rounded-xl shadow-lg max-w-[210mm] mx-auto min-h-[297mm] text-slate-900 font-nepali text-sm print:shadow-none print:p-0 print:max-w-none">
-                    <div className="mb-8">
-                        <div className="flex items-start justify-between">
-                            <div className="w-24 flex justify-start pt-2 print:h-24 print:w-24 print:shrink-0">
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" alt="Nepal Emblem" className="h-24 w-24 object-contain" />
-                            </div>
-                            <div className="flex-1 text-center space-y-1">
-                                <h1 className="text-xl font-bold text-red-600 print:text-base print:text-slate-900">{generalSettings.orgNameNepali}</h1>
-                                {generalSettings.subTitleNepali && <h2 className="text-lg font-bold print:text-sm">{generalSettings.subTitleNepali}</h2>}
-                                {generalSettings.subTitleNepali2 && <h3 className="text-base font-bold print:text-xs">{generalSettings.subTitleNepali2}</h3>}
-                                {generalSettings.subTitleNepali3 && <h3 className="text-lg font-bold print:text-xs">{generalSettings.subTitleNepali3}</h3>}
-                                {/* ADDED: Contact Details Row */}
-                                <div className="text-xs mt-2 space-x-3 font-medium text-slate-600 print:text-[8px] print:text-slate-700">
-                                    {generalSettings.address && <span>{generalSettings.address}</span>}
-                                    {generalSettings.phone && <span>| फोन: {generalSettings.phone}</span>}
-                                    {generalSettings.email && <span>| ईमेल: {generalSettings.email}</span>}
-                                    {generalSettings.panNo && <span>| पान नं: {generalSettings.panNo}</span>}
-                                </div>
-                            </div>
-                            <div className="w-24 print:h-24 print:w-24 print:shrink-0"></div> 
-                        </div>
-                        <div className="text-center pt-6 pb-2 print:pt-4">
-                            <h1 className="text-xl font-bold underline underline-offset-4 print:text-base">खरिद आदेश</h1>
-                        </div>
-                    </div>
-
-                    <div className="flex justify-between items-start mb-6 print:text-[10px] print:mb-4">
-                        <div className="w-1/2 space-y-2">
-                             <div className="flex flex-col gap-1">
-                                <label className="font-bold print:font-semibold">श्री (आदेश गरिएको व्यक्ति/फर्म/निकाय नाम):</label>
-                                {canEditVendor ? (
-                                    <SearchableSelect
-                                        options={vendorOptions}
-                                        value={poDetails.vendorName}
-                                        onChange={(val) => setPoDetails({...poDetails, vendorName: val})}
-                                        onSelect={(option) => {
-                                            const selectedFirm = firms.find(f => f.id === option.id);
-                                            if (selectedFirm) {
-                                                setPoDetails(prev => ({ ...prev, vendorName: selectedFirm.firmName, vendorAddress: selectedFirm.address, vendorPan: selectedFirm.vatPan, vendorPhone: selectedFirm.contactNo }));
-                                            }
-                                        }}
-                                        placeholder="Vendor Name"
-                                        className="!border-b !border-dotted !border-slate-400 !rounded-none !bg-transparent !px-0 !py-1 print:border-none print:bg-none print:text-slate-900 print:text-[10px] print:font-bold print:px-0"
-                                    />
-                                ) : (
-                                    <input value={poDetails.vendorName} onChange={e => setPoDetails({...poDetails, vendorName: e.target.value})} className="border-b border-dotted border-slate-400 outline-none w-full bg-transparent focus:border-slate-800 disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:text-[10px] print:font-bold print:px-0" disabled={true} />
-                                )}
-                             </div>
-                             <div className="flex items-center gap-2">
-                                <label className="font-bold w-16 print:font-semibold">ठेगाना :</label>
-                                <input value={poDetails.vendorAddress} onChange={e => setPoDetails({...poDetails, vendorAddress: e.target.value})} className="border-b border-dotted border-slate-400 outline-none flex-1 bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:text-[10px] print:font-bold print:px-0" disabled={!canEditVendor} />
-                             </div>
-                             <div className="flex items-center gap-2">
-                                <label className="font-bold print:font-semibold">स्थायी लेखा (PAN/VAT) नम्बर:</label>
-                                <input value={poDetails.vendorPan} onChange={e => setPoDetails({...poDetails, vendorPan: e.target.value})} className="border-b border-dotted border-slate-400 outline-none w-32 bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:text-[10px] print:font-bold print:px-0" disabled={!canEditVendor} />
-                             </div>
-                             <div className="flex items-center gap-2">
-                                <label className="font-bold w-16 print:font-semibold">फोन नं :</label>
-                                <input value={poDetails.vendorPhone} onChange={e => setPoDetails({...poDetails, vendorPhone: e.target.value})} className="border-b border-dotted border-slate-400 outline-none w-32 bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:text-[10px] print:font-bold print:px-0" disabled={!canEditVendor} />
-                             </div>
-                        </div>
-
-                        {/* Updated alignment for labels and inputs */}
-                        <div className="w-1/3 space-y-2">
-                            <div className="flex items-center gap-2">
-                                <label className="font-bold w-28 text-left print:font-semibold">आर्थिक वर्ष :</label>
-                                <input value={poDetails.fiscalYear} readOnly className="border-b border-dotted border-slate-400 outline-none flex-1 w-24 text-right bg-transparent print:border-none print:bg-none print:text-slate-900 print:font-bold print:px-0" />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <label className="font-bold w-28 text-left print:font-semibold">खरिद आदेश नं :</label>
-                                <input value={poDetails.orderNo} readOnly className="border-b border-dotted border-slate-400 outline-none flex-1 w-24 text-right bg-transparent font-bold text-red-600 print:border-none print:bg-none print:text-slate-900 print:font-bold print:px-0" />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <label className="font-bold w-28 text-left print:font-semibold">खरिद आदेश मिति <span className="text-red-500 print:text-slate-900">*</span> :</label>
-                                <NepaliDatePicker 
-                                    value={poDetails.orderDate}
-                                    onChange={handleOrderDateChange}
-                                    format="YYYY/MM/DD"
-                                    label=""
-                                    hideIcon={true}
-                                    inputClassName={`border-b border-dotted border-slate-400 outline-none flex-1 w-32 text-right bg-transparent font-bold placeholder:text-slate-400 placeholder:font-normal rounded-none px-0 py-0 h-auto focus:ring-0 focus:border-slate-400 ${validationError ? 'text-red-600' : ''} print:border-none print:bg-none print:text-slate-900 print:font-bold print:px-0`}
-                                    wrapperClassName="w-32 flex-1"
-                                    disabled={true} 
-                                />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <label className="font-bold w-28 text-left print:font-semibold">खरिद सम्बन्धी निर्णय नं :</label>
-                                <input value={poDetails.decisionNo} onChange={e => setPoDetails({...poDetails, decisionNo: e.target.value})} className="border-b border-dotted border-slate-400 outline-none flex-1 w-24 text-right bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:font-bold print:px-0" disabled={!canEditVendor} />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <label className="font-bold w-28 text-left print:font-semibold">निर्णय मिति :</label>
-                                <input value={poDetails.decisionDate} onChange={e => setPoDetails({...poDetails, decisionDate: e.target.value})} className="border-b border-dotted border-slate-400 outline-none flex-1 w-24 text-right bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:font-bold print:px-0" disabled={!canEditVendor} />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mb-6 print:mb-4">
-                        <div className="flex items-center gap-2 text-slate-700 font-bold mb-3 border-b pb-2 print:text-[11px] print:border-slate-900 print:pb-1">बजेट विवरण:</div>
-                        <div className="grid grid-cols-3 gap-4 print:text-[10px] print:gap-2">
-                            <div>
-                                <label className="font-bold block mb-1 print:font-semibold">बजेट उपशीर्षक नं:</label>
-                                <input value={poDetails.budgetSubHeadNo} onChange={e => setPoDetails({...poDetails, budgetSubHeadNo: e.target.value})} className="border-b border-dotted border-slate-400 outline-none w-full bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:px-0" disabled={!canEditBudget} />
-                            </div>
-                            <div>
-                                <label className="font-bold block mb-1 print:font-semibold">खर्च शीर्षक नं:</label>
-                                <input value={poDetails.expHeadNo} onChange={e => setPoDetails({...poDetails, expHeadNo: e.target.value})} className="border-b border-dotted border-slate-400 outline-none w-full bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:px-0" disabled={!canEditBudget} />
-                            </div>
-                            <div>
-                                <label className="font-bold block mb-1 print:font-semibold">कार्यक्रम क्रियाकलाप कोड नं:</label>
-                                <input value={poDetails.activityNo} onChange={e => setPoDetails({...poDetails, activityNo: e.target.value})} className="border-b border-dotted border-slate-400 outline-none w-full bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:px-0" disabled={!canEditBudget} />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mb-6 print:mb-4">
-                        <table className="w-full border-collapse border border-slate-900 text-center print:text-[8px] print:break-inside-avoid">
-                            <thead>
-                                <tr className="bg-slate-50 print:bg-slate-100 print:table-header-group">
-                                    <th className="border border-slate-900 p-2 w-10 print:text-[7px]" rowSpan={2}>क्र.सं.</th>
-                                    <th className="border border-slate-900 p-2 print:text-[7px]" colSpan={3}>सम्पत्ति तथा जिन्सी मालसामानको</th>
-                                    <th className="border border-slate-900 p-2 print:text-[7px]" rowSpan={2}>मोडल</th>
-                                    <th className="border border-slate-900 p-2 print:text-[7px]" rowSpan={2}>एकाई</th>
-                                    <th className="border border-slate-900 p-2 print:text-[7px]" rowSpan={2}>परिमाण</th>
-                                    <th className="border border-slate-900 p-2 print:text-[7px]" colSpan={2}>मूल्य(मू.अ.क. बाहेक)</th>
-                                    <th className="border border-slate-900 p-2 print:text-[7px]" rowSpan={2}>कैफियत</th>
-                                </tr>
-                                <tr className="bg-slate-50 print:bg-slate-100">
-                                    <th className="border border-slate-900 p-1 print:text-[7px]">सङ्केत नं</th>
-                                    <th className="border border-slate-900 p-1 print:text-[7px]">नाम</th> {/* Increased width */}
-                                    <th className="border border-slate-900 p-1 print:text-[7px]">स्पेसिफिकेसन</th> {/* Increased width */}
-                                    <th className="border border-slate-900 p-1 print:text-[7px]">दर</th>
-                                    <th className="border border-slate-900 p-1 print:text-[7px]">जम्मा</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {poItems.map((item, index) => (
-                                    <tr key={item.id} className="print:page-break-inside-avoid">
-                                        <td className="border border-slate-900 p-1 print:px-1 print:py-0.5">{index + 1}</td>
-                                        <td className="border border-slate-900 p-1 print:px-1 print:py-0.5">
-                                            <input value={item.codeNo} onChange={e => handleItemChange(index, 'codeNo', e.target.value)} className="w-full text-center outline-none bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:px-0" placeholder="Code" disabled={!canEditVendor} />
-                                        </td>
-                                        <td className="border border-slate-900 p-1 text-left px-2 cursor-help whitespace-normal print:px-1 print:py-0.5" title={getLowestQuoteTooltip(item.name)}>
-                                            <SearchableSelect
-                                                options={itemOptions}
-                                                value={item.name}
-                                                onChange={newName => handleItemChange(index, 'name', newName)}
-                                                onSelect={(option) => handlePoItemSelect(index, option)} 
-                                                placeholder="सामानको नाम खोज्नुहोस्"
-                                                className="!border-none !bg-transparent !p-0 !whitespace-normal print:!border-none print:!bg-none print:!text-slate-900 print:!font-bold print:!px-0 !text-[8px]" // Changed !text-xs to !text-[8px] for print
-                                                label=""
-                                                disabled={!canEditVendor}
-                                            />
-                                        </td>
-                                        <td className="border border-slate-900 p-1 print:px-1 print:py-0.5">
-                                            <input value={item.specification} onChange={e => handleItemChange(index, 'specification', e.target.value)} className="w-full text-center outline-none bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:px-0" placeholder="Specification" disabled={!canEditVendor} />
-                                        </td>
-                                        <td className="border border-slate-900 p-1 print:px-1 print:py-0.5">
-                                            <input value={item.model} onChange={e => handleItemChange(index, 'model', e.target.value)} className="w-full text-center outline-none bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:px-0" placeholder="Model" disabled={!canEditVendor} />
-                                        </td>
-                                        <td className="border border-slate-900 p-1 print:px-1 print:py-0.5">
-                                            <input value={item.unit} onChange={e => handleItemChange(index, 'unit', e.target.value)} className="w-full text-center outline-none bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:px-0" placeholder="Unit" disabled={!canEditVendor} />
-                                        </td>
-                                        <td className="border border-slate-900 p-1 font-bold print:px-1 print:py-0.5">
-                                            <input type="number" value={item.quantity} onChange={e => handleItemChange(index, 'quantity', e.target.value)} className="w-full text-center outline-none bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:px-0" placeholder="Quantity" disabled={!canEditVendor} />
-                                        </td>
-                                        <td className="border border-slate-900 p-1 print:px-1 print:py-0.5">
-                                            <input value={item.rate} onChange={e => handleItemChange(index, 'rate', e.target.value)} className="w-full text-right outline-none bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:px-0" placeholder="0.00" disabled={!canEditVendor} />
-                                        </td>
-                                        <td className="border border-slate-900 p-1 text-right font-bold bg-slate-50 print:bg-slate-100 print:px-1 print:py-0.5">{item.total || '-'}</td>
-                                        <td className="border border-slate-900 p-1 print:px-1 print:py-0.5">
-                                            <input value={item.remarks} onChange={e => handleItemChange(index, 'remarks', e.target.value)} className="w-full text-center outline-none bg-transparent disabled:cursor-not-allowed print:border-none print:bg-none print:text-slate-900 print:px-0" disabled={!canEditVendor} />
-                                        </td>
-                                    </tr>
-                                ))}
-                                <tr className="font-bold print:text-[9px]">
-                                    <td className="border border-slate-900 p-1 text-right pr-4 print:px-1 print:py-0.5" colSpan={8}>कुल जम्मा (Total)</td>
-                                    <td className="border border-slate-900 p-1 text-right print:px-1 print:py-0.5">{grandTotal.toFixed(2)}</td>
-                                    <td className="border border-slate-900 p-1 print:px-1 print:py-0.5"></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div className="space-y-8 mt-8 print:mt-12 print:text-[10px]">
-                        <div className="grid grid-cols-2 gap-12 print:gap-8">
-                            <div className="print:flex print:flex-col print:gap-2">
-                                <label className="block font-bold mb-4 print:font-bold print:mb-2 print:text-sm print:border-b print:border-slate-900 print:pb-1">तयार गर्ने (Storekeeper):</label>
-                                <div className="space-y-2 print:space-y-1">
-                                    <div className="flex gap-2 print:block">
-                                        <span className="w-16 print:w-auto print:font-semibold print:block print:mb-0.5">नाम :</span>
-                                        <input 
-                                            value={poDetails.preparedBy.name} 
-                                            onChange={e => setPoDetails({...poDetails, preparedBy: {...poDetails.preparedBy, name: e.target.value}})} 
-                                            className="border-b border-dotted border-slate-400 outline-none flex-1 bg-transparent print:border-b print:border-slate-900 print:bg-none print:text-slate-900 print:px-0" 
-                                            disabled={isViewOnlyMode || !(isStoreKeeper && selectedOrder?.status === 'Pending')}
-                                        />
-                                    </div>
-                                    <div className="flex gap-2 print:block">
-                                        <span className="w-16 print:w-auto print:font-semibold print:block print:mb-0.5">पद :</span>
-                                        <input 
-                                            value={poDetails.preparedBy.designation} 
-                                            onChange={e => setPoDetails({...poDetails, preparedBy: {...poDetails.preparedBy, designation: e.target.value}})} 
-                                            className="border-b border-dotted border-slate-400 outline-none flex-1 bg-transparent print:border-b print:border-slate-900 print:bg-none print:text-slate-900 print:px-0" 
-                                            disabled={isViewOnlyMode || !(isStoreKeeper && selectedOrder?.status === 'Pending')}
-                                        />
-                                    </div>
-                                    <div className="flex gap-2 print:block">
-                                        <span className="w-16 print:w-auto print:font-semibold print:block print:mb-0.5">मिति :</span>
-                                        <input 
-                                            value={poDetails.preparedBy.date} 
-                                            onChange={e => setPoDetails({...poDetails, preparedBy: {...poDetails.preparedBy, date: e.target.value}})} 
-                                            className="border-b border-dotted border-slate-400 outline-none flex-1 bg-transparent text-xs print:border-b print:border-slate-900 print:bg-none print:text-slate-900 print:px-0" 
-                                            disabled={isViewOnlyMode || !(isStoreKeeper && selectedOrder?.status === 'Pending')}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="print:flex print:flex-col print:gap-2">
-                                <label className="block font-bold mb-4 print:font-bold print:mb-2 print:text-sm print:border-b print:border-slate-900 print:pb-1">सिफारिस गर्ने:</label>
-                                <div className="space-y-2 print:space-y-1">
-                                    <div className="flex gap-2 print:block">
-                                        <span className="w-16 print:w-auto print:font-semibold print:block print:mb-0.5">नाम :</span>
-                                        <input value={poDetails.recommendedBy.name} onChange={e => setPoDetails({...poDetails, recommendedBy: {...poDetails.recommendedBy, name: e.target.value}})} className="border-b border-dotted border-slate-400 outline-none flex-1 bg-transparent print:border-b print:border-slate-900 print:bg-none print:text-slate-900 print:px-0" disabled={isViewOnlyMode}/>
-                                    </div>
-                                    <div className="flex gap-2 print:block">
-                                        <span className="w-16 print:w-auto print:font-semibold print:block print:mb-0.5">पद :</span>
-                                        <input value={poDetails.recommendedBy.designation} onChange={e => setPoDetails({...poDetails, recommendedBy: {...poDetails.recommendedBy, designation: e.target.value}})} className="border-b border-dotted border-slate-400 outline-none flex-1 bg-transparent print:border-b print:border-slate-900 print:bg-none print:text-slate-900 print:px-0" disabled={isViewOnlyMode}/>
-                                    </div>
-                                    <div className="flex gap-2 print:block">
-                                        <span className="w-16 print:w-auto print:font-semibold print:block print:mb-0.5">मिति :</span>
-                                        <input value={poDetails.recommendedBy.date} onChange={e => setPoDetails({...poDetails, recommendedBy: {...poDetails.recommendedBy, date: e.target.value}})} className="border-b border-dotted border-slate-400 outline-none flex-1 bg-transparent text-xs print:border-b print:border-slate-900 print:bg-none print:text-slate-900 print:px-0" disabled={isViewOnlyMode}/>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-12 print:gap-8">
-                            <div className="print:flex print:flex-col print:gap-2">
-                                <label className="block font-bold mb-4 print:font-bold print:mb-2 print:text-sm print:border-b print:border-slate-900 print:pb-1">आर्थिक प्रशासन शाखा (Account):</label>
-                                <div className="space-y-2 print:space-y-1">
-                                    <div className="flex gap-2 print:block">
-                                        <span className="w-16 print:w-auto print:font-semibold print:block print:mb-0.5">नाम :</span>
-                                        <input 
-                                            value={poDetails.financeBy.name} 
-                                            onChange={e => setPoDetails({...poDetails, financeBy: {...poDetails.financeBy, name: e.target.value}})} 
-                                            className="border-b border-dotted border-slate-400 outline-none flex-1 bg-transparent print:border-b print:border-slate-900 print:bg-none print:text-slate-900 print:px-0" 
-                                            disabled={isViewOnlyMode || !(isAccount && selectedOrder?.status === 'Pending Account')}
-                                        />
-                                    </div>
-                                    <div className="flex gap-2 print:block">
-                                        <span className="w-16 print:w-auto print:font-semibold print:block print:mb-0.5">पद :</span>
-                                        <input 
-                                            value={poDetails.financeBy.designation} 
-                                            onChange={e => setPoDetails({...poDetails, financeBy: {...poDetails.financeBy, designation: e.target.value}})} 
-                                            className="border-b border-dotted border-slate-400 outline-none flex-1 bg-transparent print:border-b print:border-slate-900 print:bg-none print:text-slate-900 print:px-0" 
-                                            disabled={isViewOnlyMode || !(isAccount && selectedOrder?.status === 'Pending Account')}
-                                        />
-                                    </div>
-                                    <div className="flex gap-2 print:block">
-                                        <span className="w-16 print:w-auto print:font-semibold print:block print:mb-0.5">मिति :</span>
-                                        <input 
-                                            value={poDetails.financeBy.date} 
-                                            onChange={e => setPoDetails({...poDetails, financeBy: {...poDetails.financeBy, date: e.target.value}})} 
-                                            className="border-b border-dotted border-slate-400 outline-none flex-1 bg-transparent text-xs print:border-b print:border-slate-900 print:bg-none print:text-slate-900 print:px-0" 
-                                            disabled={isViewOnlyMode || !(isAccount && selectedOrder?.status === 'Pending Account')}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="print:flex print:flex-col print:gap-2">
-                                <label className="block font-bold mb-4 print:font-bold print:mb-2 print:text-sm print:border-b print:border-slate-900 print:pb-1">आदेश दिने (स्वीकृत गर्ने):</label>
-                                <div className="space-y-2 print:space-y-1">
-                                    <div className="flex gap-2 print:block">
-                                        <span className="w-16 print:w-auto print:font-semibold print:block print:mb-0.5">नाम :</span>
-                                        <input 
-                                            value={poDetails.approvedBy.name} 
-                                            onChange={e => setPoDetails({...poDetails, approvedBy: {...poDetails.approvedBy, name: e.target.value}})} 
-                                            className="border-b border-dotted border-slate-400 outline-none flex-1 bg-transparent print:border-b print:border-slate-900 print:bg-none print:text-slate-900 print:px-0" 
-                                            disabled={isViewOnlyMode || !(isAdmin && selectedOrder?.status === 'Account Verified')}
-                                        />
-                                    </div>
-                                    <div className="flex gap-2 print:block">
-                                        <span className="w-16 print:w-auto print:font-semibold print:block print:mb-0.5">पद :</span>
-                                        <input 
-                                            value={poDetails.approvedBy.designation} 
-                                            onChange={e => setPoDetails({...poDetails, approvedBy: {...poDetails.approvedBy, designation: e.target.value}})} 
-                                            className="border-b border-dotted border-slate-400 outline-none flex-1 bg-transparent print:border-b print:border-slate-900 print:bg-none print:text-slate-900 print:px-0" 
-                                            disabled={isViewOnlyMode || !(isAdmin && selectedOrder?.status === 'Account Verified')}
-                                        />
-                                    </div>
-                                    <div className="flex gap-2 print:block">
-                                        <span className="w-16 print:w-auto print:font-semibold print:block print:mb-0.5">मिति :</span>
-                                        <input 
-                                            value={poDetails.approvedBy.date} 
-                                            onChange={e => setPoDetails({...poDetails, approvedBy: {...poDetails.approvedBy, date: e.target.value}})} 
-                                            className="border-b border-dotted border-slate-400 outline-none flex-1 bg-transparent text-xs print:border-b print:border-slate-900 print:bg-none print:text-slate-900 print:px-0" 
-                                            disabled={isViewOnlyMode || !(isAdmin && selectedOrder?.status === 'Account Verified')}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {showPrintOptionsModal && <PrintOptionsModal onClose={() => setShowPrintOptionsModal(false)} onPrint={printDocument} />}
-            </div>
-        );
+      const initializedOrder = {
+          ...selectedOrder,
+          items: selectedOrder.items.map(item => ({
+              ...item,
+              rate: item.rate || 0,
+              totalAmount: item.totalAmount || ((parseFloat(item.quantity) || 0) * (item.rate || 0)),
+              model: item.model || '',
+              codeNo: item.codeNo || ''
+          })),
+          decisionNo: selectedOrder.decisionNo || '',
+          decisionDate: selectedOrder.decisionDate || '',
+          budgetDetails: selectedOrder.budgetDetails || { budgetSubHeadNo: '', expHeadNo: '', activityNo: '' },
+          vatAmount: selectedOrder.vatAmount || 0 
+      };
+      setFormData(JSON.parse(JSON.stringify(initializedOrder)));
     }
+  }, [selectedOrder]);
 
-    return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-                <div className="flex items-center gap-3">
-                    <div className="bg-purple-100 p-2 rounded-lg text-purple-600">
-                        <ShoppingCart size={24} />
-                    </div>
-                    <div>
-                        <h2 className="text-xl font-bold text-slate-800 font-nepali">खरिद आदेश (Purchase Order)</h2>
-                        <p className="text-sm text-slate-500">खरिद आदेश तयार, सिफारिस र स्वीकृत गर्नुहोस्</p>
-                    </div>
-                </div>
-            </div>
+  const itemOptions = useMemo(() => {
+    const uniqueItems = Array.from(new Set(inventoryItems.map(i => i.itemName))).map(name => {
+        const item = inventoryItems.find(i => i.itemName === name);
+        return {
+            id: name,
+            value: name,
+            label: `${name} ${item?.unit ? `(${item.unit})` : ''}`,
+            itemData: item
+        };
+    });
+    return uniqueItems.sort((a, b) => a.label.localeCompare(b.label));
+  }, [inventoryItems]);
 
-            {actionableOrders.length > 0 && (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-orange-50 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <Clock size={18} className="text-orange-600"/>
-                            <h3 className="font-semibold text-orange-800 font-nepali">
-                                {isStoreKeeper ? 'तयारीको लागि (Pending Preparation)' : 
-                                 isAccount ? 'प्रमाणिकरणको लागि (Pending Verification)' : 
-                                 'स्वीकृतिको लागि (Pending Approval)'}
-                            </h3>
-                        </div>
-                        <span className="bg-orange-200 text-orange-800 text-xs font-bold px-2 py-1 rounded-full">{actionableOrders.length}</span>
-                    </div>
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-50 text-slate-600 font-medium">
-                            <tr>
-                                <th className="px-6 py-3">Mag Form No</th>
-                                <th className="px-6 py-3">Date</th>
-                                <th className="px-6 py-3">Items</th>
-                                <th className="px-6 py-3">Status</th>
-                                <th className="px-6 py-3 text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {actionableOrders.map(order => (
-                                <tr key={order.id} className="hover:bg-slate-50">
-                                    <td className="px-6 py-4 font-mono font-medium text-slate-700">#{order.magFormNo}</td>
-                                    <td className="px-6 py-4 font-nepali">{order.requestDate}</td>
-                                    <td className="px-6 py-4 text-slate-600">{order.items.length} items</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${
-                                            order.status === 'Pending' ? 'bg-orange-100 text-orange-700 border-orange-200' :
-                                            order.status === 'Pending Account' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                                            'bg-purple-100 text-purple-700 border-purple-200'
-                                        }`}>
-                                            <Clock size={12}/> {order.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button 
-                                            onClick={() => handleLoadOrder(order, false)}
-                                            className="text-primary-600 hover:text-primary-800 font-medium text-xs flex items-center justify-end gap-1 bg-primary-50 px-3 py-1.5 rounded-md hover:bg-primary-100 transition-colors"
-                                        >
-                                            <FilePlus size={14} /> Process
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+  const firmOptions = useMemo(() => firms.map(f => ({
+      id: f.id,
+      value: f.id, 
+      label: `${f.firmName} (PAN: ${f.vatPan})`
+  })), [firms]);
 
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <FileText size={18} className="text-slate-500"/>
-                        <h3 className="font-semibold text-slate-700 font-nepali">खरिद आदेश इतिहास (Order History)</h3>
-                    </div>
-                </div>
-                {trackedOrders.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500 italic">कुनै आदेश फेला परेन (No orders found)</div>
-                ) : (
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-50 text-slate-600 font-medium">
-                            <tr>
-                                <th className="px-6 py-3">PO No</th>
-                                <th className="px-6 py-3">Mag Form No</th>
-                                <th className="px-6 py-3">Date</th>
-                                <th className="px-6 py-3">Status</th>
-                                <th className="px-6 py-3 text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {trackedOrders.map(order => (
-                                <tr key={order.id} className="hover:bg-slate-50">
-                                    <td className="px-6 py-4 font-mono font-medium text-slate-700">{order.orderNo ? `#${order.orderNo}` : '-'}</td>
-                                    <td className="px-6 py-4 font-mono text-slate-600">#{order.magFormNo}</td>
-                                    <td className="px-6 py-4 font-nepali">{order.requestDate}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${
-                                            order.status === 'Completed' ? 'bg-teal-100 text-teal-700 border-teal-200' :
-                                            order.status === 'Generated' ? 'bg-green-100 text-green-700 border-green-200' :
-                                            'bg-blue-100 text-blue-700 border-blue-200'
-                                        }`}>
-                                            <CheckCircle2 size={12}/> {order.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button 
-                                            onClick={() => handleLoadOrder(order, true)}
-                                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-md text-xs font-bold transition-colors border border-slate-300"
-                                        >
-                                            <Eye size={14} /> View
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
-            {showPrintOptionsModal && <PrintOptionsModal onClose={() => setShowPrintOptionsModal(false)} onPrint={printDocument} />}
-        </div>
-    );
+  const getLowestQuoteTooltip = (itemName: string) => {
+      if (!itemName) return null;
+      const relatedQuotes = quotations.filter(q => 
+          q.itemName.trim().toLowerCase() === itemName.trim().toLowerCase() && 
+          q.fiscalYear === currentFiscalYear
+      ).sort((a, b) => parseFloat(a.rate) - parseFloat(b.rate));
+
+      if (relatedQuotes.length === 0) return `Item: ${itemName}\n(No quotations found)`;
+      const best = relatedQuotes[0];
+      return `Item: ${itemName}\nLowest Rate: Rs. ${best.rate}\nFirm: ${best.firmName}`;
+  };
+
+  const getLowestQuoteDetails = (itemName: string) => {
+      const relatedQuotes = quotations.filter(q => 
+          q.itemName.trim().toLowerCase() === itemName.trim().toLowerCase() && 
+          q.fiscalYear === currentFiscalYear
+      ).sort((a, b) => parseFloat(a.rate) - parseFloat(b.rate));
+
+      if (relatedQuotes.length === 0) return null;
+      return relatedQuotes[0];
+  };
+
+  const handleBack = () => {
+      setSelectedOrder(null);
+      setFormData(null);
+      setIsViewOnly(false);
+  };
+
+  const handleVendorSelect = (option: Option) => {
+      if (!formData) return;
+      const firm = firms.find(f => f.id === option.value);
+      if (firm) {
+          setFormData({
+              ...formData,
+              vendorDetails: {
+                  name: firm.firmName,
+                  address: firm.address,
+                  pan: firm.vatPan,
+                  phone: firm.contactNo
+              }
+          });
+      }
+  };
+
+  const handleItemChange = (index: number, field: string, value: any) => {
+      if (!formData) return;
+      const updatedItems = [...formData.items];
+      updatedItems[index] = { ...updatedItems[index], [field]: value };
+      
+      if (field === 'rate' || field === 'quantity') {
+          const qty = parseFloat(field === 'quantity' ? value : updatedItems[index].quantity) || 0;
+          const rate = parseFloat(field === 'rate' ? value : (updatedItems[index].rate || 0)) || 0;
+          updatedItems[index].totalAmount = qty * rate;
+      }
+      setFormData({ ...formData, items: updatedItems });
+  };
+
+  const handlePoItemSelect = (index: number, option: Option) => {
+      handleItemChange(index, 'name', option.value);
+      if (option.itemData) {
+          handleItemChange(index, 'unit', option.itemData.unit);
+      }
+  };
+
+  const handleSaveOrder = (action: 'draft' | 'submit_account' | 'verify' | 'approve') => {
+      if (!formData) return;
+      
+      let newStatus: PurchaseOrderEntry['status'] = formData.status;
+      let updates: Partial<PurchaseOrderEntry> = {};
+      const today = new NepaliDate().format('YYYY-MM-DD');
+
+      if (action === 'draft') {
+          newStatus = 'Pending';
+          updates.preparedBy = { name: currentUser.fullName, designation: currentUser.designation, date: today };
+      } else if (action === 'submit_account') {
+          newStatus = 'Pending Account';
+          updates.preparedBy = { name: currentUser.fullName, designation: currentUser.designation, date: today };
+      } else if (action === 'verify') {
+          newStatus = 'Account Verified';
+          updates.financeBy = { name: currentUser.fullName, designation: currentUser.designation, date: today };
+          
+          // Generate Order No Logic (001-KH, 002-KH...)
+          if (!formData.orderNo) {
+              const existingOrders = orders.filter(o => o.fiscalYear === currentFiscalYear && o.orderNo);
+              let maxNum = 0;
+              
+              existingOrders.forEach(o => {
+                  if (o.orderNo) {
+                      // Extract number part from "001-KH"
+                      const parts = o.orderNo.split('-');
+                      const numPart = parseInt(parts[0]);
+                      if (!isNaN(numPart) && numPart > maxNum) {
+                          maxNum = numPart;
+                      }
+                  }
+              });
+              
+              const nextNum = maxNum + 1;
+              updates.orderNo = `${String(nextNum).padStart(3, '0')}-KH`;
+          }
+      } else if (action === 'approve') {
+          newStatus = 'Completed'; 
+          updates.approvedBy = { name: currentUser.fullName, designation: currentUser.designation, date: today };
+      }
+
+      onSave({ ...formData, ...updates, status: newStatus });
+      alert(
+          action === 'draft' ? "मस्यौदा सुरक्षित गरियो!" : 
+          action === 'submit_account' ? "लेखा शाखामा पठाइयो!" : 
+          action === 'verify' ? `लेखा द्वारा प्रमाणित गरियो! खरिद आदेश नं: ${updates.orderNo || formData.orderNo}` : 
+          "खरिद आदेश स्वीकृत भयो!"
+      );
+      handleBack();
+  };
+
+  const filteredOrders = orders.filter(o => 
+      o.magFormNo.includes(searchTerm) || 
+      o.vendorDetails?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.status.toLowerCase().includes(searchTerm.toLowerCase())
+  ).sort((a, b) => b.requestDate.localeCompare(a.requestDate));
+
+  // --- RENDER ---
+
+  if (formData && selectedOrder) {
+      const subTotal = formData.items.reduce((acc, item) => acc + (item.totalAmount || 0), 0);
+      const grandTotal = subTotal + (formData.vatAmount || 0);
+      
+      return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+              <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
+                  <div className="flex items-center gap-4">
+                      <button onClick={handleBack} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
+                          <ArrowLeft size={20} />
+                      </button>
+                      <div>
+                          <h2 className="font-bold text-slate-700 font-nepali text-lg">खरिद आदेश विवरण (Purchase Order)</h2>
+                          <div className="flex items-center gap-2">
+                              <p className="text-sm text-slate-500">माग फारम नं: {formData.magFormNo}</p>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                  formData.status === 'Completed' ? 'bg-green-50 border-green-200 text-green-700' : 
+                                  formData.status === 'Account Verified' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                                  'bg-orange-50 border-orange-200 text-orange-700'
+                              }`}>
+                                  {formData.status}
+                              </span>
+                          </div>
+                      </div>
+                  </div>
+                  <div className="flex gap-2">
+                      {!isViewOnly && (
+                          <>
+                              {isStoreKeeper && (formData.status === 'Pending' || formData.status === 'Pending Account') && (
+                                  <>
+                                      <button onClick={() => handleSaveOrder('draft')} className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg font-bold text-sm shadow-sm transition-colors border border-slate-300">
+                                          <Save size={16} /> Save Draft
+                                      </button>
+                                      <button onClick={() => handleSaveOrder('submit_account')} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white hover:bg-primary-700 rounded-lg font-bold text-sm shadow-sm transition-colors">
+                                          <Send size={16} /> Submit to Account
+                                      </button>
+                                  </>
+                              )}
+                              {isAccount && formData.status === 'Pending Account' && (
+                                  <button onClick={() => handleSaveOrder('verify')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold text-sm shadow-sm transition-colors">
+                                      <ShieldCheck size={16} /> Verify & Generate PO No
+                                  </button>
+                              )}
+                              {isAdmin && formData.status === 'Account Verified' && (
+                                  <button onClick={() => handleSaveOrder('approve')} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg font-bold text-sm shadow-sm transition-colors">
+                                      <CheckCircle2 size={16} /> Final Approve
+                                  </button>
+                              )}
+                          </>
+                      )}
+                      {(formData.status === 'Completed' || formData.status === 'Generated') && (
+                          <button onClick={() => onDakhilaClick(formData)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg font-bold text-sm shadow-sm transition-colors">
+                              <Package size={16} /> Create Dakhila
+                          </button>
+                      )}
+                      <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-bold text-sm shadow-sm transition-colors">
+                          <Printer size={16} /> Print
+                      </button>
+                  </div>
+              </div>
+
+              {/* Exact Format per Image Request */}
+              <div className="bg-white p-10 md:p-14 max-w-[297mm] mx-auto min-h-[210mm] font-nepali text-slate-900 shadow-xl rounded-xl text-sm landscape-print">
+                  
+                  {/* Top Header Section with Logo and Address */}
+                  <div className="flex justify-between items-start mb-2">
+                      <div className="w-32 pt-2">
+                          <img 
+                            src={generalSettings.logoUrl || "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png"} 
+                            className="h-28 w-28 object-contain" 
+                            alt="Emblem"
+                          />
+                      </div>
+                      
+                      <div className="flex-1 text-center space-y-1">
+                          <h1 className="text-2xl font-black text-red-600">{generalSettings.orgNameNepali}</h1>
+                          <h2 className="text-lg font-bold">{generalSettings.subTitleNepali}</h2>
+                          {generalSettings.subTitleNepali2 && <h3 className="text-base font-bold">{generalSettings.subTitleNepali2}</h3>}
+                          {generalSettings.subTitleNepali3 && <h4 className="text-sm font-bold">{generalSettings.subTitleNepali3}</h4>}
+                          
+                          <div className="text-sm mt-1 font-medium">
+                              {generalSettings.address && <span>{generalSettings.address}</span>}
+                              {generalSettings.phone && <span> | फोन: {generalSettings.phone}</span>}
+                              {generalSettings.email && <span> | ईमेल: {generalSettings.email}</span>}
+                          </div>
+                      </div>
+                      
+                      <div className="w-32 text-right">
+                          <div className="text-[10px] font-bold">म.ले.प.फारम नं: ४०५</div>
+                      </div>
+                  </div>
+
+                  <div className="text-center mb-8">
+                      <h2 className="text-xl font-black underline mt-2">खरिद आदेश</h2>
+                  </div>
+
+                  <div className="flex justify-between items-start mb-6">
+                      {/* Left Side: Vendor Info */}
+                      <div className="w-1/2 space-y-3">
+                          <div className="flex gap-2 items-center">
+                              <span className="w-48">श्री (आदेश गरिएको व्यक्ति/फर्म/निकाय नाम):</span>
+                              <div className="flex-1">
+                                  {!isViewOnly ? (
+                                      <SearchableSelect 
+                                          options={firmOptions} 
+                                          value={formData.vendorDetails?.name || ''} 
+                                          onChange={() => {}} 
+                                          onSelect={handleVendorSelect}
+                                          placeholder="फर्म/सप्लायर्स छान्नुहोस्"
+                                          className="!border-none !border-b !border-slate-800 !rounded-none !px-0"
+                                      />
+                                  ) : (
+                                      <span className="font-bold border-b border-dotted border-slate-800 block">{formData.vendorDetails?.name}</span>
+                                  )}
+                              </div>
+                          </div>
+                          <div className="flex gap-2">
+                              <span className="w-16">ठेगाना :</span>
+                              <span className="font-bold border-b border-dotted border-slate-800 flex-1">{formData.vendorDetails?.address}</span>
+                          </div>
+                          <div className="flex gap-2">
+                              <span className="w-40">स्थायी लेखा (PAN/VAT) नम्बर:</span>
+                              <span className="font-bold border-b border-dotted border-slate-800 flex-1">{formData.vendorDetails?.pan}</span>
+                          </div>
+                          <div className="flex gap-2">
+                              <span className="w-16">फोन नं.</span>
+                              <span className="font-bold border-b border-dotted border-slate-800 flex-1">{formData.vendorDetails?.phone}</span>
+                          </div>
+                      </div>
+
+                      {/* Right Side: PO Details */}
+                      <div className="w-1/3 space-y-2 text-right">
+                          <div className="flex justify-end gap-2">
+                              <span>आर्थिक वर्ष :</span>
+                              <span className="font-bold w-24 text-center">{formData.fiscalYear}</span>
+                          </div>
+                          <div className="flex justify-end gap-2 items-center">
+                              <span>खरिद आदेश नं :</span>
+                              <input 
+                                  value={formData.orderNo || ''} 
+                                  readOnly 
+                                  className="w-24 text-right border-b border-dotted border-slate-800 bg-transparent outline-none font-bold text-red-600" 
+                                  placeholder="Auto"
+                              />
+                          </div>
+                          <div className="flex justify-end gap-2 items-center">
+                              <span>खरिद आदेश मिति :</span>
+                              <NepaliDatePicker 
+                                  value={formData.decisionDate || new NepaliDate().format('YYYY-MM-DD')} 
+                                  onChange={(v) => setFormData({...formData, decisionDate: v})} 
+                                  hideIcon 
+                                  label="" 
+                                  inputClassName="text-right w-24 border-b border-dotted border-slate-800 bg-transparent outline-none" 
+                              />
+                          </div>
+                          <div className="flex justify-end gap-2 items-center">
+                              <span>खरिद सम्बन्धी निर्णय नं :</span>
+                              <input 
+                                  value={formData.decisionNo || ''} 
+                                  onChange={(e) => setFormData({...formData, decisionNo: e.target.value})}
+                                  disabled={!canEdit}
+                                  className="w-24 text-right border-b border-dotted border-slate-800 bg-transparent outline-none" 
+                              />
+                          </div>
+                          <div className="flex justify-end gap-2 items-center">
+                              <span>निर्णय मिति :</span>
+                              <NepaliDatePicker 
+                                  value={formData.decisionDate || ''} 
+                                  onChange={(v) => setFormData({...formData, decisionDate: v})} 
+                                  hideIcon 
+                                  label="" 
+                                  inputClassName="text-right w-24 border-b border-dotted border-slate-800 bg-transparent outline-none" 
+                              />
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* Table Section */}
+                  <table className="w-full border-collapse border border-slate-900 text-xs text-center mb-6">
+                      <thead className="bg-slate-50">
+                          <tr>
+                              <th className="border border-slate-900 p-2 w-10" rowSpan={2}>क्र.सं.</th>
+                              <th className="border border-slate-900 p-2" colSpan={2}>सम्पत्ति तथा जिन्सी मालसामानको</th>
+                              <th className="border border-slate-900 p-2" rowSpan={2}>स्पेसिफिकेसन</th>
+                              <th className="border border-slate-900 p-2" rowSpan={2}>मोडल</th>
+                              <th className="border border-slate-900 p-2 w-16" rowSpan={2}>एकाई</th>
+                              <th className="border border-slate-900 p-2 w-20" rowSpan={2}>परिमाण</th>
+                              <th className="border border-slate-900 p-2" colSpan={2}>मूल्य(मू.अ.क. बाहेक)</th>
+                              <th className="border border-slate-900 p-2" rowSpan={2}>कैफियत</th>
+                          </tr>
+                          <tr>
+                              <th className="border border-slate-900 p-2 w-24">सङ्केत नं</th>
+                              <th className="border border-slate-900 p-2">नाम</th>
+                              <th className="border border-slate-900 p-2 w-24">दर</th>
+                              <th className="border border-slate-900 p-2 w-24">जम्मा</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {formData.items.map((item, index) => (
+                              <tr key={index}>
+                                  <td className="border border-slate-900 p-1">{index + 1}</td>
+                                  <td className="border border-slate-900 p-1">
+                                      <input value={item.codeNo || ''} onChange={e => handleItemChange(index, 'codeNo', e.target.value)} disabled={!canEdit} className="w-full bg-transparent text-center outline-none" />
+                                  </td>
+                                  <td className="border border-slate-900 p-1 text-left px-2" title={getLowestQuoteTooltip(item.name) || ''}>
+                                      <SearchableSelect
+                                          options={itemOptions}
+                                          value={item.name}
+                                          onChange={newName => handleItemChange(index, 'name', newName)}
+                                          onSelect={(option) => handlePoItemSelect(index, option)} 
+                                          placeholder=""
+                                          className="!border-none !bg-transparent !p-0 !text-xs"
+                                          label=""
+                                          disabled={!canEdit}
+                                      />
+                                  </td>
+                                  <td className="border border-slate-900 p-1">
+                                      <input value={item.specification} onChange={e => handleItemChange(index, 'specification', e.target.value)} disabled={!canEdit} className="w-full bg-transparent text-center outline-none" />
+                                  </td>
+                                  <td className="border border-slate-900 p-1">
+                                      <input value={item.model || ''} onChange={e => handleItemChange(index, 'model', e.target.value)} disabled={!canEdit} className="w-full bg-transparent text-center outline-none" />
+                                  </td>
+                                  <td className="border border-slate-900 p-1">
+                                      <input value={item.unit} onChange={e => handleItemChange(index, 'unit', e.target.value)} disabled={!canEdit} className="w-full bg-transparent text-center outline-none" />
+                                  </td>
+                                  <td className="border border-slate-900 p-1 font-bold">
+                                      {item.quantity}
+                                  </td>
+                                  <td className="border border-slate-900 p-1">
+                                      <input type="number" value={item.rate || ''} onChange={e => handleItemChange(index, 'rate', e.target.value)} disabled={!canEdit} className="w-full bg-transparent text-right outline-none" placeholder="" />
+                                  </td>
+                                  <td className="border border-slate-900 p-1 text-right px-2 font-bold">
+                                      {(item.totalAmount || 0).toFixed(2)}
+                                  </td>
+                                  <td className="border border-slate-900 p-1">
+                                      <input value={item.remarks} onChange={e => handleItemChange(index, 'remarks', e.target.value)} disabled={!canEdit} className="w-full bg-transparent outline-none" />
+                                  </td>
+                              </tr>
+                          ))}
+                      </tbody>
+                      <tfoot>
+                          <tr>
+                              <td colSpan={8} className="border border-slate-900 p-2 text-right font-bold">जम्मा रकम</td>
+                              <td className="border border-slate-900 p-2 text-right font-bold">{subTotal.toFixed(2)}</td>
+                              <td className="border border-slate-900 p-2"></td>
+                          </tr>
+                          <tr>
+                              <td colSpan={8} 
+                                className="border border-slate-900 p-2 text-right font-bold cursor-pointer hover:bg-slate-100 transition-colors"
+                                onClick={() => {
+                                    if(canEdit) {
+                                        const calcVat = subTotal * 0.13;
+                                        setFormData({...formData, vatAmount: parseFloat(calcVat.toFixed(2))});
+                                    }
+                                }}
+                                title="Click to auto calculate 13% VAT"
+                              >
+                                भ्याट/कर (VAT/Tax) <span className="text-[10px] text-slate-500 font-normal no-print">(Click for 13%)</span>
+                              </td>
+                              <td className="border border-slate-900 p-2 text-right font-bold relative group">
+                                  <input 
+                                      type="number" 
+                                      value={formData.vatAmount || ''} 
+                                      onChange={(e) => setFormData({...formData, vatAmount: parseFloat(e.target.value) || 0})}
+                                      disabled={!canEdit}
+                                      className="w-full bg-transparent text-right outline-none font-bold pr-5"
+                                      placeholder="0.00"
+                                  />
+                                  {formData.vatAmount > 0 && canEdit && (
+                                      <button 
+                                        onClick={(e) => { e.stopPropagation(); setFormData({...formData, vatAmount: 0}); }}
+                                        className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 no-print"
+                                        title="Clear"
+                                      >
+                                          <X size={14} />
+                                      </button>
+                                  )}
+                              </td>
+                              <td className="border border-slate-900 p-2"></td>
+                          </tr>
+                          <tr>
+                              <td colSpan={8} className="border border-slate-900 p-2 text-right font-bold">कुल जम्मा रकम</td>
+                              <td className="border border-slate-900 p-2 text-right font-bold">{grandTotal.toFixed(2)}</td>
+                              <td className="border border-slate-900 p-2"></td>
+                          </tr>
+                      </tfoot>
+                  </table>
+
+                  {/* Signatures Section 1 (Prepared & Recommended) */}
+                  <div className="grid grid-cols-2 gap-10 text-xs mb-4">
+                      <div className="space-y-1">
+                          <p className="font-bold mb-4">तयार गर्ने : ......</p>
+                          <div className="flex gap-2"><span>नाम:</span> <span>{formData.preparedBy?.name}</span></div>
+                          <div className="flex gap-2"><span>पद:</span> <span>{formData.preparedBy?.designation}</span></div>
+                          <div className="flex gap-2"><span>मिति:</span> <span>{formData.preparedBy?.date}</span></div>
+                      </div>
+                      <div className="space-y-1 text-right">
+                          <p className="font-bold mb-4 text-left pl-20">सिफारिस गर्ने : ........</p>
+                          <div className="flex gap-2 justify-start pl-20"><span>नाम:</span> <span>{formData.recommendedBy?.name}</span></div>
+                          <div className="flex gap-2 justify-start pl-20"><span>पद:</span> <span>{formData.recommendedBy?.designation}</span></div>
+                          <div className="flex gap-2 justify-start pl-20"><span>मिति:</span> <span>{formData.recommendedBy?.date}</span></div>
+                      </div>
+                  </div>
+
+                  {/* Budget Text */}
+                  <div className="border-t border-b border-slate-900 py-2 my-4 text-xs font-medium">
+                      उल्लेखित सामानहरु बजेट उपशीर्षक नं.<input value={formData.budgetDetails?.budgetSubHeadNo || ''} onChange={e => setFormData({...formData, budgetDetails: {...formData.budgetDetails, budgetSubHeadNo: e.target.value}})} className="border-b border-dotted border-slate-800 w-16 text-center outline-none bg-transparent"/> को खर्च शीर्षक न <input value={formData.budgetDetails?.expHeadNo || ''} onChange={e => setFormData({...formData, budgetDetails: {...formData.budgetDetails, expHeadNo: e.target.value}})} className="border-b border-dotted border-slate-800 w-16 text-center outline-none bg-transparent"/> को क्रियाकलाप नं.<input value={formData.budgetDetails?.activityNo || ''} onChange={e => setFormData({...formData, budgetDetails: {...formData.budgetDetails, activityNo: e.target.value}})} className="border-b border-dotted border-slate-800 w-16 text-center outline-none bg-transparent"/> बाट भुक्तानी दिन बजेट बाँकी रहेको देखिन्छ ।
+                  </div>
+
+                  {/* Signatures Section 2 (Finance & Approved) */}
+                  <div className="grid grid-cols-2 gap-10 text-xs mt-6">
+                      <div className="space-y-1">
+                          <p className="font-bold mb-4">आर्थिक प्रशासन शाखा : ........</p>
+                          <div className="flex gap-2"><span>नाम:</span> <span>{formData.financeBy?.name}</span></div>
+                          <div className="flex gap-2"><span>पद:</span> <span>{formData.financeBy?.designation}</span></div>
+                          <div className="flex gap-2"><span>मिति:</span> <span>{formData.financeBy?.date}</span></div>
+                      </div>
+                      <div className="space-y-1 text-right">
+                          <p className="font-bold mb-4 text-left pl-20">स्वीकृत गर्ने :</p>
+                          <div className="flex gap-2 justify-start pl-20"><span>नाम:</span> <span>{formData.approvedBy?.name}</span></div>
+                          <div className="flex gap-2 justify-start pl-20"><span>पद:</span> <span>{formData.approvedBy?.designation}</span></div>
+                          <div className="flex gap-2 justify-start pl-20"><span>मिति:</span> <span>{formData.approvedBy?.date}</span></div>
+                      </div>
+                  </div>
+
+              </div>
+          </div>
+      );
+  }
+
+  // List View
+  return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
+              <div className="flex items-center gap-3">
+                  <div className="bg-green-100 p-2 rounded-lg text-green-600"><ShoppingCart size={24} /></div>
+                  <div>
+                      <h2 className="text-xl font-bold text-slate-800 font-nepali">खरिद आदेश (Purchase Orders)</h2>
+                      <p className="text-sm text-slate-500 font-nepali">सिर्जना गरिएको माग फारमबाट खरिद आदेश व्यवस्थापन गर्नुहोस्</p>
+                  </div>
+              </div>
+              <div className="relative w-72">
+                  <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                      type="text" 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search orders..." 
+                      className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-4 focus:ring-green-500/10 outline-none text-sm transition-all"
+                  />
+              </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+              <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50 text-slate-500 font-bold border-b">
+                      <tr>
+                          <th className="px-6 py-4">माग फारम नं</th>
+                          <th className="px-6 py-4">मिति</th>
+                          <th className="px-6 py-4">सामान संख्या</th>
+                          <th className="px-6 py-4">स्थिति</th>
+                          <th className="px-6 py-4 text-right">कार्य</th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                      {filteredOrders.length === 0 ? (
+                          <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">कुनै आदेश फेला परेन (No orders found)</td></tr>
+                      ) : (
+                          filteredOrders.map(order => (
+                              <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-6 py-4 font-mono font-bold text-indigo-600">#{order.magFormNo}</td>
+                                  <td className="px-6 py-4 font-nepali">{order.requestDate}</td>
+                                  <td className="px-6 py-4 flex items-center gap-2">
+                                      <Package size={16} className="text-slate-400" /> {order.items.length} Items
+                                  </td>
+                                  <td className="px-6 py-4">
+                                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                          order.status === 'Completed' || order.status === 'Generated' ? 'bg-green-50 text-green-700 border-green-200' : 
+                                          order.status === 'Account Verified' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                          'bg-orange-50 text-orange-700 border-orange-200'
+                                      }`}>
+                                          <Clock size={10} /> {order.status}
+                                      </span>
+                                  </td>
+                                  <td className="px-6 py-4 text-right">
+                                      <button 
+                                          onClick={() => { setSelectedOrder(order); setIsViewOnly(false); }}
+                                          className="text-indigo-600 hover:text-indigo-800 font-bold text-xs bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors"
+                                      >
+                                          विवरण / प्रक्रिया
+                                      </button>
+                                  </td>
+                              </tr>
+                          ))
+                      )}
+                  </tbody>
+              </table>
+          </div>
+      </div>
+  );
 };

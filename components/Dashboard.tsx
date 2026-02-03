@@ -153,12 +153,15 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         res.mag_faram = magForms.filter(f => f.status === 'Verified').length;
     }
 
-    // 2. Purchase Order Pending
+    // 2. Purchase Order Pending (3-Step Workflow)
     if (currentUser.role === 'STOREKEEPER') {
+        // Storekeeper sees 'Pending' (Drafts)
         res.kharid_adesh = purchaseOrders.filter(o => o.status === 'Pending').length;
     } else if (currentUser.role === 'ACCOUNT') {
+        // Account sees 'Pending Account' (Sent by Storekeeper)
         res.kharid_adesh = purchaseOrders.filter(o => o.status === 'Pending Account').length;
     } else if (['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role)) {
+        // Admin sees 'Account Verified' (Ready for Final Approval)
         res.kharid_adesh = purchaseOrders.filter(o => o.status === 'Account Verified').length;
     }
 
