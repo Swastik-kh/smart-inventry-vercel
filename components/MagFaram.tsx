@@ -226,7 +226,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
       const rowsHtml = printableItems.map((item, idx) => `
         <tr>
           <td style="text-align: center;">${idx + 1}</td>
-          <td style="text-align: left; padding-left: 8px; font-weight: bold;">${item.name}</td>
+          <td style="text-align: left; padding-left: 8px; font-weight: 600;">${item.name}</td>
           <td style="text-align: center;">${item.specification || '-'}</td>
           <td style="text-align: center;">${item.unit}</td>
           <td style="text-align: center; font-weight: bold;">${item.quantity}</td>
@@ -248,33 +248,39 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
             @page { size: A4 portrait; margin: 10mm; }
             body { font-family: 'Mukta', sans-serif; padding: 0; margin: 0; background: white; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .header-red { color: #dc2626 !important; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid black; padding: 4px; font-size: 12px; }
-            th { background-color: #f3f4f6; font-weight: 700; }
-            .dotted-line { border-bottom: 1px dotted black; display: inline-block; min-width: 100px; text-align: center; }
-            .checkbox-box { display: inline-block; width: 12px; height: 12px; border: 1px solid black; margin-right: 4px; vertical-align: middle; position: relative; }
-            .checkbox-box.checked::after { content: '✓'; position: absolute; top: -4px; left: 1px; font-size: 14px; font-weight: bold; }
-            .w-10 { width: 40px; display: inline-block; }
+            
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; border: 1.5px solid black; }
+            th, td { border: 1px solid black; padding: 6px 8px; font-size: 14px; vertical-align: middle; }
+            th { background-color: #f3f4f6; font-weight: 800; font-size: 15px; }
+            
+            .dotted-line { border-bottom: 1px dotted black; display: inline-block; min-width: 120px; text-align: center; font-weight: bold; }
+            .checkbox-box { display: inline-block; width: 16px; height: 16px; border: 1px solid black; margin-right: 6px; vertical-align: middle; position: relative; }
+            .checkbox-box.checked::after { content: '✓'; position: absolute; top: -6px; left: 2px; font-size: 20px; font-weight: bold; }
             
             /* Header Specifics */
-            .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; position: relative; }
-            .logo-container { width: 15%; }
-            .center-text { text-align: center; flex: 1; }
+            .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; position: relative; }
+            .logo-container { width: 15%; text-align: left; }
+            .center-text { text-align: center; width: 70%; }
             .form-no-container { width: 15%; text-align: right; }
-            .form-no-box { border: 1px solid black; padding: 4px 8px; font-size: 12px; font-weight: bold; display: inline-block; }
-            .org-name { font-size: 24px; font-weight: 800; line-height: 1.2; margin: 0; }
-            .office-name { font-size: 16px; font-weight: 700; margin: 2px 0; }
-            .sub-title { font-size: 14px; font-weight: 600; margin: 2px 0; }
-            .address-text { font-size: 12px; margin-top: 4px; }
-            .form-title { margin-top: 15px; font-size: 20px; font-weight: 800; text-decoration: underline; text-underline-offset: 4px; }
             
-            .meta-info { display: flex; justify-content: flex-end; margin-bottom: 10px; font-size: 12px; font-weight: bold; }
-            .meta-row { margin-bottom: 4px; }
+            .form-no-box { border: 1px solid black; padding: 4px 10px; font-size: 12px; font-weight: bold; display: inline-block; }
             
-            .signatures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 10px; font-size: 12px; }
-            .sig-block { margin-bottom: 20px; }
-            .sig-title { font-weight: bold; border-bottom: 1px solid black; display: inline-block; margin-bottom: 8px; font-size: 13px; }
-            .sig-line { margin-bottom: 4px; display: flex; align-items: center; }
+            .org-name { font-size: 28px; font-weight: 900; line-height: 1.2; margin: 0; margin-bottom: 5px; }
+            .office-name { font-size: 18px; font-weight: 700; margin: 2px 0; }
+            .sub-title { font-size: 16px; font-weight: 600; margin: 2px 0; }
+            .sub-title-3 { font-size: 14px; font-weight: 600; margin: 2px 0; }
+            .address-text { font-size: 14px; margin-top: 4px; font-weight: 500; }
+            
+            .form-title { margin-top: 20px; font-size: 24px; font-weight: 900; text-decoration: underline; text-underline-offset: 6px; }
+            
+            .meta-info { display: flex; justify-content: flex-end; margin-bottom: 10px; font-size: 14px; font-weight: bold; margin-top: 15px; }
+            .meta-row { margin-bottom: 6px; display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+            
+            .signatures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 40px; font-size: 14px; }
+            .sig-block { margin-bottom: 30px; }
+            .sig-title { font-weight: 800; border-bottom: 1px solid black; display: inline-block; margin-bottom: 12px; font-size: 15px; }
+            .sig-line { margin-bottom: 8px; display: flex; align-items: center; }
+            .w-label { width: 60px; display: inline-block; font-weight: 600; }
           </style>
         </head>
         <body>
@@ -284,15 +290,16 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
             <div class="header-container">
                <!-- Logo -->
                <div class="logo-container">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" style="width: 80px; height: auto;" />
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" style="width: 90px; height: auto;" />
                </div>
 
                <!-- Center Text -->
                <div class="center-text">
                   <h1 class="header-red org-name">${generalSettings.orgNameNepali}</h1>
-                  <h2 class="office-name">नगरकार्यपालिकाको कार्यालय</h2>
-                  <h3 class="sub-title">${generalSettings.subTitleNepali}</h3> 
-                  <div class="address-text">${generalSettings.address}${generalSettings.phone ? ` | फोन: ${generalSettings.phone}` : ''}</div>
+                  ${generalSettings.subTitleNepali ? `<h2 class="office-name">${generalSettings.subTitleNepali}</h2>` : ''}
+                  ${generalSettings.subTitleNepali2 ? `<h3 class="sub-title">${generalSettings.subTitleNepali2}</h3>` : ''}
+                  ${generalSettings.subTitleNepali3 ? `<h4 class="sub-title-3">${generalSettings.subTitleNepali3}</h4>` : ''}
+                  <div class="address-text">${[generalSettings.address, generalSettings.phone ? `फोन: ${generalSettings.phone}` : '', generalSettings.email ? `ईमेल: ${generalSettings.email}` : ''].filter(Boolean).join(' | ')}</div>
                   <div class="form-title">माग फारम</div>
                </div>
 
@@ -317,10 +324,10 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
             <table>
               <thead>
                 <tr>
-                  <th rowspan="2" style="width: 40px;">क्र.सं.</th>
+                  <th rowspan="2" style="width: 50px;">क्र.सं.</th>
                   <th colspan="2">जिन्सी मालसामानको विवरण</th>
-                  <th rowspan="2" style="width: 60px;">एकाई</th>
-                  <th rowspan="2" style="width: 80px;">माग गरिएको<br/>परिमाण</th>
+                  <th rowspan="2" style="width: 70px;">एकाई</th>
+                  <th rowspan="2" style="width: 100px;">माग गरिएको<br/>परिमाण</th>
                   <th rowspan="2">कैफियत</th>
                 </tr>
                 <tr>
@@ -339,38 +346,38 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               <div>
                 <div class="sig-block">
                   <div class="sig-title">माग गर्नेको दस्तखत</div>
-                  <div class="sig-line"><span class="w-10">नाम:</span> <span style="font-weight: bold;">${formDetails.demandBy?.name || ''}</span></div>
-                  <div class="sig-line"><span class="w-10">पद:</span> <span>${formDetails.demandBy?.designation || ''}</span></div>
-                  <div class="sig-line"><span class="w-10">मिति:</span> <span>${formDetails.demandBy?.date || ''}</span></div>
-                  <div class="sig-line"><span class="w-10">प्रयोजन:</span> <span class="dotted-line" style="text-align: left; padding-left: 5px; min-width: 150px;">${formDetails.demandBy?.purpose || ''}</span></div>
+                  <div class="sig-line"><span class="w-label">नाम:</span> <span style="font-weight: bold;">${formDetails.demandBy?.name || ''}</span></div>
+                  <div class="sig-line"><span class="w-label">पद:</span> <span>${formDetails.demandBy?.designation || ''}</span></div>
+                  <div class="sig-line"><span class="w-label">मिति:</span> <span>${formDetails.demandBy?.date || ''}</span></div>
+                  <div class="sig-line"><span class="w-label">प्रयोजन:</span> <span class="dotted-line" style="text-align: left; padding-left: 5px; min-width: 150px;">${formDetails.demandBy?.purpose || ''}</span></div>
                 </div>
 
-                <div class="sig-block" style="margin-top: 30px;">
+                <div class="sig-block" style="margin-top: 40px;">
                   <div class="sig-title">मालसामान बुझिलिनेको दस्तखत</div>
-                  <div class="sig-line"><span class="w-10">नाम:</span> <span class="dotted-line">${formDetails.receiver?.name || ''}</span></div>
-                  <div class="sig-line"><span class="w-10">पद:</span> <span class="dotted-line">${formDetails.receiver?.designation || ''}</span></div>
-                  <div class="sig-line"><span class="w-10">मिति:</span> <span class="dotted-line">${formDetails.receiver?.date || ''}</span></div>
+                  <div class="sig-line"><span class="w-label">नाम:</span> <span class="dotted-line">${formDetails.receiver?.name || ''}</span></div>
+                  <div class="sig-line"><span class="w-label">पद:</span> <span class="dotted-line">${formDetails.receiver?.designation || ''}</span></div>
+                  <div class="sig-line"><span class="w-label">मिति:</span> <span class="dotted-line">${formDetails.receiver?.date || ''}</span></div>
                 </div>
               </div>
 
               <!-- Right Column -->
               <div>
                 <div class="sig-block">
-                  <div style="margin-bottom: 10px; font-size: 11px;">
-                     <div style="margin-bottom: 4px;"><span class="checkbox-box ${marketChecked}"></span> बजारबाट खरिद गर्नु पर्ने</div>
+                  <div style="margin-bottom: 15px; font-size: 14px;">
+                     <div style="margin-bottom: 6px;"><span class="checkbox-box ${marketChecked}"></span> बजारबाट खरिद गर्नु पर्ने</div>
                      <div><span class="checkbox-box ${stockChecked}"></span> मौज्दातमा रहेको</div>
                   </div>
                   <div class="sig-title">सिफारिस गर्नेको दस्तखत</div>
-                  <div class="sig-line"><span class="w-10">नाम:</span> <span class="dotted-line">${formDetails.recommendedBy?.name || ''}</span></div>
-                  <div class="sig-line"><span class="w-10">पद:</span> <span class="dotted-line">${formDetails.recommendedBy?.designation || ''}</span></div>
-                  <div class="sig-line"><span class="w-10">मिति:</span> <span class="dotted-line">${formDetails.recommendedBy?.date || ''}</span></div>
+                  <div class="sig-line"><span class="w-label">नाम:</span> <span class="dotted-line">${formDetails.recommendedBy?.name || ''}</span></div>
+                  <div class="sig-line"><span class="w-label">पद:</span> <span class="dotted-line">${formDetails.recommendedBy?.designation || ''}</span></div>
+                  <div class="sig-line"><span class="w-label">मिति:</span> <span class="dotted-line">${formDetails.recommendedBy?.date || ''}</span></div>
                 </div>
 
-                <div class="sig-block" style="margin-top: 30px;">
+                <div class="sig-block" style="margin-top: 40px;">
                   <div class="sig-title">स्वीकृत गर्नेको दस्तखत</div>
-                  <div class="sig-line"><span class="w-10">नाम:</span> <span class="dotted-line">${formDetails.approvedBy?.name || ''}</span></div>
-                  <div class="sig-line"><span class="w-10">पद:</span> <span class="dotted-line">${formDetails.approvedBy?.designation || ''}</span></div>
-                  <div class="sig-line"><span class="w-10">मिति:</span> <span class="dotted-line">${formDetails.approvedBy?.date || ''}</span></div>
+                  <div class="sig-line"><span class="w-label">नाम:</span> <span class="dotted-line">${formDetails.approvedBy?.name || ''}</span></div>
+                  <div class="sig-line"><span class="w-label">पद:</span> <span class="dotted-line">${formDetails.approvedBy?.designation || ''}</span></div>
+                  <div class="sig-line"><span class="w-label">मिति:</span> <span class="dotted-line">${formDetails.approvedBy?.date || ''}</span></div>
                 </div>
               </div>
             </div>
@@ -478,9 +485,9 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" className="w-20 h-20 object-contain" />
               <div className="text-center flex-1">
                   <h1 className="text-xl font-black text-red-600 uppercase">{generalSettings.orgNameNepali}</h1>
-                  <h2 className="text-base font-bold">नगरकार्यपालिकाको कार्यालय</h2>
-                  <h3 className="text-sm font-bold">{generalSettings.subTitleNepali}</h3>
-                  {generalSettings.subTitleNepali2 && <h4 className="text-xs font-bold">{generalSettings.subTitleNepali2}</h4>}
+                  {generalSettings.subTitleNepali && <h2 className="text-base font-bold">{generalSettings.subTitleNepali}</h2>}
+                  {generalSettings.subTitleNepali2 && <h3 className="text-sm font-bold">{generalSettings.subTitleNepali2}</h3>}
+                  {generalSettings.subTitleNepali3 && <h4 className="text-xs font-bold">{generalSettings.subTitleNepali3}</h4>}
                   <div className="text-[10px] font-bold text-slate-500 mt-2">
                     {[
                         generalSettings.address, 
