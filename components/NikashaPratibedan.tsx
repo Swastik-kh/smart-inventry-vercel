@@ -86,55 +86,160 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
                     </div>
                 </div>
 
-                <div className="bg-white p-10 rounded-xl shadow-lg max-w-[210mm] mx-auto min-h-[297mm] font-nepali text-slate-900 print:shadow-none print:p-0">
-                    <div className="text-center mb-8">
-                        <h1 className="text-xl font-bold text-red-600">{generalSettings.orgNameNepali}</h1>
-                        <h2 className="text-lg font-bold underline mt-4">निकासा प्रतिवेदन (निकासी फारम)</h2>
+                {/* Form 404 Layout */}
+                <div className="bg-white p-10 rounded-xl shadow-lg max-w-[297mm] mx-auto min-h-[210mm] font-nepali text-slate-900 print:shadow-none print:p-0 landscape-print">
+                    
+                    {/* Header Row */}
+                    <div className="flex justify-between items-start mb-2">
+                        {/* Logo */}
+                        <div className="w-32 pt-2">
+                            <img 
+                                src={generalSettings.logoUrl || "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png"} 
+                                alt="Emblem" 
+                                className="h-28 w-28 object-contain"
+                            />
+                        </div>
+
+                        {/* Center Text */}
+                        <div className="flex-1 text-center space-y-1 pt-2">
+                            <h1 className="text-xl font-bold text-slate-900">{generalSettings.orgNameNepali}</h1>
+                            <h2 className="text-lg font-medium">{generalSettings.subTitleNepali}</h2>
+                            {generalSettings.subTitleNepali2 && <h3 className="text-lg font-medium">{generalSettings.subTitleNepali2}</h3>}
+                            {generalSettings.subTitleNepali3 && <h3 className="text-base font-medium">{generalSettings.subTitleNepali3}</h3>}
+                            <h2 className="text-lg font-bold mt-4">खर्च निकासा फाराम</h2>
+                        </div>
+
+                        {/* Top Right Info */}
+                        <div className="w-32 text-right pt-2 space-y-1">
+                            <div className="text-[10px] font-bold">म.ले.प.फारम नं: ४०४</div>
+                            <div className="mt-8 flex justify-end items-center gap-1 text-sm">
+                                <span className="font-bold">नि.नं. :</span>
+                                <span className="border-b border-dotted border-slate-900 min-w-[40px] text-center">{selectedReport.issueNo || selectedReport.magFormNo}</span>
+                            </div>
+                            <div className="flex justify-end items-center gap-1 text-sm">
+                                <span className="font-bold">मिति :</span>
+                                <span className="border-b border-dotted border-slate-900 min-w-[80px] text-center">{selectedReport.issueDate || selectedReport.requestDate}</span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="flex justify-between mb-4 text-sm font-bold">
-                        <p>माग फारम नं: #{selectedReport.magFormNo}</p>
-                        <p>मिति: {selectedReport.issueDate || selectedReport.requestDate}</p>
+                    <div className="flex justify-between items-end mb-4 text-xs font-bold">
+                        <div className="pb-1">
+                            आ.व. : {selectedReport.fiscalYear}
+                        </div>
                     </div>
 
-                    <table className="w-full border-collapse border border-slate-900 text-xs">
-                        <thead>
-                            <tr className="bg-slate-50">
-                                <th className="border border-slate-900 p-2">क्र.सं.</th>
-                                <th className="border border-slate-900 p-2">सामानको नाम</th>
-                                <th className="border border-slate-900 p-2">एकाई</th>
-                                <th className="border border-slate-900 p-2 text-center">माग परिमाण</th>
-                                <th className="border border-slate-900 p-2 text-center">निकासा परिमाण</th>
-                                <th className="border border-slate-900 p-2">कैफियत</th>
+                    <div className="mb-2 text-xs font-bold">
+                        खर्च निकासा गरिएको माग फाराम नं. <span className="font-normal">{selectedReport.magFormNo}</span>
+                    </div>
+
+                    {/* Table Title */}
+                    <div className="text-center text-xs font-bold border-t border-l border-r border-slate-900 p-1">
+                        खर्च भएर जाने जिन्सी मालसामानको निकासा गरिएको
+                    </div>
+
+                    <table className="w-full border-collapse border border-slate-900 text-xs text-center">
+                        <thead className="bg-white">
+                            <tr>
+                                <th className="border border-slate-900 p-1 w-10">क्र.सं.</th>
+                                <th className="border border-slate-900 p-1">नाम</th>
+                                <th className="border border-slate-900 p-1 w-20">संकेत नं.</th>
+                                <th className="border border-slate-900 p-1">स्पेसिफिकेसन</th>
+                                <th className="border border-slate-900 p-1 w-16">एकाई</th>
+                                <th className="border border-slate-900 p-1 w-16">परिमाण</th>
+                                <th className="border border-slate-900 p-1 w-16">दर</th>
+                                <th className="border border-slate-900 p-1 w-24">जम्मा रकम</th>
+                                <th className="border border-slate-900 p-1 w-32">कैफियत</th>
+                            </tr>
+                            {/* Column Numbers */}
+                            <tr>
+                                <th className="border border-slate-900 p-0.5 text-[10px]">१</th>
+                                <th className="border border-slate-900 p-0.5 text-[10px]">२</th>
+                                <th className="border border-slate-900 p-0.5 text-[10px]">३</th>
+                                <th className="border border-slate-900 p-0.5 text-[10px]">४</th>
+                                <th className="border border-slate-900 p-0.5 text-[10px]">५</th>
+                                <th className="border border-slate-900 p-0.5 text-[10px]">६</th>
+                                <th className="border border-slate-900 p-0.5 text-[10px]">७</th>
+                                <th className="border border-slate-900 p-0.5 text-[10px]">८=६x७</th>
+                                <th className="border border-slate-900 p-0.5 text-[10px]">९</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {selectedReport.items.map((item, idx) => (
-                                <tr key={idx}>
-                                    <td className="border border-slate-900 p-2 text-center">{idx + 1}</td>
-                                    <td className="border border-slate-900 p-2 text-left">{item.name}</td>
-                                    <td className="border border-slate-900 p-2 text-center">{item.unit}</td>
-                                    <td className="border border-slate-900 p-2 text-center">{item.quantity}</td>
-                                    <td className="border border-slate-900 p-2 text-center font-bold">{item.quantity}</td>
-                                    <td className="border border-slate-900 p-2">{item.remarks}</td>
-                                </tr>
-                            ))}
+                            {selectedReport.items.map((item, idx) => {
+                                const rate = item.rate || 0;
+                                const qty = parseFloat(item.quantity) || 0;
+                                const total = rate * qty;
+                                return (
+                                    <tr key={idx}>
+                                        <td className="border border-slate-900 p-1">{idx + 1}</td>
+                                        <td className="border border-slate-900 p-1 text-left px-2">{item.name}</td>
+                                        <td className="border border-slate-900 p-1">{item.codeNo}</td>
+                                        <td className="border border-slate-900 p-1">{item.specification}</td>
+                                        <td className="border border-slate-900 p-1">{item.unit}</td>
+                                        <td className="border border-slate-900 p-1 font-bold">{item.quantity}</td>
+                                        <td className="border border-slate-900 p-1 text-right px-2">{rate > 0 ? rate.toFixed(2) : ''}</td>
+                                        <td className="border border-slate-900 p-1 text-right px-2">{total > 0 ? total.toFixed(2) : ''}</td>
+                                        <td className="border border-slate-900 p-1 text-left px-2">{item.remarks}</td>
+                                    </tr>
+                                );
+                            })}
+                            {/* Empty rows to fill space if needed, or total row */}
+                            <tr>
+                                <td className="border border-slate-900 p-1 font-bold text-right" colSpan={7}>कुल जम्मा</td>
+                                <td className="border border-slate-900 p-1 font-bold text-right px-2">
+                                    {selectedReport.items.reduce((sum, item) => sum + ((item.rate || 0) * (parseFloat(item.quantity) || 0)), 0).toFixed(2)}
+                                </td>
+                                <td className="border border-slate-900 p-1"></td>
+                            </tr>
                         </tbody>
                     </table>
 
-                    <div className="grid grid-cols-2 gap-12 mt-20 text-sm">
-                        <div className="text-center">
-                            <div className="border-t border-slate-800 pt-2">
-                                <p className="font-bold">तयार गर्ने (Storekeeper)</p>
-                                <p className="mt-4">{selectedReport.preparedBy?.name || '...................'}</p>
-                                <p className="text-[10px] uppercase text-slate-500">{selectedReport.preparedBy?.designation}</p>
+                    <div className="grid grid-cols-3 gap-4 mt-16 text-sm">
+                        <div className="space-y-4">
+                            <p className="font-bold">तयार गर्ने:......</p>
+                            <div className="flex gap-2 items-end">
+                                <span>नाम थर :</span>
+                                <span className="border-b border-dotted border-slate-900 flex-1">{selectedReport.preparedBy?.name}</span>
+                            </div>
+                            <div className="flex gap-2 items-end">
+                                <span>पद :</span>
+                                <span className="border-b border-dotted border-slate-900 flex-1">{selectedReport.preparedBy?.designation}</span>
+                            </div>
+                            <div className="flex gap-2 items-end">
+                                <span>मिति :</span>
+                                <span className="border-b border-dotted border-slate-900 flex-1">{selectedReport.preparedBy?.date}</span>
                             </div>
                         </div>
-                        <div className="text-center">
-                            <div className="border-t border-slate-800 pt-2">
-                                <p className="font-bold">स्वीकृत गर्ने (Approver)</p>
-                                <p className="mt-4">{selectedReport.approvedBy?.name || '...................'}</p>
-                                <p className="text-[10px] uppercase text-slate-500">{selectedReport.approvedBy?.designation}</p>
+
+                        <div className="space-y-4">
+                            <p className="font-bold">सिफारिस गर्ने:.........</p>
+                            <div className="flex gap-2 items-end">
+                                <span>नाम थर :</span>
+                                <span className="border-b border-dotted border-slate-900 flex-1">{selectedReport.recommendedBy?.name}</span>
+                            </div>
+                            <div className="flex gap-2 items-end">
+                                <span>पद :</span>
+                                <span className="border-b border-dotted border-slate-900 flex-1">{selectedReport.recommendedBy?.designation}</span>
+                            </div>
+                            <div className="flex gap-2 items-end">
+                                <span>मिति :</span>
+                                <span className="border-b border-dotted border-slate-900 flex-1">{selectedReport.recommendedBy?.date}</span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <p className="font-bold">स्वीकृत गर्ने:.........</p>
+                            <div className="flex gap-2 items-end">
+                                <span>नाम थर :</span>
+                                <span className="border-b border-dotted border-slate-900 flex-1">{selectedReport.approvedBy?.name}</span>
+                            </div>
+                            <div className="flex gap-2 items-end">
+                                <span>पद :</span>
+                                <span className="border-b border-dotted border-slate-900 flex-1">{selectedReport.approvedBy?.designation}</span>
+                            </div>
+                            <div className="flex gap-2 items-end">
+                                <span>मिति :</span>
+                                <span className="border-b border-dotted border-slate-900 flex-1">{selectedReport.approvedBy?.date}</span>
                             </div>
                         </div>
                     </div>

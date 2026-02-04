@@ -100,16 +100,6 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
       return `Item: ${itemName}\nLowest Rate: Rs. ${best.rate}\nFirm: ${best.firmName}`;
   };
 
-  const getLowestQuoteDetails = (itemName: string) => {
-      const relatedQuotes = quotations.filter(q => 
-          q.itemName.trim().toLowerCase() === itemName.trim().toLowerCase() && 
-          q.fiscalYear === currentFiscalYear
-      ).sort((a, b) => parseFloat(a.rate) - parseFloat(b.rate));
-
-      if (relatedQuotes.length === 0) return null;
-      return relatedQuotes[0];
-  };
-
   const handleBack = () => {
       setSelectedOrder(null);
       setFormData(null);
@@ -169,14 +159,12 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
           newStatus = 'Account Verified';
           updates.financeBy = { name: currentUser.fullName, designation: currentUser.designation, date: today };
           
-          // Generate Order No Logic (001-KH, 002-KH...)
           if (!formData.orderNo) {
               const existingOrders = orders.filter(o => o.fiscalYear === currentFiscalYear && o.orderNo);
               let maxNum = 0;
               
               existingOrders.forEach(o => {
                   if (o.orderNo) {
-                      // Extract number part from "001-KH"
                       const parts = o.orderNo.split('-');
                       const numPart = parseInt(parts[0]);
                       if (!isNaN(numPart) && numPart > maxNum) {
@@ -201,6 +189,86 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
           "खरिद आदेश स्वीकृत भयो!"
       );
       handleBack();
+  };
+
+  const handlePrint = () => {
+    const printContent = document.getElementById('kharid-adesh-print-content');
+    if (!printContent) {
+        alert("प्रिन्ट गर्नको लागि सामग्री भेटिएन।");
+        return;
+    }
+
+    // Force values into input attributes for printing
+    const inputs = printContent.querySelectorAll('input');
+    inputs.forEach((input: any) => {
+        input.setAttribute('value', input.value);
+    });
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Purchase Order Print</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+        <style>
+          @page { size: A4 landscape; margin: 10mm; }
+          body { 
+            font-family: 'Mukta', sans-serif; 
+            padding: 20px; 
+            margin: 0; 
+            background: white; 
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact; 
+          }
+          /* Ensure inputs look like text in print */
+          input { background: transparent !important; border: none !important; border-bottom: 1px dotted #333 !important; color: black !important; }
+          .border-slate-900 { border-color: black !important; }
+          .bg-slate-50 { background-color: #f8fafc !important; }
+          .text-red-600 { color: #dc2626 !important; }
+          
+          /* Hide non-printable elements inside the container if any */
+          .no-print { display: none !important; }
+          
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid black !important; padding: 4px; font-size: 11px; }
+          th { background-color: #f3f4f6 !important; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div style="width: 100%; max-width: none;">
+            ${printContent.innerHTML}
+        </div>
+        <script>
+           window.onload = function() {
+              setTimeout(function() {
+                 window.print();
+              }, 800);
+           };
+        </script>
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+        if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+        }
+    }, 5000);
   };
 
   const filteredOrders = orders.filter(o => 
@@ -266,14 +334,14 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
                               <Package size={16} /> Create Dakhila
                           </button>
                       )}
-                      <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-bold text-sm shadow-sm transition-colors">
+                      <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-bold text-sm shadow-sm transition-colors">
                           <Printer size={16} /> Print
                       </button>
                   </div>
               </div>
 
               {/* Exact Format per Image Request */}
-              <div className="bg-white p-10 md:p-14 max-w-[297mm] mx-auto min-h-[210mm] font-nepali text-slate-900 shadow-xl rounded-xl text-sm landscape-print">
+              <div id="kharid-adesh-print-content" className="bg-white p-10 md:p-14 max-w-[297mm] mx-auto min-h-[210mm] font-nepali text-slate-900 shadow-xl rounded-xl text-sm landscape-print">
                   
                   {/* Top Header Section with Logo and Address */}
                   <div className="flex justify-between items-start mb-2">
@@ -416,16 +484,20 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
                                       <input value={item.codeNo || ''} onChange={e => handleItemChange(index, 'codeNo', e.target.value)} disabled={!canEdit} className="w-full bg-transparent text-center outline-none" />
                                   </td>
                                   <td className="border border-slate-900 p-1 text-left px-2" title={getLowestQuoteTooltip(item.name) || ''}>
-                                      <SearchableSelect
-                                          options={itemOptions}
-                                          value={item.name}
-                                          onChange={newName => handleItemChange(index, 'name', newName)}
-                                          onSelect={(option) => handlePoItemSelect(index, option)} 
-                                          placeholder=""
-                                          className="!border-none !bg-transparent !p-0 !text-xs"
-                                          label=""
-                                          disabled={!canEdit}
-                                      />
+                                      {!isViewOnly ? (
+                                          <SearchableSelect
+                                              options={itemOptions}
+                                              value={item.name}
+                                              onChange={newName => handleItemChange(index, 'name', newName)}
+                                              onSelect={(option) => handlePoItemSelect(index, option)} 
+                                              placeholder=""
+                                              className="!border-none !bg-transparent !p-0 !text-xs"
+                                              label=""
+                                              disabled={!canEdit}
+                                          />
+                                      ) : (
+                                          <span className="block px-1">{item.name}</span>
+                                      )}
                                   </td>
                                   <td className="border border-slate-900 p-1">
                                       <input value={item.specification} onChange={e => handleItemChange(index, 'specification', e.target.value)} disabled={!canEdit} className="w-full bg-transparent text-center outline-none" />

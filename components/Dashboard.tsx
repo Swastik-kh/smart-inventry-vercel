@@ -580,13 +580,13 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
     <div className="flex h-screen bg-slate-50 overflow-hidden font-nepali">
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 transition-opacity duration-300"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 transition-opacity duration-300 no-print"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       <aside className={`
-        fixed inset-y-0 left-0 w-72 bg-white border-r border-slate-200 z-40 transform transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 w-72 bg-white border-r border-slate-200 z-40 transform transition-transform duration-300 ease-in-out no-print
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex flex-col h-full">
@@ -697,7 +697,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 relative">
-        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 shrink-0">
+        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 shrink-0 no-print">
           <div className="flex items-center gap-4">
             <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg">
               <Menu size={20} />
@@ -777,7 +777,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
           </div>
         </header>
 
-        <main ref={mainContentRef} className="flex-1 overflow-y-auto p-6 md:p-8 scroll-smooth no-print">
+        <main ref={mainContentRef} className="flex-1 overflow-y-auto p-6 md:p-8 scroll-smooth">
           <div className="max-w-7xl mx-auto min-h-full">
             {renderContent()}
           </div>
