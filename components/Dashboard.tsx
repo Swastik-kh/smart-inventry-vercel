@@ -55,7 +55,7 @@ interface AppNotification {
     isNew: boolean;
 }
 
-const READ_NOTIFS_KEY = 'smart_inv_read_notifs_v3';
+const READ_NOTIFS_KEY_PREFIX = 'smart_inv_read_notifs_v4_';
 
 export const Dashboard: React.FC<ExtendedDashboardProps> = ({ 
   onLogout, currentUser, currentFiscalYear, users, onAddUser, onUpdateUser, onDeleteUser, onChangePassword, isDbLocked,
@@ -76,9 +76,20 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const [showNotifications, setShowNotifications] = useState(false);
   
+  // Use a user-specific key for storing read notifications to ensure persistence per user
+  const userNotifKey = useMemo(() => {
+      return currentUser ? `${READ_NOTIFS_KEY_PREFIX}${currentUser.id}` : '';
+  }, [currentUser]);
+
   const [readNotifIds, setReadNotifIds] = useState<string[]>(() => {
-      const saved = localStorage.getItem(READ_NOTIFS_KEY);
-      return saved ? JSON.parse(saved) : [];
+      if (!userNotifKey) return [];
+      try {
+          const saved = localStorage.getItem(userNotifKey);
+          return saved ? JSON.parse(saved) : [];
+      } catch (e) {
+          console.error("Error loading notification state", e);
+          return [];
+      }
   });
 
   const [pendingPoDakhila, setPendingPoDakhila] = useState<PurchaseOrderEntry | null>(null);
@@ -98,8 +109,10 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-      localStorage.setItem(READ_NOTIFS_KEY, JSON.stringify(readNotifIds));
-  }, [readNotifIds]);
+      if (userNotifKey) {
+          localStorage.setItem(userNotifKey, JSON.stringify(readNotifIds));
+      }
+  }, [readNotifIds, userNotifKey]);
 
   const canViewFullReport = useMemo(() => {
     if (!currentUser) return false;
