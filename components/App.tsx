@@ -251,6 +251,8 @@ const App: React.FC = () => {
               const currentInvList: InventoryItem[] = Object.keys(currentInvData).map(k => ({ ...currentInvData[k], id: k }));
               const nowBs = new NepaliDate().format('YYYY-MM-DD');
               const nowAd = new Date().toISOString().split('T')[0];
+              
+              // 1. Deduct Stock
               for (const issueItem of report.items) {
                   let remainingIssuedQty = parseFloat(issueItem.quantity) || 0;
                   let potentialInventoryItems = currentInvList.filter(inv => {
@@ -277,6 +279,21 @@ const App: React.FC = () => {
                               lastUpdateDateBs: nowBs, lastUpdateDateAd: nowAd, receiptSource: 'Issued',
                           };
                           remainingIssuedQty -= qtyToDeduct;
+                      }
+                  }
+              }
+
+              // 2. Update Receiver in Mag Faram
+              if (report.magFormId) {
+                  const magFormSnap = await get(ref(db, `${orgPath}/magForms/${report.magFormId}`));
+                  if (magFormSnap.exists()) {
+                      const magFormVal = magFormSnap.val();
+                      if (magFormVal.demandBy) {
+                          updates[`${orgPath}/magForms/${report.magFormId}/receiver`] = {
+                              name: magFormVal.demandBy.name,
+                              designation: magFormVal.demandBy.designation,
+                              date: report.issueDate || nowBs
+                          };
                       }
                   }
               }
