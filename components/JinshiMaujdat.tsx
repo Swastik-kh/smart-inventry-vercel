@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Package, Calendar, Plus, RotateCcw, Save, X, CheckCircle2, Search, 
   ArrowUpCircle, ArrowDownCircle, Warehouse, DollarSign, Tag, ClipboardList, Barcode,
-  Hash, BookOpen, Layers, ScrollText, Store as StoreIcon, User, FileText, Filter, PieChart, Send, Info, Edit, Calculator, SlidersHorizontal, BarChart4, ChevronRight, History, CheckSquare, List, Loader2, Trash2
+  Hash, BookOpen, Layers, ScrollText, Store as StoreIcon, User, FileText, Filter, PieChart, Send, Info, Edit, Calculator, SlidersHorizontal, BarChart4, ChevronRight, History, CheckSquare, List, Loader2, Trash2, ShieldAlert
 } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
@@ -931,6 +932,7 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
   const handleOpenBulkModal = (mode: 'opening' | 'add') => { setBulkMode(mode); setShowBulkModal(true); };
 
   const isAdmin = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
+  const isStorekeeper = currentUser.role === 'STOREKEEPER';
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
@@ -942,10 +944,17 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
             <p className="text-sm text-slate-500">हाल {filteredItems.length} सामानहरू मौज्दातमा उपलब्ध छन्।</p>
           </div>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
-            <button onClick={() => handleOpenBulkModal('opening')} className="flex-1 md:flex-none flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-medium shadow-sm transition-colors justify-center"><ArrowUpCircle size={18} /><span className="font-nepali">ओपनिङ्ग (Opening)</span></button>
-            <button onClick={() => handleOpenBulkModal('add')} className="flex-1 md:flex-none flex items-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg text-sm font-medium shadow-sm transition-colors justify-center"><Plus size={18} /><span className="font-nepali">दाखिला (Add Stock)</span></button>
-        </div>
+        {isStorekeeper ? (
+            <div className="flex gap-2 w-full md:w-auto">
+                <button onClick={() => handleOpenBulkModal('opening')} className="flex-1 md:flex-none flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-medium shadow-sm transition-colors justify-center"><ArrowUpCircle size={18} /><span className="font-nepali">ओपनिङ्ग (Opening)</span></button>
+                <button onClick={() => handleOpenBulkModal('add')} className="flex-1 md:flex-none flex items-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg text-sm font-medium shadow-sm transition-colors justify-center"><Plus size={18} /><span className="font-nepali">दाखिला (Add Stock)</span></button>
+            </div>
+        ) : (
+            <div className="flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 rounded-lg border border-orange-200 text-xs font-bold shadow-sm">
+                <ShieldAlert size={16} className="text-orange-600" />
+                <span className="font-nepali">स्टक दाखिला जिन्सी शाखाले मात्र गर्न मिल्छ (Restricted to Storekeeper)</span>
+            </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

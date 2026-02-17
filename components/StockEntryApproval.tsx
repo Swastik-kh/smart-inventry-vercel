@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { CheckCircle2, X, Eye, ClipboardCheck, AlertCircle, Calendar, Store as StoreIcon, Package, Clock, HelpCircle, ShieldCheck } from 'lucide-react';
 // Corrected import paths for StockEntryRequest, User, Store
@@ -26,6 +25,9 @@ export const StockEntryApproval: React.FC<StockEntryApprovalProps> = ({
   const [showApproveConfirm, setShowApproveConfirm] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [activeTab, setActiveTab] = useState<'Pending' | 'History'>('Pending');
+
+  // Check if current user has approval privileges
+  const canApprove = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
 
   const displayedRequests = requests.filter(req => {
       if (activeTab === 'Pending') return req.status === 'Pending';
@@ -278,7 +280,7 @@ export const StockEntryApproval: React.FC<StockEntryApprovalProps> = ({
                           बन्द गर्नुहोस् (Close)
                       </button>
                       
-                      {selectedRequest.status === 'Pending' && (
+                      {selectedRequest.status === 'Pending' && canApprove && (
                           <>
                               <button 
                                   onClick={() => handleRejectClick(selectedRequest)}
