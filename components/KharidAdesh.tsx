@@ -244,6 +244,8 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
           
           /* Hide non-printable elements inside the container if any */
           .no-print { display: none !important; }
+          .print-only { display: block !important; }
+          .no-print-view { display: none !important; }
           
           table { width: 100%; border-collapse: collapse; }
           th, td { border: 1px solid black !important; padding: 4px; font-size: 16px; }
@@ -502,23 +504,27 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
                               <tr key={index}>
                                   <td className="border border-slate-900 p-1">{index + 1}</td>
                                   <td className="border border-slate-900 p-1">
-                                      <input value={item.codeNo || ''} onChange={e => handleItemChange(index, 'codeNo', e.target.value)} disabled={!canEdit} className="w-full bg-transparent text-center outline-none" />
+                                      <div className="hidden print-only font-bold text-black">{item.codeNo}</div>
+                                      <input value={item.codeNo || ''} onChange={e => handleItemChange(index, 'codeNo', e.target.value)} disabled={!canEdit} className="w-full bg-transparent text-center outline-none no-print-view" />
                                   </td>
                                   <td className="border border-slate-900 p-1 text-left px-2 font-black text-black" title={getLowestQuoteTooltip(item.name) || ''}>
-                                      {!isViewOnly ? (
-                                          <SearchableSelect
-                                              options={itemOptions}
-                                              value={item.name}
-                                              onChange={newName => handleItemChange(index, 'name', newName)}
-                                              onSelect={(option) => handlePoItemSelect(index, option)} 
-                                              placeholder=""
-                                              className="!border-none !bg-transparent !p-0 !text-xs !font-black !text-black"
-                                              label=""
-                                              disabled={!canEdit}
-                                          />
-                                      ) : (
-                                          <span className="block px-1 font-black text-black">{item.name}</span>
-                                      )}
+                                      <div className="hidden print-only font-black text-black">{item.name}</div>
+                                      <div className="no-print-view">
+                                          {!isViewOnly ? (
+                                              <SearchableSelect
+                                                  options={itemOptions}
+                                                  value={item.name}
+                                                  onChange={newName => handleItemChange(index, 'name', newName)}
+                                                  onSelect={(option) => handlePoItemSelect(index, option)} 
+                                                  placeholder=""
+                                                  className="!border-none !bg-transparent !p-0 !text-xs !font-black !text-black"
+                                                  label=""
+                                                  disabled={!canEdit}
+                                              />
+                                          ) : (
+                                              <span className="block px-1 font-black text-black">{item.name}</span>
+                                          )}
+                                      </div>
                                   </td>
                                   <td className="border border-slate-900 p-1">
                                       <input value={item.specification} onChange={e => handleItemChange(index, 'specification', e.target.value)} disabled={!canEdit} className="w-full bg-transparent text-center outline-none" />
