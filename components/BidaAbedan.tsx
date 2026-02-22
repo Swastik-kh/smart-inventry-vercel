@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Calendar, Save, FileText, CheckCircle2, X, BookOpen, User as UserIcon, Check, XCircle } from 'lucide-react';
+import { Calendar, Save, FileText, CheckCircle2, X, BookOpen, User as UserIcon, Check, XCircle, Eye } from 'lucide-react';
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
 import { Select } from './Select';
 import { User, LeaveApplication, LeaveStatus } from '../types/coreTypes';
+import { BidaMaagFaram } from './BidaMaagFaram';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -50,6 +51,8 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
     home: 30, // Ghar Bida
     other: 0
   });
+
+  const [viewApplication, setViewApplication] = useState<LeaveApplication | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,6 +206,60 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
         </div>
       )}
 
+      {/* View Application Modal */}
+      {viewApplication && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-200 my-8">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 sticky top-0 z-10">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <FileText size={18} className="text-primary-600"/>
+                बिदाको माग फारम (Leave Request Form)
+              </h3>
+              <button onClick={() => setViewApplication(null)} className="text-slate-400 hover:text-red-500 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[80vh]">
+              <BidaMaagFaram 
+                application={viewApplication} 
+                currentUser={currentUser}
+                accumulatedLeave={accumulatedLeave}
+                organizationName={currentUser?.organizationName}
+              />
+              
+              {isAdmin && viewApplication.status === 'Pending' && (
+                <div className="mt-6 flex justify-end gap-3 border-t pt-4 print:hidden">
+                    <button 
+                      onClick={() => {
+                        const reason = prompt('अस्वीकृत गर्नुको कारण (Rejection Reason):');
+                        if (reason) {
+                            onUpdateLeaveStatus(viewApplication.id, 'Rejected', reason);
+                            setViewApplication(null);
+                        }
+                      }}
+                      className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2"
+                    >
+                      <XCircle size={18} />
+                      अस्वीकृत गर्नुहोस्
+                    </button>
+                    <button 
+                      onClick={() => {
+                        onUpdateLeaveStatus(viewApplication.id, 'Approved');
+                        setViewApplication(null);
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                    >
+                      <Check size={18} />
+                      स्वीकृत गर्नुहोस्
+                    </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Admin Approval Section */}
       {isAdmin && pendingApplications.length > 0 && (
         <div className="bg-white p-6 rounded-xl border border-orange-200 shadow-sm mb-6">
@@ -242,6 +299,13 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                     <td className="p-3 max-w-xs truncate text-slate-600" title={app.reason}>{app.reason}</td>
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => setViewApplication(app)}
+                          className="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                          title="हेर्नुहोस् (View)"
+                        >
+                          <Eye size={16} />
+                        </button>
                         <button 
                           onClick={() => onUpdateLeaveStatus(app.id, 'Approved')}
                           className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
