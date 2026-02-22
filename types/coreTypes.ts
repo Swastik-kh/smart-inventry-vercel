@@ -61,6 +61,23 @@ export interface Signature {
   purpose?: string;
 }
 
+export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface LeaveApplication {
+  id: string;
+  userId: string;
+  employeeName: string;
+  designation: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: LeaveStatus;
+  appliedDate: string;
+  rejectionReason?: string;
+  approvedBy?: string;
+}
+
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;

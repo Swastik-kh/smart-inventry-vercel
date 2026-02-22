@@ -1,0 +1,376 @@
+import React, { useState } from 'react';
+import { Calendar, Save, FileText, CheckCircle2, X, BookOpen, User as UserIcon, Check, XCircle } from 'lucide-react';
+import { Input } from './Input';
+import { NepaliDatePicker } from './NepaliDatePicker';
+import { Select } from './Select';
+import { User, LeaveApplication, LeaveStatus } from '../types/coreTypes';
+// @ts-ignore
+import NepaliDate from 'nepali-date-converter';
+
+interface BidaAbedanProps {
+  currentUser: User | null;
+  users: User[];
+  leaveApplications: LeaveApplication[];
+  onAddLeaveApplication: (application: LeaveApplication) => void;
+  onUpdateLeaveStatus: (id: string, status: LeaveStatus, rejectionReason?: string) => void;
+}
+
+export const BidaAbedan: React.FC<BidaAbedanProps> = ({ 
+  currentUser, 
+  users, 
+  leaveApplications, 
+  onAddLeaveApplication, 
+  onUpdateLeaveStatus 
+}) => {
+  const [formData, setFormData] = useState({
+    employeeName: currentUser?.fullName || '',
+    designation: currentUser?.designation || '',
+    leaveType: 'Casual',
+    startDate: '',
+    endDate: '',
+    reason: '',
+    status: 'Pending'
+  });
+
+  const [showAccumulatedModal, setShowAccumulatedModal] = useState(false);
+  const [selectedUserForAccumulated, setSelectedUserForAccumulated] = useState<string>('');
+  const [accumulatedData, setAccumulatedData] = useState({
+    casual: 0,
+    sick: 0,
+    festival: 0,
+    home: 0,
+    other: 0
+  });
+
+  // Mock accumulated leave data (This should ideally come from a database)
+  const [accumulatedLeave, setAccumulatedLeave] = useState({
+    casual: 6,
+    sick: 12,
+    festival: 5,
+    home: 30, // Ghar Bida
+    other: 0
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    const newApplication: LeaveApplication = {
+      id: Date.now().toString(),
+      userId: currentUser.id,
+      employeeName: currentUser.fullName,
+      designation: currentUser.designation,
+      leaveType: formData.leaveType,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      reason: formData.reason,
+      status: 'Pending',
+      appliedDate: new NepaliDate().format('YYYY-MM-DD')
+    };
+
+    onAddLeaveApplication(newApplication);
+    alert('बिदा आवेदन पेश गरियो (Leave application submitted)');
+    
+    // Reset form
+    setFormData({
+      ...formData,
+      startDate: '',
+      endDate: '',
+      reason: ''
+    });
+  };
+
+  const handleSaveAccumulated = (e: React.FormEvent) => {
+    e.preventDefault();
+    // In a real app, you would save this to the database for the selected user
+    if (selectedUserForAccumulated === currentUser?.id) {
+        setAccumulatedLeave(accumulatedData);
+    }
+    alert('सञ्चित बिदा विवरण सुरक्षित गरियो (Accumulated leave record saved)');
+    setShowAccumulatedModal(false);
+  };
+
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'APPROVAL';
+
+  const userOptions = users.map(u => ({ id: u.id, value: u.id, label: `${u.fullName} (${u.designation})` }));
+
+  const pendingApplications = leaveApplications.filter(app => app.status === 'Pending');
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 relative">
+      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
+            <Calendar size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-800 font-nepali">बिदा आवेदन (Leave Application)</h2>
+            <p className="text-sm text-slate-500">बिदाको लागि आवेदन फारम</p>
+          </div>
+        </div>
+        {isAdmin && (
+          <button 
+            onClick={() => setShowAccumulatedModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 shadow-sm transition-all text-sm font-medium"
+          >
+            <BookOpen size={16} />
+            <span>सञ्चित बिदा अभिलेख (Accumulated Leave Record)</span>
+          </button>
+        )}
+      </div>
+
+      {/* Accumulated Leave Modal */}
+      {showAccumulatedModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <BookOpen size={18} className="text-primary-600"/>
+                सञ्चित बिदा व्यवस्थापन
+              </h3>
+              <button onClick={() => setShowAccumulatedModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSaveAccumulated} className="p-6 space-y-4">
+              <Select
+                label="कर्मचारी छान्नुहोस्"
+                value={selectedUserForAccumulated}
+                onChange={e => setSelectedUserForAccumulated(e.target.value)}
+                options={userOptions}
+                required
+                icon={<UserIcon size={16} />}
+                placeholder="कर्मचारी चयन गर्नुहोस्"
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="भैपरी आउने बिदा (Casual)"
+                  type="number"
+                  value={accumulatedData.casual}
+                  onChange={e => setAccumulatedData({...accumulatedData, casual: Number(e.target.value)})}
+                  min={0}
+                />
+                <Input
+                  label="बिरामी बिदा (Sick)"
+                  type="number"
+                  value={accumulatedData.sick}
+                  onChange={e => setAccumulatedData({...accumulatedData, sick: Number(e.target.value)})}
+                  min={0}
+                />
+                <Input
+                  label="पर्व बिदा (Festival)"
+                  type="number"
+                  value={accumulatedData.festival}
+                  onChange={e => setAccumulatedData({...accumulatedData, festival: Number(e.target.value)})}
+                  min={0}
+                />
+                <Input
+                  label="घर बिदा (Home)"
+                  type="number"
+                  value={accumulatedData.home}
+                  onChange={e => setAccumulatedData({...accumulatedData, home: Number(e.target.value)})}
+                  min={0}
+                />
+                <Input
+                  label="अन्य (Other)"
+                  type="number"
+                  value={accumulatedData.other}
+                  onChange={e => setAccumulatedData({...accumulatedData, other: Number(e.target.value)})}
+                  min={0}
+                />
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 mt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setShowAccumulatedModal(false)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium"
+                >
+                  रद्द
+                </button>
+                <button 
+                  type="submit"
+                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium shadow-sm flex items-center gap-2"
+                >
+                  <Save size={16} />
+                  सुरक्षित गर्नुहोस्
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Approval Section */}
+      {isAdmin && pendingApplications.length > 0 && (
+        <div className="bg-white p-6 rounded-xl border border-orange-200 shadow-sm mb-6">
+          <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <CheckCircle2 size={20} className="text-orange-500"/>
+            स्वीकृतिको लागि प्राप्त बिदा आवेदनहरू (Pending Approvals)
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                <tr>
+                  <th className="p-3">मिति</th>
+                  <th className="p-3">कर्मचारी</th>
+                  <th className="p-3">बिदाको प्रकार</th>
+                  <th className="p-3">अवधि</th>
+                  <th className="p-3">कारण</th>
+                  <th className="p-3 text-right">कार्य</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {pendingApplications.map(app => (
+                  <tr key={app.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-3">{app.appliedDate}</td>
+                    <td className="p-3">
+                      <div className="font-medium text-slate-800">{app.employeeName}</div>
+                      <div className="text-xs text-slate-500">{app.designation}</div>
+                    </td>
+                    <td className="p-3">
+                      <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium border border-blue-100">
+                        {app.leaveType}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <div className="text-slate-700">{app.startDate} देखि</div>
+                      <div className="text-slate-700">{app.endDate} सम्म</div>
+                    </td>
+                    <td className="p-3 max-w-xs truncate text-slate-600" title={app.reason}>{app.reason}</td>
+                    <td className="p-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => onUpdateLeaveStatus(app.id, 'Approved')}
+                          className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                          title="स्वीकृत गर्नुहोस् (Approve)"
+                        >
+                          <Check size={16} />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const reason = prompt('अस्वीकृत गर्नुको कारण (Rejection Reason):');
+                            if (reason) onUpdateLeaveStatus(app.id, 'Rejected', reason);
+                          }}
+                          className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                          title="अस्वीकृत गर्नुहोस् (Reject)"
+                        >
+                          <XCircle size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div className="grid md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-6">
+            <Input 
+              label="कर्मचारीको नाम" 
+              value={formData.employeeName} 
+              onChange={e => setFormData({...formData, employeeName: e.target.value})} 
+              required 
+              readOnly
+              className="bg-slate-50"
+            />
+            <Input 
+              label="पद" 
+              value={formData.designation} 
+              onChange={e => setFormData({...formData, designation: e.target.value})} 
+              required 
+              readOnly
+              className="bg-slate-50"
+            />
+            
+            <Select
+              label="बिदाको प्रकार"
+              value={formData.leaveType}
+              onChange={e => setFormData({...formData, leaveType: e.target.value})}
+              options={[
+                { id: 'casual', value: 'Casual', label: 'भैपरी आउने बिदा (Casual Leave)' },
+                { id: 'sick', value: 'Sick', label: 'बिरामी बिदा (Sick Leave)' },
+                { id: 'festival', value: 'Festival', label: 'पर्व बिदा (Festival Leave)' },
+                { id: 'home', value: 'Home', label: 'घर बिदा (Home Leave)' },
+                { id: 'other', value: 'Other', label: 'अन्य (Other)' },
+              ]}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <NepaliDatePicker
+                label="देखि (From Date)"
+                value={formData.startDate}
+                onChange={val => setFormData({...formData, startDate: val})}
+                required
+              />
+              <NepaliDatePicker
+                label="सम्म (To Date)"
+                value={formData.endDate}
+                onChange={val => setFormData({...formData, endDate: val})}
+                required
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-bold text-slate-700 mb-1">कारण (Reason)</label>
+              <textarea
+                value={formData.reason}
+                onChange={e => setFormData({...formData, reason: e.target.value})}
+                className="w-full p-3 rounded-lg border border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition-all"
+                rows={4}
+                required
+                placeholder="बिदा बस्नु पर्ने कारण उल्लेख गर्नुहोस्..."
+              />
+            </div>
+
+            <div className="md:col-span-2 flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="submit"
+                className="flex items-center gap-2 px-6 py-2 bg-primary-600 text-white hover:bg-primary-700 rounded-lg shadow-sm transition-all active:scale-95 font-medium"
+              >
+                <Save size={18} />
+                <span>पेश गर्नुहोस् (Submit)</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm h-fit">
+           <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2 border-b pb-2">
+             <FileText size={18} className="text-primary-600"/>
+             बिदाको सञ्चित अवस्था
+           </h3>
+           <div className="space-y-3">
+             <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
+               <span className="text-sm text-slate-600">भैपरी आउने बिदा</span>
+               <span className="font-bold text-slate-800">{accumulatedLeave.casual} दिन</span>
+             </div>
+             <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
+               <span className="text-sm text-slate-600">बिरामी बिदा</span>
+               <span className="font-bold text-slate-800">{accumulatedLeave.sick} दिन</span>
+             </div>
+             <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
+               <span className="text-sm text-slate-600">पर्व बिदा</span>
+               <span className="font-bold text-slate-800">{accumulatedLeave.festival} दिन</span>
+             </div>
+             <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
+               <span className="text-sm text-slate-600">घर बिदा</span>
+               <span className="font-bold text-slate-800">{accumulatedLeave.home} दिन</span>
+             </div>
+             <div className="mt-4 pt-3 border-t border-slate-100">
+               <p className="text-xs text-slate-500 italic text-center">
+                 * यो विवरण अन्तिम अपडेट अनुसार हो।
+               </p>
+             </div>
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+};

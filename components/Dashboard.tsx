@@ -11,6 +11,7 @@ import {
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
 import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest, DakhilaPratibedanEntry } from '../types/inventoryTypes';
+import { LeaveApplication, LeaveStatus } from '../types/coreTypes';
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -32,6 +33,7 @@ import { JinshiFirtaFaram } from './JinshiFirtaFaram';
 import { MarmatAdesh } from './MarmatAdesh';
 import { DatabaseManagement } from './DatabaseManagement';
 import { DhuliyaunaFaram } from './DhuliyaunaFaram';
+import { BidaAbedan } from './BidaAbedan';
 import { LogBook } from './LogBook';
 import { GeneralSetting } from './GeneralSetting';
 import { VaccinationServiceTabs } from './VaccinationServiceTabs';
@@ -100,6 +102,18 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   const [initialDakhilaReportId, setInitialDakhilaReportId] = useState<string | null>(null);
   
   const [previewDakhila, setPreviewDakhila] = useState<DakhilaPratibedanEntry | null>(null);
+  
+  const [leaveApplications, setLeaveApplications] = useState<LeaveApplication[]>([]);
+
+  const handleAddLeaveApplication = (application: LeaveApplication) => {
+    setLeaveApplications(prev => [application, ...prev]);
+  };
+
+  const handleUpdateLeaveStatus = (id: string, status: LeaveStatus, rejectionReason?: string) => {
+    setLeaveApplications(prev => prev.map(app => 
+      app.id === id ? { ...app, status, rejectionReason, approvedBy: currentUser?.fullName } : app
+    ));
+  };
 
   // New State for Dashboard Date Selection
   const [selectedStatsDate, setSelectedStatsDate] = useState<string>(() => {
@@ -592,6 +606,13 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'jinshi_firta_khata': return <JinshiFirtaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} returnEntries={returnEntries} onSaveReturnEntry={onSaveReturnEntry} issueReports={issueReports} generalSettings={generalSettings} />;
       case 'marmat_adesh': return <MarmatAdesh currentFiscalYear={currentFiscalYear} currentUser={currentUser} marmatEntries={marmatEntries} onSaveMarmatEntry={onSaveMarmatEntry} inventoryItems={inventoryItems} generalSettings={generalSettings} />;
       case 'dhuliyauna_faram': return <DhuliyaunaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} dhuliyaunaEntries={dhuliyaunaEntries} onSaveDhuliyaunaEntry={onSaveDhuliyaunaEntry} stores={stores} />;
+      case 'bida_abedan': return <BidaAbedan 
+        currentUser={currentUser} 
+        users={users} 
+        leaveApplications={leaveApplications}
+        onAddLeaveApplication={handleAddLeaveApplication}
+        onUpdateLeaveStatus={handleUpdateLeaveStatus}
+      />;
       case 'log_book': return <LogBook currentUser={currentUser} currentFiscalYear={currentFiscalYear} inventoryItems={inventoryItems} logBookEntries={logBookEntries} onAddLogEntry={onSaveLogBookEntry} />;
       case 'report_inventory_monthly': return <InventoryMonthlyReport 
                                               currentFiscalYear={currentFiscalYear} 
