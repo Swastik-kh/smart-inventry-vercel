@@ -476,7 +476,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                 <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Clinic Progress</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Anti Rabies Clinic Progress</p>
                             <div className="flex items-center gap-2">
                                 <button onClick={handlePrevDate} className="p-1 hover:bg-slate-100 rounded-full transition-colors text-slate-500">
                                     <ChevronLeft size={14}/>
@@ -519,7 +519,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                   <h4 className="font-bold text-slate-800 font-nepali mb-4 flex items-center gap-2">
                       <Syringe size={18} className="text-indigo-600"/> 
-                      {selectedStatsDate === new NepaliDate().format('YYYY-MM-DD') ? 'आजका' : `${selectedStatsDate} का`} खोप सेवाग्राहीहरू (D0, D3, D7)
+                      {selectedStatsDate === new NepaliDate().format('YYYY-MM-DD') ? 'आजका एन्टीरेविज' : `${selectedStatsDate} का`} खोप सेवाग्राहीहरू (D0, D3, D7)
                   </h4>
                   <table className="w-full text-xs text-left print-table">
                       <thead className="bg-slate-50 font-bold"><tr><th className="p-2 border-b">बिरामीको नाम</th><th className="p-2 border-b text-center">डोज</th><th className="p-2 border-b text-right">सम्पर्क</th></tr></thead>
