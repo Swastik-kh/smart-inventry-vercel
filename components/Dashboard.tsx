@@ -384,21 +384,31 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   ];
 
   const menuItems = useMemo(() => {
-    return allMenuItems.map(item => {
-        const accessibleSubItems = item.subItems?.filter(si => hasAccess(si.id));
-        const shouldIncludeTopLevel = hasAccess(item.id) || (accessibleSubItems && accessibleSubItems.length > 0);
+    const filterItems = (items: MenuItem[]): MenuItem[] => {
+      return items.map(item => {
+        // Recursively filter sub-items
+        const filteredSubItems = item.subItems ? filterItems(item.subItems) : undefined;
         
-        if (shouldIncludeTopLevel) {
-            const subBadgesSum = accessibleSubItems?.reduce((acc, si) => acc + (si.badgeCount || 0), 0) || 0;
-            return { 
-                ...item, 
-                subItems: accessibleSubItems,
-                badgeCount: item.badgeCount !== undefined ? item.badgeCount : (subBadgesSum > 0 ? subBadgesSum : undefined)
-            };
+        // Check if the item itself is accessible OR has accessible children
+        const isAccessible = hasAccess(item.id);
+        const hasAccessibleChildren = filteredSubItems && filteredSubItems.length > 0;
+        
+        if (isAccessible || hasAccessibleChildren) {
+          // Calculate badge count (sum of children if not set on parent)
+          const subBadgesSum = filteredSubItems?.reduce((acc, si) => acc + (si.badgeCount || 0), 0) || 0;
+          
+          return {
+            ...item,
+            subItems: filteredSubItems,
+            badgeCount: item.badgeCount !== undefined ? item.badgeCount : (subBadgesSum > 0 ? subBadgesSum : undefined)
+          };
         }
         return null;
-    }).filter(Boolean) as MenuItem[];
-}, [currentUser, hasAccess, counts]);
+      }).filter(Boolean) as MenuItem[];
+    };
+
+    return filterItems(allMenuItems);
+  }, [currentUser, hasAccess, counts]);
 
   const handlePrint = useCallback((printContentId: string, orientation: 'portrait' | 'landscape' = 'portrait') => {
     const printContent = document.getElementById(printContentId);
