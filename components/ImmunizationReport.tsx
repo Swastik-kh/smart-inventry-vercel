@@ -73,7 +73,11 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
         td1: 0, td2: 0, tdBooster: 0, total: 0
       },
       uniqueChildrenVax: { male: 0, female: 0, other: 0, total: 0 },
-      ethnicFIC: Object.keys(jatLabels).reduce((acc, code) => {
+      ethnicFIC_Under24: Object.keys(jatLabels).reduce((acc, code) => {
+        acc[code] = { male: 0, female: 0, total: 0 };
+        return acc;
+      }, {} as Record<string, { male: number, female: number, total: number }>),
+      ethnicFIC_Over24: Object.keys(jatLabels).reduce((acc, code) => {
         acc[code] = { male: 0, female: 0, total: 0 };
         return acc;
       }, {} as Record<string, { male: number, female: number, total: number }>)
@@ -85,6 +89,7 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
       .forEach(record => {
         let isFullyImmunized = false;
         let lastVaccineMonth = '';
+        let lastVaccineDateAd = '';
         let receivedDoseThisMonth = false;
 
         record.vaccines.forEach(v => {
@@ -103,6 +108,7 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
             if (v.name.toLowerCase().includes('mr-2') || v.name.toLowerCase().includes('typhoid')) {
                 isFullyImmunized = true;
                 lastVaccineMonth = v.givenDateBs.split('-')[1];
+                if (v.givenDateAd) lastVaccineDateAd = v.givenDateAd;
             }
           }
         });
@@ -118,9 +124,28 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
         if (isFullyImmunized && lastVaccineMonth === selectedMonth) {
             const code = record.jatCode || '06'; 
             const gender = record.gender === 'Female' ? 'female' : 'male';
-            if (stats.ethnicFIC[code]) {
-                stats.ethnicFIC[code][gender]++;
-                stats.ethnicFIC[code].total++;
+            
+            // Calculate Age
+            let ageMonths = 0;
+            if (record.dobAd && lastVaccineDateAd) {
+                const dob = new Date(record.dobAd);
+                const vaxDate = new Date(lastVaccineDateAd);
+                ageMonths = (vaxDate.getFullYear() - dob.getFullYear()) * 12 + (vaxDate.getMonth() - dob.getMonth());
+                if (vaxDate.getDate() < dob.getDate()) {
+                    ageMonths--;
+                }
+            }
+
+            if (ageMonths <= 23) {
+                if (stats.ethnicFIC_Under24[code]) {
+                    stats.ethnicFIC_Under24[code][gender]++;
+                    stats.ethnicFIC_Under24[code].total++;
+                }
+            } else {
+                if (stats.ethnicFIC_Over24[code]) {
+                    stats.ethnicFIC_Over24[code][gender]++;
+                    stats.ethnicFIC_Over24[code].total++;
+                }
             }
         }
       });
@@ -308,9 +333,9 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
             </div>
         </div>
 
-        {/* Section 3: Ethnicity Table */}
+        {/* Section 3: Ethnicity Table (Under 24 Months) */}
         <div className="mb-8">
-            <h4 className="text-base font-bold text-teal-800 mb-2 font-nepali border-b border-teal-100 pb-1">३. पूर्ण खोप पुरा गरेका बच्चाहरू (Fully Immunized Children)</h4>
+            <h4 className="text-base font-bold text-teal-800 mb-2 font-nepali border-b border-teal-100 pb-1">३. पूर्ण खोप पुरा गरेका बच्चाहरू (२३ महिना सम्म) (Fully Immunized Children ≤ 23 Months)</h4>
             <div className="overflow-hidden rounded-lg border border-slate-200">
                 <table className="w-full text-sm text-left border-collapse">
                     <thead className="bg-slate-50 text-slate-700 font-bold">
@@ -323,7 +348,7 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                         {Object.entries(jatLabels).map(([code, label]) => {
-                            const d = reportStats.ethnicFIC[code] || { male: 0, female: 0, total: 0 };
+                            const d = reportStats.ethnicFIC_Under24[code] || { male: 0, female: 0, total: 0 };
                             return (
                                 <tr key={code} className="hover:bg-slate-50">
                                     <td className="border-r border-slate-200 p-2 pl-3"><span className="font-mono font-bold text-slate-500 mr-2">{code}</span> {label}</td>
@@ -334,10 +359,46 @@ export const ImmunizationReport: React.FC<ImmunizationReportProps> = ({
                             );
                         })}
                         <tr className="bg-teal-50 font-bold text-teal-900">
-                            <td className="border-r border-teal-200 p-2 pl-3 text-right">कुल पूर्ण खोप (FIC):</td>
-                            <td className="border-r border-teal-200 p-2 text-center">{Object.values(reportStats.ethnicFIC).reduce((a, b: any) => a + b.male, 0)}</td>
-                            <td className="border-r border-teal-200 p-2 text-center">{Object.values(reportStats.ethnicFIC).reduce((a, b: any) => a + b.female, 0)}</td>
-                            <td className="p-2 text-center">{Object.values(reportStats.ethnicFIC).reduce((a, b: any) => a + b.total, 0)}</td>
+                            <td className="border-r border-teal-200 p-2 pl-3 text-right">कुल पूर्ण खोप (FIC ≤ 23 Months):</td>
+                            <td className="border-r border-teal-200 p-2 text-center">{Object.values(reportStats.ethnicFIC_Under24).reduce((a, b: any) => a + b.male, 0)}</td>
+                            <td className="border-r border-teal-200 p-2 text-center">{Object.values(reportStats.ethnicFIC_Under24).reduce((a, b: any) => a + b.female, 0)}</td>
+                            <td className="p-2 text-center">{Object.values(reportStats.ethnicFIC_Under24).reduce((a, b: any) => a + b.total, 0)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {/* Section 4: Ethnicity Table (Over 24 Months) */}
+        <div className="mb-8">
+            <h4 className="text-base font-bold text-orange-800 mb-2 font-nepali border-b border-orange-100 pb-1">४. पूर्ण खोप पुरा गरेका बच्चाहरू (२३ महिना माथि) (Fully Immunized Children {'>'} 23 Months)</h4>
+            <div className="overflow-hidden rounded-lg border border-slate-200">
+                <table className="w-full text-sm text-left border-collapse">
+                    <thead className="bg-slate-50 text-slate-700 font-bold">
+                        <tr>
+                            <th className="border-b border-r border-slate-200 p-3">जातीय कोड (Ethnicity)</th>
+                            <th className="border-b border-r border-slate-200 p-3 text-center w-24">बालक (Male)</th>
+                            <th className="border-b border-r border-slate-200 p-3 text-center w-24">बालिका (Female)</th>
+                            <th className="border-b border-slate-200 p-3 text-center w-24">जम्मा (Total)</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                        {Object.entries(jatLabels).map(([code, label]) => {
+                            const d = reportStats.ethnicFIC_Over24[code] || { male: 0, female: 0, total: 0 };
+                            return (
+                                <tr key={code} className="hover:bg-slate-50">
+                                    <td className="border-r border-slate-200 p-2 pl-3"><span className="font-mono font-bold text-slate-500 mr-2">{code}</span> {label}</td>
+                                    <td className="border-r border-slate-200 p-2 text-center text-slate-700">{d.male}</td>
+                                    <td className="border-r border-slate-200 p-2 text-center text-slate-700">{d.female}</td>
+                                    <td className="p-2 text-center font-bold text-orange-700">{d.total}</td>
+                                </tr>
+                            );
+                        })}
+                        <tr className="bg-orange-50 font-bold text-orange-900">
+                            <td className="border-r border-orange-200 p-2 pl-3 text-right">कुल पूर्ण खोप (FIC {'>'} 23 Months):</td>
+                            <td className="border-r border-orange-200 p-2 text-center">{Object.values(reportStats.ethnicFIC_Over24).reduce((a, b: any) => a + b.male, 0)}</td>
+                            <td className="border-r border-orange-200 p-2 text-center">{Object.values(reportStats.ethnicFIC_Over24).reduce((a, b: any) => a + b.female, 0)}</td>
+                            <td className="p-2 text-center">{Object.values(reportStats.ethnicFIC_Over24).reduce((a, b: any) => a + b.total, 0)}</td>
                         </tr>
                     </tbody>
                 </table>
