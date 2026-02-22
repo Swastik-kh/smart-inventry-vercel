@@ -246,8 +246,11 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
           .no-print { display: none !important; }
           
           table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid black !important; padding: 4px; font-size: 15px; }
+          th, td { border: 1px solid black !important; padding: 4px; font-size: 16px; }
           th { background-color: #f3f4f6 !important; font-weight: bold; }
+
+          /* Increase font size for signatures and budget text in print */
+          .text-xs { font-size: 14px !important; }
         </style>
       </head>
       <body>
