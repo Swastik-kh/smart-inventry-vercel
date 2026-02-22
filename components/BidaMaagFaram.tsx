@@ -172,7 +172,7 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
                 {index + 1}. {type.label}
               </div>
               <div className="p-1 border-r border-black">{balance}</div>
-              <div className="p-1 border-r border-black">{requested > 0 ? requested : ''}</div>
+              <div className="p-1 border-r border-black">{typeof requested === 'number' && requested > 0 ? requested : (selected ? requested : '')}</div>
               <div className="p-1">{remaining}</div>
             </div>
            );

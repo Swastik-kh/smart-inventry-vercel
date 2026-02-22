@@ -103,7 +103,14 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   
   const [previewDakhila, setPreviewDakhila] = useState<DakhilaPratibedanEntry | null>(null);
   
-  const [leaveApplications, setLeaveApplications] = useState<LeaveApplication[]>([]);
+  const [leaveApplications, setLeaveApplications] = useState<LeaveApplication[]>(() => {
+    const saved = localStorage.getItem('leave_applications');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('leave_applications', JSON.stringify(leaveApplications));
+  }, [leaveApplications]);
 
   const handleAddLeaveApplication = (application: LeaveApplication) => {
     setLeaveApplications(prev => [application, ...prev]);

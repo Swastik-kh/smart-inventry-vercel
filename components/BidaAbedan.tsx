@@ -276,12 +276,21 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
         </div>
       )}
 
-      {/* Admin Approval Section - Only show if on Apply tab and there are pending ones, or if on Applications tab show all */}
-      {isAdmin && activeTab === 'applications' && (
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
+      {/* Admin Approval Section - Show pending ones on Apply tab, or all on Applications tab */}
+      {isAdmin && (activeTab === 'applications' || pendingApplications.length > 0) && (
+        <div className={`bg-white p-6 rounded-xl border shadow-sm mb-6 ${activeTab === 'apply' ? 'border-orange-200' : 'border-slate-200'}`}>
           <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <List size={20} className="text-primary-600"/>
-            सबै बिदा आवेदनहरू (All Leave Applications)
+            {activeTab === 'apply' ? (
+              <>
+                <CheckCircle2 size={20} className="text-orange-500"/>
+                स्वीकृतिको लागि प्राप्त बिदा आवेदनहरू (Pending Approvals)
+              </>
+            ) : (
+              <>
+                <List size={20} className="text-primary-600"/>
+                सबै बिदा आवेदनहरू (All Leave Applications)
+              </>
+            )}
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -291,17 +300,17 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                   <th className="p-3">कर्मचारी</th>
                   <th className="p-3">बिदाको प्रकार</th>
                   <th className="p-3">अवधि</th>
-                  <th className="p-3">अवस्था</th>
+                  <th className="p-3">{activeTab === 'apply' ? 'कारण' : 'अवस्था'}</th>
                   <th className="p-3 text-right">कार्य</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {leaveApplications.length === 0 ? (
+                {(activeTab === 'apply' ? pendingApplications : leaveApplications).length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-slate-400 italic">कुनै आवेदन फेला परेन।</td>
                   </tr>
                 ) : (
-                  leaveApplications.map(app => (
+                  (activeTab === 'apply' ? pendingApplications : leaveApplications).map(app => (
                     <tr key={app.id} className="hover:bg-slate-50 transition-colors">
                       <td className="p-3">{app.appliedDate}</td>
                       <td className="p-3">
@@ -318,13 +327,17 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                         <div className="text-slate-700">{app.endDate} सम्म</div>
                       </td>
                       <td className="p-3">
-                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          app.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                          app.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                          'bg-orange-100 text-orange-700'
-                        }`}>
-                          {app.status === 'Approved' ? 'स्वीकृत' : app.status === 'Rejected' ? 'अस्वीकृत' : 'पेन्डिङ'}
-                        </span>
+                        {activeTab === 'apply' ? (
+                           <div className="max-w-xs truncate text-slate-600" title={app.reason}>{app.reason}</div>
+                        ) : (
+                          <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            app.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                            app.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                            'bg-orange-100 text-orange-700'
+                          }`}>
+                            {app.status === 'Approved' ? 'स्वीकृत' : app.status === 'Rejected' ? 'अस्वीकृत' : 'पेन्डिङ'}
+                          </span>
+                        )}
                       </td>
                       <td className="p-3 text-right">
                         <div className="flex items-center justify-end gap-2">
