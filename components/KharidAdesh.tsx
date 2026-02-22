@@ -37,6 +37,7 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [formData, setFormData] = useState<PurchaseOrderEntry | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [printOrientation, setPrintOrientation] = useState<'portrait' | 'landscape'>('landscape');
 
   // Role Logic
   const isStoreKeeper = currentUser.role === 'STOREKEEPER';
@@ -225,7 +226,7 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
         <style>
-          @page { size: A4 landscape; margin: 10mm; }
+          @page { size: A4 ${printOrientation}; margin: 10mm; }
           body { 
             font-family: 'Mukta', sans-serif; 
             padding: 20px; 
@@ -235,7 +236,8 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
             print-color-adjust: exact; 
           }
           /* Ensure inputs look like text in print */
-          input { background: transparent !important; border: none !important; border-bottom: 1px dotted #333 !important; color: black !important; }
+          input { background: transparent !important; border: none !important; color: black !important; font-weight: bold; }
+          /* Only keep dotted border for signature lines if needed, but remove for table cells */
           .border-slate-900 { border-color: black !important; }
           .bg-slate-50 { background-color: #f8fafc !important; }
           .text-red-600 { color: #dc2626 !important; }
@@ -334,6 +336,22 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
                               <Package size={16} /> Create Dakhila
                           </button>
                       )}
+                      
+                      <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
+                          <button 
+                              onClick={() => setPrintOrientation('portrait')} 
+                              className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${printOrientation === 'portrait' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                          >
+                              Portrait
+                          </button>
+                          <button 
+                              onClick={() => setPrintOrientation('landscape')} 
+                              className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${printOrientation === 'landscape' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                          >
+                              Landscape
+                          </button>
+                      </div>
+
                       <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-bold text-sm shadow-sm transition-colors">
                           <Printer size={16} /> Print
                       </button>
@@ -341,7 +359,7 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
               </div>
 
               {/* Exact Format per Image Request */}
-              <div id="kharid-adesh-print-content" className="bg-white p-10 md:p-14 max-w-[297mm] mx-auto min-h-[210mm] font-nepali text-slate-900 shadow-xl rounded-xl text-sm landscape-print">
+              <div id="kharid-adesh-print-content" className={`bg-white p-10 md:p-14 max-w-[297mm] mx-auto min-h-[210mm] font-nepali text-slate-900 shadow-xl rounded-xl text-sm ${printOrientation === 'landscape' ? 'landscape-print' : ''}`}>
                   
                   {/* Top Header Section with Logo and Address */}
                   <div className="flex justify-between items-start mb-2">
@@ -483,7 +501,7 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
                                   <td className="border border-slate-900 p-1">
                                       <input value={item.codeNo || ''} onChange={e => handleItemChange(index, 'codeNo', e.target.value)} disabled={!canEdit} className="w-full bg-transparent text-center outline-none" />
                                   </td>
-                                  <td className="border border-slate-900 p-1 text-left px-2" title={getLowestQuoteTooltip(item.name) || ''}>
+                                  <td className="border border-slate-900 p-1 text-left px-2 font-black text-black" title={getLowestQuoteTooltip(item.name) || ''}>
                                       {!isViewOnly ? (
                                           <SearchableSelect
                                               options={itemOptions}
@@ -491,12 +509,12 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
                                               onChange={newName => handleItemChange(index, 'name', newName)}
                                               onSelect={(option) => handlePoItemSelect(index, option)} 
                                               placeholder=""
-                                              className="!border-none !bg-transparent !p-0 !text-xs"
+                                              className="!border-none !bg-transparent !p-0 !text-xs !font-black !text-black"
                                               label=""
                                               disabled={!canEdit}
                                           />
                                       ) : (
-                                          <span className="block px-1">{item.name}</span>
+                                          <span className="block px-1 font-black text-black">{item.name}</span>
                                       )}
                                   </td>
                                   <td className="border border-slate-900 p-1">
