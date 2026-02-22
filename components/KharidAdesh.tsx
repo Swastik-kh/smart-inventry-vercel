@@ -482,7 +482,7 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
                       <thead className="bg-slate-50">
                           <tr>
                               <th className="border border-slate-900 p-2 w-10" rowSpan={2}>क्र.सं.</th>
-                              <th className="border border-slate-900 p-2" colSpan={2}>सम्पत्ति तथा जिन्सी मालसामानको</th>
+                              <th className="border border-slate-900 p-2 font-black text-black" colSpan={2}>सम्पत्ति तथा जिन्सी मालसामानको</th>
                               <th className="border border-slate-900 p-2" rowSpan={2}>स्पेसिफिकेसन</th>
                               <th className="border border-slate-900 p-2" rowSpan={2}>मोडल</th>
                               <th className="border border-slate-900 p-2 w-16" rowSpan={2}>एकाई</th>
@@ -492,7 +492,7 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
                           </tr>
                           <tr>
                               <th className="border border-slate-900 p-2 w-24">सङ्केत नं</th>
-                              <th className="border border-slate-900 p-2">नाम</th>
+                              <th className="border border-slate-900 p-2 font-black text-black">नाम</th>
                               <th className="border border-slate-900 p-2 w-24">दर</th>
                               <th className="border border-slate-900 p-2 w-24">जम्मा</th>
                           </tr>
