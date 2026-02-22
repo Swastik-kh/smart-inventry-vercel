@@ -246,7 +246,7 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
           .no-print { display: none !important; }
           
           table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid black !important; padding: 4px; font-size: 11px; }
+          th, td { border: 1px solid black !important; padding: 4px; font-size: 13px; }
           th { background-color: #f3f4f6 !important; font-weight: bold; }
         </style>
       </head>
