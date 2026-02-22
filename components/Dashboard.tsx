@@ -6,7 +6,7 @@ import {
   ClipboardList, FileSpreadsheet, FilePlus, ShoppingCart, FileOutput, 
   BookOpen, Book, Archive, RotateCcw, Wrench, Scroll, BarChart3,
   Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, AlertTriangle, Calculator, Trash2, TrendingUp, AlertOctagon, Timer, Printer, Baby, Flame, CalendarClock, List,
-  Eye, ShieldAlert, ChevronLeft
+  Eye, ShieldAlert, ChevronLeft, Send, MapPin
 } from 'lucide-react';
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
@@ -72,6 +72,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   logBookEntries, onSaveLogBookEntry, onClearData, onUploadData
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
+  const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
   const [activeItem, setActiveItem] = useState<string>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -320,7 +321,18 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       label: 'सेवा (Services)', 
       icon: <Stethoscope size={20} />, 
       subItems: [ 
-        { id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग', icon: <Activity size={16} /> }, 
+        { 
+          id: 'administration', 
+          label: 'प्रशासन', 
+          icon: <Users size={16} />,
+          subItems: [
+            { id: 'darta', label: 'दर्ता', icon: <FileText size={16} /> },
+            { id: 'chalani', label: 'चलानी', icon: <Send size={16} /> },
+            { id: 'bharman_adesh', label: 'भ्रमण आदेश दर्ता', icon: <MapPin size={16} /> },
+            { id: 'bida_abedan', label: 'बिदा आवेदन', icon: <Calendar size={16} /> },
+          ]
+        },
+        { id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग', icon: <Activity size={16} /> },  
         { id: 'khop_sewa', label: 'खोप सेवा', icon: <Baby size={16} /> }, 
         { id: 'rabies', label: 'रेबिज़ खोप क्लिनिक', icon: <Syringe size={16} /> }, 
         { id: 'immunization_tracking', label: 'खोप अनुगमन', icon: <Baby size={16} /> } 
@@ -647,6 +659,43 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                     {expandedMenu === menu.id && (
                       <div className="pl-12 space-y-1 animate-in slide-in-from-top-2 duration-300">
                         {menu.subItems.map((sub) => (
+                          sub.subItems ? (
+                            <div key={sub.id} className="space-y-1">
+                              <button
+                                onClick={() => setExpandedSubMenu(expandedSubMenu === sub.id ? null : sub.id)}
+                                className={`
+                                  w-full flex items-center justify-between p-2.5 rounded-lg text-sm transition-all
+                                  ${expandedSubMenu === sub.id ? 'bg-slate-100 text-slate-800' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'}
+                                `}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className={`${expandedSubMenu === sub.id ? 'text-primary-600' : 'text-slate-500'}`}>{sub.icon}</span>
+                                  <span>{sub.label}</span>
+                                </div>
+                                <span className="transition-transform duration-300">
+                                  {expandedSubMenu === sub.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                </span>
+                              </button>
+                              
+                              {expandedSubMenu === sub.id && (
+                                <div className="pl-4 space-y-1 border-l-2 border-slate-100 ml-3">
+                                  {sub.subItems.map((child) => (
+                                    <button
+                                      key={child.id}
+                                      onClick={() => { setActiveItem(child.id); setIsSidebarOpen(false); }}
+                                      className={`
+                                        w-full flex items-center gap-3 p-2 rounded-lg text-xs transition-all
+                                        ${activeItem === child.id ? 'text-primary-700 font-bold bg-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}
+                                      `}
+                                    >
+                                      <span className={`${activeItem === child.id ? 'text-primary-600' : 'text-slate-400'}`}>{child.icon}</span>
+                                      <span>{child.label}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
                           <button
                             key={sub.id}
                             onClick={() => { setActiveItem(sub.id); setIsSidebarOpen(false); }}
@@ -661,6 +710,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                               <span className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm">{sub.badgeCount}</span>
                             )}
                           </button>
+                          )
                         ))}
                       </div>
                     )}

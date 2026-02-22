@@ -11,6 +11,16 @@ const PERMISSION_STRUCTURE = [
         id: 'services', 
         label: 'सेवा (Services)',
         children: [
+            { 
+                id: 'administration', 
+                label: 'प्रशासन (Administration)',
+                children: [
+                    { id: 'darta', label: 'दर्ता (Darta)' },
+                    { id: 'chalani', label: 'चलानी (Chalani)' },
+                    { id: 'bharman_adesh', label: 'भ्रमण आदेश दर्ता (Travel Order)' },
+                    { id: 'bida_abedan', label: 'बिदा आवेदन (Leave Application)' },
+                ]
+            },
             { id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग (TB/Leprosy)' },
             { id: 'khop_sewa', label: 'खोप सेवा (Vaccination Service)' }, 
             { id: 'rabies', label: 'रेबिज़ खोप क्लिनिक (Rabies Vaccine)' },

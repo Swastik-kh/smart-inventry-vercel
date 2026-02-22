@@ -109,11 +109,13 @@ export const FirmListing: React.FC<FirmListingProps> = ({ currentFiscalYear, fir
   };
 
   const filteredFirms = firms.filter(firm =>
-    firm.firmName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    firm.firmRegNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    firm.vatPan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    firm.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    firm.contactNo.includes(searchTerm)
+    firm.fiscalYear === currentFiscalYear && (
+      firm.firmName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      firm.firmRegNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      firm.vatPan.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      firm.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      firm.contactNo.includes(searchTerm)
+    )
   ).sort((a, b) => b.firmRegNo.localeCompare(a.firmRegNo)); // Sort by regNo descending
 
   return (
