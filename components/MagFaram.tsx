@@ -410,12 +410,34 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
 
   const handleSnMouseLeave = () => { setHoveredStock(null); };
 
-  const getButtonLabel = () => {
-    if (isSaved) return 'सुरक्षित भयो';
-    if (isStoreKeeper && formDetails.status === 'Pending') return 'प्रमाणित गरी पठाउनुहोस् (Verify)';
-    if (isApprover && formDetails.status === 'Verified') return 'स्वीकृत गर्नुहोस् (Approve)';
-    return 'सुरक्षित गर्नुहोस्';
-  };
+    const handleReject = () => {
+        if (!window.confirm("के तपाईं यो माग फारम अस्वीकृत गर्न निश्चित हुनुहुन्छ?")) return;
+        
+        let finalStatus = 'Rejected';
+        // If storekeeper rejects, it's rejected at verification stage
+        // If approver rejects, it's rejected at approval stage
+        
+        onSave({
+            ...formDetails,
+            id: editingId === 'new' || !editingId ? Date.now().toString() : editingId,
+            items: items.filter(item => item.name.trim() !== '' || item.quantity.trim() !== '').map(({ isFromInventory, ...rest }) => rest),
+            status: finalStatus,
+            // Clear approvals if rejected
+            recommendedBy: finalStatus === 'Rejected' ? { name: '', designation: '', date: '' } : formDetails.recommendedBy,
+            approvedBy: finalStatus === 'Rejected' ? { name: '', designation: '', date: '' } : formDetails.approvedBy
+        });
+        
+        setSuccessMessage("माग फारम अस्वीकृत गरियो।");
+        setIsSaved(true);
+        setTimeout(handleReset, 1500);
+    };
+
+    const getButtonLabel = () => {
+        if (isSaved) return 'सुरक्षित भयो';
+        if (isStoreKeeper && formDetails.status === 'Pending') return 'प्रमाणित गरी पठाउनुहोस् (Verify)';
+        if (isApprover && formDetails.status === 'Verified') return 'स्वीकृत गर्नुहोस् (Approve)';
+        return 'सुरक्षित गर्नुहोस्';
+    };
 
   if (!editingId) {
     return (
@@ -466,7 +488,14 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
        <div className="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm no-print">
           <button onClick={handleReset} className="p-2 hover:bg-slate-100 rounded-full text-slate-500"><ArrowLeft size={24} /></button>
           <div className="flex gap-2">
-            {!isViewOnly && <button onClick={handleSave} disabled={isSaved} className={`px-6 py-2 text-white rounded-lg font-bold shadow-md transition-all active:scale-95 ${isSaved ? 'bg-green-600' : 'bg-primary-600 hover:bg-primary-700'}`}>{getButtonLabel()}</button>}
+            {!isViewOnly && (
+                <>
+                    <button onClick={handleSave} disabled={isSaved} className={`px-6 py-2 text-white rounded-lg font-bold shadow-md transition-all active:scale-95 ${isSaved ? 'bg-green-600' : 'bg-primary-600 hover:bg-primary-700'}`}>{getButtonLabel()}</button>
+                    {(isStoreKeeper && formDetails.status === 'Pending') || (isApprover && formDetails.status === 'Verified') ? (
+                        <button onClick={handleReject} disabled={isSaved} className="px-6 py-2 bg-red-600 text-white rounded-lg font-bold shadow-md transition-all active:scale-95 hover:bg-red-700">अस्वीकृत गर्नुहोस् (Reject)</button>
+                    ) : null}
+                </>
+            )}
             <button onClick={printOfficialForm} className="px-6 py-2 bg-slate-800 text-white rounded-lg font-bold shadow-md flex items-center gap-2 hover:bg-slate-900"><Printer size={18} /> प्रिन्ट गर्नुहोस्</button>
           </div>
        </div>
