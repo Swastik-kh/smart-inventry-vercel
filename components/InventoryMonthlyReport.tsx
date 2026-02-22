@@ -332,11 +332,11 @@ export const InventoryMonthlyReport: React.FC<InventoryMonthlyReportProps> = ({
                       {sortColumn === 'ledgerPageNo' && (sortDirection === 'asc' ? '▲' : '▼')}
                     </th>
                     <th className="border border-slate-900 p-1">एकाई</th>
-                    <th className="border border-slate-900 p-1">अघिल्लो महिनाको अन्तिम मौज्दात</th> {/* Updated column header */}
+                    <th className="border border-slate-900 p-1">अघिल्लो महिनाको अन्तिम मौज्दात</th>
                     <th className="border border-slate-900 p-1">यस महिना प्राप्त</th>
                     <th className="border border-slate-900 p-1">यस महिना खर्च</th>
                     <th className="border border-slate-900 p-1">स्वीकृत मौज्दात (ASL)</th>
-                    <th className="border border-slate-900 p-1">आपतकालीन अर्डर बिन्दु (EOP)</th> {/* New column header */}
+                    <th className="border border-slate-900 p-1">आपतकालीन अर्डर बिन्दु (EOP)</th>
                     <th className="border border-slate-900 p-1">माग गर्नुपर्ने परिमाण</th>
                 </tr>
             </thead>
@@ -347,11 +347,11 @@ export const InventoryMonthlyReport: React.FC<InventoryMonthlyReportProps> = ({
                         <td className="border border-slate-900 p-1 px-2">{d.itemName}</td>
                         <td className="border border-slate-900 p-1 text-center">{d.ledgerPageNo || '-'}</td>
                         <td className="border border-slate-900 p-1 text-center">{d.unit}</td>
-                        <td className="border border-slate-900 p-1 text-center font-bold">{d.previousMonthClosingStock}</td> {/* Display new calculated value */}
+                        <td className="border border-slate-900 p-1 text-center font-bold">{d.previousMonthClosingStock}</td>
                         <td className="border border-slate-900 p-1 text-center text-green-700 font-bold">{d.monthlyReceipts || 0}</td>
                         <td className="border border-slate-900 p-1 text-center text-red-600 font-bold">{d.monthlyExpenditure || 0}</td>
                         <td className="border border-slate-900 p-1 text-center">{d.approvedStockLevel || '-'}</td>
-                        <td className="border border-slate-900 p-1 text-center">{d.emergencyOrderPoint || '-'}</td> {/* New data */}
+                        <td className="border border-slate-900 p-1 text-center">{d.emergencyOrderPoint || '-'}</td>
                         <td className="border border-slate-900 p-1 text-center font-bold text-blue-700">{d.quantityToOrder || '-'}</td>
                     </tr>
                 ))}

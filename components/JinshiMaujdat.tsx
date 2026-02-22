@@ -848,18 +848,21 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
 
   // UPDATED: Filter out items with 0 currentQuantity for counts
   const expendableCount = useMemo(() => 
-    inventoryItems.filter(i => i.itemType === 'Expendable' && i.currentQuantity > 0).length, 
-  [inventoryItems]);
+    inventoryItems.filter(i => i.itemType === 'Expendable' && i.currentQuantity > 0 && (i.fiscalYear === currentFiscalYear || !i.fiscalYear)).length, 
+  [inventoryItems, currentFiscalYear]);
   
   const nonExpendableCount = useMemo(() => 
-    inventoryItems.filter(i => i.itemType === 'Non-Expendable' && i.currentQuantity > 0).length, 
-  [inventoryItems]);
+    inventoryItems.filter(i => i.itemType === 'Non-Expendable' && i.currentQuantity > 0 && (i.fiscalYear === currentFiscalYear || !i.fiscalYear)).length, 
+  [inventoryItems, currentFiscalYear]);
 
   // UPDATED: Filter out items with 0 currentQuantity for listing
   const filteredItems = useMemo(() => {
     return inventoryItems.filter(item => {
         // Essential condition: Must have stock
         if (item.currentQuantity <= 0) return false;
+        
+        // Filter by Fiscal Year (include items with no fiscal year for backward compatibility)
+        if (item.fiscalYear && item.fiscalYear !== currentFiscalYear) return false;
 
         const matchesSearch = item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                              (item.uniqueCode && item.uniqueCode.toLowerCase().includes(searchTerm.toLowerCase())) || 
@@ -869,7 +872,74 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
         const matchesClass = filterClass ? item.itemClassification === filterClass : true;
         return matchesSearch && matchesStore && matchesType && matchesClass;
     });
-  }, [inventoryItems, searchTerm, filterStore, filterType, filterClass]);
+  }, [inventoryItems, searchTerm, filterStore, filterType, filterClass, currentFiscalYear]);
+
+  const handleCarryForward = () => {
+      // Calculate previous fiscal year
+      const parts = currentFiscalYear.split('/');
+      if (parts.length !== 2) return;
+      
+      const startYear = parseInt(parts[0]);
+      const endYear = parseInt(parts[1]);
+      const prevFiscalYear = `${startYear - 1}/0${endYear - 1}`; // Assuming 0 padding for the second part if needed, but usually it's 3 digits? No, it's 082 -> 081.
+      // Better logic:
+      // '2082/083' -> '2081/082'
+      // '2081/082' -> '2080/081'
+      
+      // Let's use a robust parser
+      const prevStart = startYear - 1;
+      const prevEnd = parseInt(parts[1]) - 1;
+      const prevFiscalYearStr = `${prevStart}/${String(prevEnd).padStart(3, '0')}`;
+
+      // Find items from previous fiscal year with remaining stock
+      const prevItems = inventoryItems.filter(item => 
+          item.fiscalYear === prevFiscalYearStr && item.currentQuantity > 0
+      );
+
+      if (prevItems.length === 0) {
+          alert(`अघिल्लो आर्थिक वर्ष (${prevFiscalYearStr}) मा कुनै मौज्दात भेटिएन। (No stock found in previous fiscal year)`);
+          return;
+      }
+
+      // Filter out items that already exist in current fiscal year (to prevent duplicates)
+      const itemsToTransfer = prevItems.filter(prevItem => {
+          const exists = inventoryItems.some(currItem => 
+              currItem.fiscalYear === currentFiscalYear && 
+              currItem.itemName === prevItem.itemName && 
+              currItem.storeId === prevItem.storeId &&
+              currItem.uniqueCode === prevItem.uniqueCode
+          );
+          return !exists;
+      });
+
+      if (itemsToTransfer.length === 0) {
+          alert(`अघिल्लो आर्थिक वर्षका सबै सामानहरू यस आर्थिक वर्षमा पहिले नै सारिसकिएको छ। (All items already transferred)`);
+          return;
+      }
+
+      if (!window.confirm(`अघिल्लो आर्थिक वर्ष (${prevFiscalYearStr}) बाट ${itemsToTransfer.length} वटा सामानहरू यस आर्थिक वर्ष (${currentFiscalYear}) मा सार्न चाहनुहुन्छ?`)) {
+          return;
+      }
+
+      // Create new items
+      let successCount = 0;
+      itemsToTransfer.forEach(item => {
+          const newItem: InventoryItem = {
+              ...item,
+              id: `FY-${currentFiscalYear}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              fiscalYear: currentFiscalYear,
+              receiptSource: 'Opening',
+              dakhilaNo: '', // Reset dakhila no for opening stock
+              remarks: `Transferred from ${prevFiscalYearStr}`,
+              lastUpdateDateBs: new NepaliDate().format('YYYY-MM-DD'),
+              lastUpdateDateAd: new Date().toISOString().split('T')[0]
+          };
+          onAddInventoryItem(newItem);
+          successCount++;
+      });
+
+      alert(`${successCount} वटा सामानहरू सफलतापूर्वक सारियो।`);
+  };
 
   const paginatedItems = useMemo(() => filteredItems.slice(0, displayLimit), [filteredItems, displayLimit]);
 
@@ -946,6 +1016,7 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
         </div>
         {isStorekeeper ? (
             <div className="flex gap-2 w-full md:w-auto">
+                <button onClick={handleCarryForward} className="flex-1 md:flex-none flex items-center gap-2 px-4 py-2 bg-teal-600 text-white hover:bg-teal-700 rounded-lg text-sm font-medium shadow-sm transition-colors justify-center" title="अघिल्लो आ.व. बाट मौज्दात सार्नुहोस्"><History size={18} /><span className="font-nepali">आ.व. सार्नुहोस् (Transfer FY)</span></button>
                 <button onClick={() => handleOpenBulkModal('opening')} className="flex-1 md:flex-none flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-medium shadow-sm transition-colors justify-center"><ArrowUpCircle size={18} /><span className="font-nepali">ओपनिङ्ग (Opening)</span></button>
                 <button onClick={() => handleOpenBulkModal('add')} className="flex-1 md:flex-none flex items-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg text-sm font-medium shadow-sm transition-colors justify-center"><Plus size={18} /><span className="font-nepali">दाखिला (Add Stock)</span></button>
             </div>
