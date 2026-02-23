@@ -295,6 +295,15 @@ const App: React.FC = () => {
       }
   };
 
+  const handleDeleteLeaveApplication = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`leaveApplications/${id}`));
+    } catch (error) {
+      alert("बिदा आवेदन हटाउन सकिएन।");
+    }
+  };
+
   // Auto Accrual Logic
   useEffect(() => {
       if (!currentUser || leaveBalances.length === 0) return;
@@ -666,6 +675,7 @@ const App: React.FC = () => {
           leaveApplications={leaveApplications}
           onAddLeaveApplication={handleAddLeaveApplication}
           onUpdateLeaveStatus={handleUpdateLeaveStatus}
+          onDeleteLeaveApplication={handleDeleteLeaveApplication}
           leaveBalances={leaveBalances}
           onSaveLeaveBalance={handleSaveLeaveBalance}
     dartaEntries={dartaEntries}

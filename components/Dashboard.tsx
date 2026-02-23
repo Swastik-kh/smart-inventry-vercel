@@ -75,7 +75,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   dakhilaReports, onSaveDakhilaReport, returnEntries, onSaveReturnEntry, 
   marmatEntries, onSaveMarmatEntry, dhuliyaunaEntries, onSaveDhuliyaunaEntry,
   logBookEntries, onSaveLogBookEntry, onClearData, onUploadData,
-  leaveApplications, onAddLeaveApplication, onUpdateLeaveStatus,
+  leaveApplications, onAddLeaveApplication, onUpdateLeaveStatus, onDeleteLeaveApplication,
   leaveBalances, onSaveLeaveBalance,
   dartaEntries, onSaveDarta, onDeleteDarta,
   chalaniEntries, onSaveChalani, onDeleteChalani,
@@ -847,6 +847,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         leaveApplications={leaveApplications}
         onAddLeaveApplication={onAddLeaveApplication}
         onUpdateLeaveStatus={onUpdateLeaveStatus}
+        onDeleteLeaveApplication={onDeleteLeaveApplication}
         leaveBalances={leaveBalances}
         onSaveLeaveBalance={onSaveLeaveBalance}
       />;

@@ -92,6 +92,10 @@ export interface LeaveBalance {
   festival: number;
   home: number;
   other: number;
+  maternity: number;
+  kiriya: number;
+  study: number;
+  extraordinary: number;
   lastAccrualMonth?: string; // YYYY-MM
   lastFiscalYearReset?: string; // YYYY
 }

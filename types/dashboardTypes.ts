@@ -127,6 +127,7 @@ export interface DashboardProps {
   leaveApplications: LeaveApplication[];
   onAddLeaveApplication: (app: LeaveApplication) => void;
   onUpdateLeaveStatus: (id: string, status: LeaveStatus, rejectionReason?: string) => void;
+  onDeleteLeaveApplication: (id: string) => void;
   
   leaveBalances: LeaveBalance[];
   onSaveLeaveBalance: (balance: LeaveBalance) => Promise<void>;
