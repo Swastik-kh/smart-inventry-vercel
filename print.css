@@ -1,21 +1,16 @@
 @media print {
-  body * {
-    visibility: hidden;
+  .no-print {
+    display: none !important;
   }
-  #printable-leave-form, #printable-leave-form *,
-  .printable-content, .printable-content * {
-    visibility: visible;
+
+  /* Standard A4 settings */
+  @page {
+    size: A4;
+    margin: 10mm;
   }
-  #printable-leave-form, .printable-content {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-  }
-  /* This targets the div with the scrollbar */
-  #printable-leave-form > div, .printable-content > div {
-      overflow: visible !important;
-      max-height: none !important;
-      height: auto !important;
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

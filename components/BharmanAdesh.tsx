@@ -91,6 +91,30 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: 'Bharman_Adesh',
+    pageStyle: `
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      @media print {
+        body {
+          margin: 0;
+          padding: 0;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .print-container-a4 {
+          width: 210mm !important;
+          height: 297mm !important;
+          margin: 0 !important;
+          padding: 15mm !important;
+          box-sizing: border-box !important;
+          border: none !important;
+          box-shadow: none !important;
+          background: white !important;
+        }
+      }
+    `
   });
 
   const entriesForYear = bharmanAdeshEntries.filter(e => e.fiscalYear === currentFiscalYear);
@@ -308,9 +332,9 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
 
       {/* Print Modal */}
       {selectedEntry && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-4xl relative flex flex-col max-h-[95vh]">
-            <div className="flex justify-between items-center p-4 border-b border-slate-200">
+            <div className="flex justify-between items-center p-4 border-b border-slate-200 no-print">
               <h3 className="text-xl font-bold text-slate-800">भ्रमण आदेश प्रिन्ट</h3>
               <div className="flex gap-2">
                 <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700">
@@ -322,11 +346,11 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
               </div>
             </div>
             
-            <div className="p-8 overflow-y-auto bg-slate-50 flex-1 flex justify-center">
+            <div className="p-8 overflow-y-auto bg-slate-50 flex-1 flex justify-center no-print">
               {/* Print Content */}
               <div 
                 ref={printRef} 
-                className="bg-white p-12 shadow-sm border border-slate-200 printable-content"
+                className="bg-white p-12 shadow-sm border border-slate-200 print-container-a4"
                 style={{
                   width: '210mm',
                   minHeight: '297mm',
@@ -334,7 +358,8 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
                   fontFamily: '"Kalimati", "Mangal", sans-serif',
                   color: '#000',
                   fontSize: '14px',
-                  lineHeight: '1.6'
+                  lineHeight: '1.6',
+                  boxSizing: 'border-box'
                 }}
               >
                 <div className="text-center mb-8 relative">

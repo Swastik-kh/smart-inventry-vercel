@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Wrench, Plus, Trash2, Printer, Save, ArrowLeft, Clock, CheckCircle2, Send, Eye } from 'lucide-react';
+import { useReactToPrint } from 'react-to-print';
 import { User, OrganizationSettings } from '../types/coreTypes';
 import { MarmatEntry, MarmatItem, InventoryItem } from '../types/inventoryTypes';
 import { SearchableSelect } from './SearchableSelect';
@@ -42,6 +43,18 @@ export const MarmatAdesh: React.FC<MarmatAdeshProps> = ({
 
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+
+  const printRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: 'Marmat_Adesh',
+    pageStyle: `
+      @page {
+        size: A4;
+        margin: 10mm;
+      }
+    `
+  });
 
   // Calculate Today in Nepali for Restrictions
   const todayBS = useMemo(() => {
@@ -277,14 +290,14 @@ export const MarmatAdesh: React.FC<MarmatAdeshProps> = ({
                 </>
             )}
 
-            <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-medium shadow-sm transition-colors">
+            <button onClick={() => handlePrint()} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-medium shadow-sm transition-colors">
                 <Printer size={18} /> Print
             </button>
         </div>
       </div>
 
       {/* 3. MAIN FORM CONTENT (A4 Layout - Form 402) */}
-      <div id="marmat-form-container" className="bg-white p-8 md:p-12 rounded-xl shadow-lg max-w-[210mm] mx-auto min-h-[297mm] text-slate-900 font-nepali text-sm print:shadow-none print:p-0 print:max-w-none printable-content">
+      <div ref={printRef} id="marmat-form-container" className="bg-white p-8 md:p-12 rounded-xl shadow-lg max-w-[210mm] mx-auto min-h-[297mm] text-slate-900 font-nepali text-sm print:shadow-none print:p-0 print:max-w-none printable-content">
         
         {/* Top Right */}
         <div className="text-right text-[10px] font-bold mb-2">
