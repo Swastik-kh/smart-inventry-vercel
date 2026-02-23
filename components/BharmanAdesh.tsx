@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { BharmanAdeshEntry, User } from '../types/coreTypes';
+import { BharmanAdeshEntry, User, OrganizationSettings } from '../types/coreTypes';
 import { Plus, Printer, Save, X, Eye } from 'lucide-react';
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
@@ -13,6 +13,7 @@ interface BharmanAdeshProps {
   bharmanAdeshEntries: BharmanAdeshEntry[];
   onSaveEntry: (entry: BharmanAdeshEntry) => void;
   users: User[];
+  generalSettings: OrganizationSettings;
 }
 
 const TRANSPORT_MEANS = [
@@ -29,7 +30,8 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
   currentUser,
   bharmanAdeshEntries,
   onSaveEntry,
-  users
+  users,
+  generalSettings
 }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<BharmanAdeshEntry | null>(null);
@@ -337,13 +339,14 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
               >
                 <div className="text-center mb-8 relative">
                   <div className="absolute left-0 top-0">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Emblem_of_Nepal.svg/200px-Emblem_of_Nepal.svg.png" alt="Emblem" className="w-24 h-24 object-contain" referrerPolicy="no-referrer" />
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" alt="Emblem" className="w-24 h-24 object-contain" referrerPolicy="no-referrer" />
                   </div>
                   <div className="font-bold text-sm">अनुसूची - १</div>
                   <div className="text-sm">(नियम ३ को उपनियम (४) सँग सम्बन्धित)</div>
-                  <div className="font-bold text-xl mt-2">चौदण्डीगढी नगरपालिका</div>
-                  <div className="font-bold text-lg">नगर कार्यपालिका कार्यालय, बेल्टार उदयपुर</div>
-                  <div className="font-bold text-lg">कोशी प्रदेश, नेपाल</div>
+                  <div className="font-bold text-xl mt-2">{generalSettings.orgNameNepali}</div>
+                  {generalSettings.subTitleNepali && <div className="font-bold text-lg">{generalSettings.subTitleNepali}</div>}
+                  {generalSettings.subTitleNepali2 && <div className="font-bold text-lg">{generalSettings.subTitleNepali2}</div>}
+                  {generalSettings.subTitleNepali3 && <div className="font-bold text-lg">{generalSettings.subTitleNepali3}</div>}
                   <div className="font-bold text-xl mt-6 underline underline-offset-4">भ्रमण आदेश</div>
                 </div>
 

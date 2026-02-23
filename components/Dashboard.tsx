@@ -42,6 +42,7 @@ import { ImmunizationReport } from './ImmunizationReport';
 import { DartaForm } from './DartaForm';
 import { ChalaniForm } from './ChalaniForm';
 import { BharmanAdesh } from './BharmanAdesh';
+import { PrintOptionsModal } from './PrintOptionsModal';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -605,7 +606,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'jinshi_firta_khata': return <JinshiFirtaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} returnEntries={returnEntries} onSaveReturnEntry={onSaveReturnEntry} issueReports={issueReports} generalSettings={generalSettings} />;
       case 'marmat_adesh': return <MarmatAdesh currentFiscalYear={currentFiscalYear} currentUser={currentUser} marmatEntries={marmatEntries} onSaveMarmatEntry={onSaveMarmatEntry} inventoryItems={inventoryItems} generalSettings={generalSettings} />;
       case 'dhuliyauna_faram': return <DhuliyaunaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} dhuliyaunaEntries={dhuliyaunaEntries} onSaveDhuliyaunaEntry={onSaveDhuliyaunaEntry} stores={stores} />;
-      case 'bharman_adesh': return <BharmanAdesh currentFiscalYear={currentFiscalYear} currentUser={currentUser} bharmanAdeshEntries={bharmanAdeshEntries} onSaveEntry={onSaveBharmanAdesh} users={users} />;
+      case 'bharman_adesh': return <BharmanAdesh currentFiscalYear={currentFiscalYear} currentUser={currentUser} bharmanAdeshEntries={bharmanAdeshEntries} onSaveEntry={onSaveBharmanAdesh} users={users} generalSettings={generalSettings} />;
       case 'chalani': {
         const fiscalYearSuffix = currentFiscalYear.slice(2, 4) + currentFiscalYear.slice(7, 9);
         const entriesForYear = chalaniEntries.filter(c => c.fiscalYear === currentFiscalYear);
