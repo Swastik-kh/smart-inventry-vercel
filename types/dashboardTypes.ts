@@ -133,12 +133,15 @@ export interface DashboardProps {
 
   dartaEntries: Darta[];
   onSaveDarta: (darta: Darta) => void;
+  onDeleteDarta: (id: string) => void;
 
   chalaniEntries: Chalani[];
   onSaveChalani: (chalani: Chalani) => void;
+  onDeleteChalani: (id: string) => void;
 
   bharmanAdeshEntries: BharmanAdeshEntry[];
   onSaveBharmanAdesh: (entry: BharmanAdeshEntry) => void;
+  onDeleteBharmanAdesh: (id: string) => void;
 
   onClearData: (sectionId: string) => void; 
   onUploadData?: (sectionId: string, data: any[]) => void;

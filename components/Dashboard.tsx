@@ -77,9 +77,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   logBookEntries, onSaveLogBookEntry, onClearData, onUploadData,
   leaveApplications, onAddLeaveApplication, onUpdateLeaveStatus,
   leaveBalances, onSaveLeaveBalance,
-  dartaEntries, onSaveDarta,
-  chalaniEntries, onSaveChalani,
-  bharmanAdeshEntries, onSaveBharmanAdesh
+  dartaEntries, onSaveDarta, onDeleteDarta,
+  chalaniEntries, onSaveChalani, onDeleteChalani,
+  bharmanAdeshEntries, onSaveBharmanAdesh, onDeleteBharmanAdesh
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
@@ -606,7 +606,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'jinshi_firta_khata': return <JinshiFirtaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} returnEntries={returnEntries} onSaveReturnEntry={onSaveReturnEntry} issueReports={issueReports} generalSettings={generalSettings} />;
       case 'marmat_adesh': return <MarmatAdesh currentFiscalYear={currentFiscalYear} currentUser={currentUser} marmatEntries={marmatEntries} onSaveMarmatEntry={onSaveMarmatEntry} inventoryItems={inventoryItems} generalSettings={generalSettings} />;
       case 'dhuliyauna_faram': return <DhuliyaunaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} dhuliyaunaEntries={dhuliyaunaEntries} onSaveDhuliyaunaEntry={onSaveDhuliyaunaEntry} stores={stores} />;
-      case 'bharman_adesh': return <BharmanAdesh currentFiscalYear={currentFiscalYear} currentUser={currentUser} bharmanAdeshEntries={bharmanAdeshEntries} onSaveEntry={onSaveBharmanAdesh} users={users} generalSettings={generalSettings} />;
+      case 'bharman_adesh': return <BharmanAdesh currentFiscalYear={currentFiscalYear} currentUser={currentUser} bharmanAdeshEntries={bharmanAdeshEntries} onSaveEntry={onSaveBharmanAdesh} onDeleteEntry={onDeleteBharmanAdesh} users={users} generalSettings={generalSettings} />;
       case 'chalani': {
         const fiscalYearSuffix = currentFiscalYear.slice(2, 4) + currentFiscalYear.slice(7, 9);
         const entriesForYear = chalaniEntries.filter(c => c.fiscalYear === currentFiscalYear);
@@ -657,6 +657,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                       <th className="p-3">पाउने</th>
                       <th className="p-3">बिषय</th>
                       <th className="p-3">पठाउने</th>
+                      {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN') && <th className="p-3 text-right">कार्य</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -667,6 +668,21 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                         <td className="p-3">{c.recipient}</td>
                         <td className="p-3">{c.subject}</td>
                         <td className="p-3">{c.sender}</td>
+                        {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN') && (
+                          <td className="p-3 text-right">
+                            <button 
+                              onClick={() => {
+                                if (window.confirm('के तपाईं यो चलानी हटाउन चाहनुहुन्छ?')) {
+                                  onDeleteChalani(c.id);
+                                }
+                              }}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                     {filteredChalaniEntries.length === 0 && (
@@ -758,6 +774,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                       <th className="p-3">पठाउने</th>
                       <th className="p-3">बिषय</th>
                       <th className="p-3">बुझ्ने</th>
+                      {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN') && <th className="p-3 text-right">कार्य</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -768,6 +785,21 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                         <td className="p-3">{d.sender}</td>
                         <td className="p-3">{d.subject}</td>
                         <td className="p-3">{d.recipient}</td>
+                        {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN') && (
+                          <td className="p-3 text-right">
+                            <button 
+                              onClick={() => {
+                                if (window.confirm('के तपाईं यो दर्ता हटाउन चाहनुहुन्छ?')) {
+                                  onDeleteDarta(d.id);
+                                }
+                              }}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                     {filteredDartaEntries.length === 0 && (

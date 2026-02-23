@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { BharmanAdeshEntry, User, OrganizationSettings } from '../types/coreTypes';
-import { Plus, Printer, Save, X, Eye } from 'lucide-react';
+import { Plus, Printer, Save, X, Eye, Trash2 } from 'lucide-react';
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
 // @ts-ignore
@@ -12,6 +12,7 @@ interface BharmanAdeshProps {
   currentUser: User | null;
   bharmanAdeshEntries: BharmanAdeshEntry[];
   onSaveEntry: (entry: BharmanAdeshEntry) => void;
+  onDeleteEntry: (id: string) => void;
   users: User[];
   generalSettings: OrganizationSettings;
 }
@@ -30,6 +31,7 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
   currentUser,
   bharmanAdeshEntries,
   onSaveEntry,
+  onDeleteEntry,
   users,
   generalSettings
 }) => {
@@ -50,7 +52,8 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
     });
     const nextSerialNumber = sortedEntries.length > 0 ? (parseInt(sortedEntries[0].chalaniNo.split('-')[0]) || 0) + 1 : 1;
     const fiscalYearSuffix = currentFiscalYear.slice(2, 4) + currentFiscalYear.slice(7, 9);
-    const nextChalaniNo = `${nextSerialNumber}-${fiscalYearSuffix}`;
+    const paddedSerialNumber = nextSerialNumber.toString().padStart(3, '0');
+    const nextChalaniNo = `${paddedSerialNumber}-${fiscalYearSuffix}`;
 
     return {
       date: today,
@@ -138,6 +141,7 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
               <tr>
+                <th className="p-3">च.नं.</th>
                 <th className="p-3">मिति</th>
                 <th className="p-3">कर्मचारीको नाम</th>
                 <th className="p-3">भ्रमण गर्ने स्थान</th>
@@ -148,18 +152,34 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
             <tbody className="divide-y divide-slate-100">
               {entriesForYear.map(entry => (
                 <tr key={entry.id} className="hover:bg-slate-50">
+                  <td className="p-3 font-bold">{entry.chalaniNo}</td>
                   <td className="p-3">{entry.date}</td>
                   <td className="p-3 font-medium">{entry.employeeName}</td>
                   <td className="p-3">{entry.destination}</td>
                   <td className="p-3">{entry.purpose}</td>
                   <td className="p-3 text-right">
-                    <button 
-                      onClick={() => setSelectedEntry(entry)}
-                      className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                      title="प्रिन्ट / हेर्नुहोस्"
-                    >
-                      <Printer size={18} />
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => setSelectedEntry(entry)}
+                        className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        title="प्रिन्ट / हेर्नुहोस्"
+                      >
+                        <Printer size={18} />
+                      </button>
+                      {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN') && (
+                        <button 
+                          onClick={() => {
+                            if (window.confirm('के तपाईं यो भ्रमण आदेश हटाउन चाहनुहुन्छ?')) {
+                              onDeleteEntry(entry.id);
+                            }
+                          }}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -222,6 +222,33 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteDarta = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`dartaEntries/${id}`));
+    } catch (error) {
+      alert("दर्ता हटाउन सकिएन।");
+    }
+  };
+
+  const handleDeleteChalani = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`chalaniEntries/${id}`));
+    } catch (error) {
+      alert("चलानी हटाउन सकिएन।");
+    }
+  };
+
+  const handleDeleteBharmanAdesh = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`bharmanAdeshEntries/${id}`));
+    } catch (error) {
+      alert("भ्रमण आदेश हटाउन सकिएन।");
+    }
+  };
+
   const handleUpdateLeaveStatus = async (id: string, status: LeaveStatus, rejectionReason?: string) => {
       if (!currentUser) return;
       try {
@@ -643,10 +670,13 @@ const App: React.FC = () => {
           onSaveLeaveBalance={handleSaveLeaveBalance}
     dartaEntries={dartaEntries}
     onSaveDarta={handleSaveDarta}
+    onDeleteDarta={handleDeleteDarta}
     chalaniEntries={chalaniEntries}
     onSaveChalani={handleSaveChalani}
+    onDeleteChalani={handleDeleteChalani}
     bharmanAdeshEntries={bharmanAdeshEntries}
     onSaveBharmanAdesh={handleSaveBharmanAdesh}
+    onDeleteBharmanAdesh={handleDeleteBharmanAdesh}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
