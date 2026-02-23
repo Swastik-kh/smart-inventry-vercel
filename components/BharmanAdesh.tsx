@@ -395,52 +395,57 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
                   <div className="flex"><span className="w-6">६.</span><span>भ्रमण गर्ने अवधि :- मिति {selectedEntry.fromDate} गते देखि {selectedEntry.toDate} गते सम्म ।</span></div>
                   <div className="flex"><span className="w-6">७.</span><span>भ्रमण गर्ने साधन :- {selectedEntry.transportMeans} ।</span></div>
                   <div className="flex"><span className="w-6">८.</span><span>भ्रमणको निमित्त माग गरेको पेश्की खर्च :-</span></div>
+                  
                   <div className="pl-6 space-y-1">
                     <div>भ्रमणभत्ता : {selectedEntry.travelAllowance}</div>
                     <div>दैनिकभत्ता : {selectedEntry.dailyAllowance}</div>
                     <div>फुटकर खर्च : {selectedEntry.miscExpense}</div>
                   </div>
+
                   <div className="flex"><span className="w-6">९.</span><span>भ्रमण सम्बन्धि अन्य आदेश : {selectedEntry.otherOrders}</span></div>
                 </div>
 
-                <div className="flex justify-between mt-16 text-center">
-                  <div className="w-48">
-                    <div className="border-b border-dashed border-black mb-2"></div>
-                    <div>भ्रमण गर्ने कर्मचारी</div>
-                    <div className="text-left mt-1">मिति :-</div>
+                <div className="grid grid-cols-3 gap-4 mt-20">
+                  <div className="text-left">
+                    <div className="border-b border-dashed border-black mb-2 w-40"></div>
+                    <div className="font-bold">भ्रमण गर्ने कर्मचारी</div>
+                    <div className="mt-2">मिति :- ....................</div>
                   </div>
-                  <div className="w-48">
-                    <div className="border-b border-dashed border-black mb-2"></div>
-                    <div>सिफारिस गर्ने</div>
+                  <div className="text-center">
+                    <div className="border-b border-dashed border-black mb-2 mx-auto w-40"></div>
+                    <div className="font-bold">सिफारिस गर्ने</div>
+                    <div className="mt-2">मिति :- ....................</div>
                   </div>
-                  <div className="w-48">
-                    <div className="border-b border-dashed border-black mb-2"></div>
-                    <div>भ्रमण स्वीकृत गर्ने पदाधिकारी</div>
-                    <div className="text-left mt-1">मिति :-</div>
+                  <div className="text-right">
+                    <div className="border-b border-dashed border-black mb-2 ml-auto w-40"></div>
+                    <div className="font-bold">भ्रमण स्वीकृत गर्ने पदाधिकारी</div>
+                    <div className="mt-2">मिति :- ....................</div>
                   </div>
                 </div>
 
-                <div className="mt-12 border-2 border-black p-4">
-                  <div className="text-center font-bold underline mb-2">(आर्थिक प्रशासनशाखाको प्रयोजनका लागि)</div>
-                  <div className="text-center font-bold underline mb-4">भ्रमणखर्च</div>
-                  
-                  <div className="mb-2">
-                    बजेट नं.................................................. बाट नगद/चेक नं.................................................. रु..................................................
-                  </div>
-                  <div className="mb-8">
-                    अक्षरेपी.................................................................................................... दिइएको छ ।
-                  </div>
-
-                  <div className="flex justify-between">
-                    <div>
-                      <div className="mb-2">बुझिलिनेको सही ..................................................</div>
-                      <div>नाम थर :-</div>
-                      <div>मिति :-</div>
+                <div className="flex justify-center mt-12">
+                  <div className="border-2 border-black p-6 w-full max-w-2xl">
+                    <div className="text-center font-bold underline mb-2">(आर्थिक प्रशासनशाखाको प्रयोजनका लागि)</div>
+                    <div className="text-center font-bold underline mb-4">भ्रमणखर्च</div>
+                    
+                    <div className="mb-2">
+                      बजेट नं.................................................. बाट नगद/चेक नं.................................................. रु..................................................
                     </div>
-                    <div className="text-center">
-                      <div className="mb-2">..................................................</div>
-                      <div>(आर्थिक प्रशासनशाखा)</div>
-                      <div>मिति :-</div>
+                    <div className="mb-8">
+                      अक्षरेपी.................................................................................................... दिइएको छ ।
+                    </div>
+
+                    <div className="flex justify-between">
+                      <div>
+                        <div className="mb-2">बुझिलिनेको सही ..................................................</div>
+                        <div>नाम थर :-</div>
+                        <div>मिति :-</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="mb-2">..................................................</div>
+                        <div>(आर्थिक प्रशासनशाखा)</div>
+                        <div>मिति :-</div>
+                      </div>
                     </div>
                   </div>
                 </div>
