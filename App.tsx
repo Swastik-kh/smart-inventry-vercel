@@ -8,7 +8,7 @@ import {
   User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, 
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
-  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani
+  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani, BharmanAdeshEntry
 } from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe, off, push } from "firebase/database";
@@ -72,6 +72,7 @@ const App: React.FC = () => {
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
   const [dartaEntries, setDartaEntries] = useState<Darta[]>([]);
   const [chalaniEntries, setChalaniEntries] = useState<Chalani[]>([]);
+  const [bharmanAdeshEntries, setBharmanAdeshEntries] = useState<BharmanAdeshEntry[]>([]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -158,6 +159,7 @@ const App: React.FC = () => {
     setupOrgListener('leaveBalances', setLeaveBalances);
     setupOrgListener('dartaEntries', setDartaEntries);
     setupOrgListener('chalaniEntries', setChalaniEntries);
+    setupOrgListener('bharmanAdeshEntries', setBharmanAdeshEntries);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser]);
@@ -208,6 +210,15 @@ const App: React.FC = () => {
       await set(getOrgRef(`chalaniEntries/${chalani.id}`), chalani);
     } catch (error) { 
       alert("चलानी सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleSaveBharmanAdesh = async (entry: BharmanAdeshEntry) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`bharmanAdeshEntries/${entry.id}`), entry);
+    } catch (error) { 
+      alert("भ्रमण आदेश सुरक्षित गर्न सकिएन।");
     }
   };
 
@@ -634,6 +645,8 @@ const App: React.FC = () => {
     onSaveDarta={handleSaveDarta}
     chalaniEntries={chalaniEntries}
     onSaveChalani={handleSaveChalani}
+    bharmanAdeshEntries={bharmanAdeshEntries}
+    onSaveBharmanAdesh={handleSaveBharmanAdesh}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">

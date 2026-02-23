@@ -1,5 +1,5 @@
 
-import { User, OrganizationSettings, LeaveApplication, LeaveStatus, LeaveBalance } from './coreTypes';
+import { User, OrganizationSettings, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani, BharmanAdeshEntry } from './coreTypes';
 import { 
   MagFormEntry, PurchaseOrderEntry, IssueReportEntry, FirmEntry, QuotationEntry, 
   InventoryItem, Store, StockEntryRequest, DakhilaPratibedanEntry, ReturnEntry, 
@@ -130,6 +130,15 @@ export interface DashboardProps {
   
   leaveBalances: LeaveBalance[];
   onSaveLeaveBalance: (balance: LeaveBalance) => Promise<void>;
+
+  dartaEntries: Darta[];
+  onSaveDarta: (darta: Darta) => void;
+
+  chalaniEntries: Chalani[];
+  onSaveChalani: (chalani: Chalani) => void;
+
+  bharmanAdeshEntries: BharmanAdeshEntry[];
+  onSaveBharmanAdesh: (entry: BharmanAdeshEntry) => void;
 
   onClearData: (sectionId: string) => void; 
   onUploadData?: (sectionId: string, data: any[]) => void;

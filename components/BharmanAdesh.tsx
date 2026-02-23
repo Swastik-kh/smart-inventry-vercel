@@ -1,0 +1,427 @@
+import React, { useState, useRef } from 'react';
+import { BharmanAdeshEntry, User } from '../types/coreTypes';
+import { Plus, Printer, Save, X, Eye } from 'lucide-react';
+import { Input } from './Input';
+import { NepaliDatePicker } from './NepaliDatePicker';
+// @ts-ignore
+import NepaliDate from 'nepali-date-converter';
+import { useReactToPrint } from 'react-to-print';
+
+interface BharmanAdeshProps {
+  currentFiscalYear: string;
+  currentUser: User | null;
+  bharmanAdeshEntries: BharmanAdeshEntry[];
+  onSaveEntry: (entry: BharmanAdeshEntry) => void;
+  users: User[];
+}
+
+const TRANSPORT_MEANS = [
+  'बस',
+  'जिप/कार',
+  'मोटरसाइकल',
+  'हवाईजहाज',
+  'पैदल',
+  'अन्य'
+];
+
+export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
+  currentFiscalYear,
+  currentUser,
+  bharmanAdeshEntries,
+  onSaveEntry,
+  users
+}) => {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<BharmanAdeshEntry | null>(null);
+
+  const getInitialFormData = (): Omit<BharmanAdeshEntry, 'id' | 'fiscalYear'> => {
+    let today = '';
+    try {
+      today = new NepaliDate().format('YYYY-MM-DD');
+    } catch (e) {}
+
+    const entriesForYear = bharmanAdeshEntries.filter(e => e.fiscalYear === currentFiscalYear);
+    const sortedEntries = [...entriesForYear].sort((a, b) => {
+        const numA = parseInt(a.chalaniNo.split('-')[0]) || 0;
+        const numB = parseInt(b.chalaniNo.split('-')[0]) || 0;
+        return numB - numA;
+    });
+    const nextSerialNumber = sortedEntries.length > 0 ? (parseInt(sortedEntries[0].chalaniNo.split('-')[0]) || 0) + 1 : 1;
+    const fiscalYearSuffix = currentFiscalYear.slice(2, 4) + currentFiscalYear.slice(7, 9);
+    const nextChalaniNo = `${nextSerialNumber}-${fiscalYearSuffix}`;
+
+    return {
+      date: today,
+      sankhya: currentFiscalYear,
+      chalaniNo: nextChalaniNo,
+      ksNo: '',
+      employeeName: currentUser?.fullName || '',
+      designation: currentUser?.designation || '',
+      office: 'आधारभूत नगर अस्पताल बेल्टार',
+      destination: '',
+      purpose: '',
+      fromDate: today,
+      toDate: today,
+      transportMeans: 'बस',
+      travelAllowance: '',
+      dailyAllowance: '',
+      miscExpense: '',
+      otherOrders: '',
+    };
+  };
+
+  const [formData, setFormData] = useState(getInitialFormData());
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newEntry: BharmanAdeshEntry = {
+      id: Date.now().toString(),
+      fiscalYear: currentFiscalYear,
+      ...formData,
+    };
+    onSaveEntry(newEntry);
+    setIsFormOpen(false);
+    setFormData(getInitialFormData());
+    alert('भ्रमण आदेश सफलतापूर्वक सुरक्षित गरियो!');
+  };
+
+  const printRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: 'Bharman_Adesh',
+  });
+
+  const entriesForYear = bharmanAdeshEntries.filter(e => e.fiscalYear === currentFiscalYear);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-slate-800">भ्रमण आदेश (आ.व. {currentFiscalYear})</h2>
+        <button 
+          onClick={() => {
+            setFormData(getInitialFormData());
+            setIsFormOpen(true);
+          }} 
+          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold shadow-sm hover:bg-primary-700"
+        >
+          <Plus size={18} /> नयाँ आदेश
+        </button>
+      </div>
+
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+              <tr>
+                <th className="p-3">मिति</th>
+                <th className="p-3">कर्मचारीको नाम</th>
+                <th className="p-3">भ्रमण गर्ने स्थान</th>
+                <th className="p-3">उद्देश्य</th>
+                <th className="p-3 text-right">कार्य</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {entriesForYear.map(entry => (
+                <tr key={entry.id} className="hover:bg-slate-50">
+                  <td className="p-3">{entry.date}</td>
+                  <td className="p-3 font-medium">{entry.employeeName}</td>
+                  <td className="p-3">{entry.destination}</td>
+                  <td className="p-3">{entry.purpose}</td>
+                  <td className="p-3 text-right">
+                    <button 
+                      onClick={() => setSelectedEntry(entry)}
+                      className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                      title="प्रिन्ट / हेर्नुहोस्"
+                    >
+                      <Printer size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {entriesForYear.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-slate-500 italic">कुनै भ्रमण आदेश भेटिएन।</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Form Modal */}
+      {isFormOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-2xl w-full max-w-4xl relative max-h-[90vh] overflow-y-auto">
+            <h3 className="text-2xl font-bold text-slate-800 mb-6">नयाँ भ्रमण आदेश</h3>
+            <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-6">
+              <NepaliDatePicker
+                label="मिति"
+                value={formData.date}
+                onChange={val => setFormData({ ...formData, date: val })}
+                required
+              />
+              <Input
+                label="संख्या (आ.व.)"
+                value={formData.sankhya}
+                onChange={e => setFormData({ ...formData, sankhya: e.target.value })}
+                required
+              />
+              <Input
+                label="च.नं."
+                value={formData.chalaniNo}
+                onChange={e => setFormData({ ...formData, chalaniNo: e.target.value })}
+                disabled
+              />
+              <Input
+                label="क.स.नं."
+                value={formData.ksNo}
+                onChange={e => setFormData({ ...formData, ksNo: e.target.value })}
+              />
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-bold text-slate-700">१. भ्रमण गर्ने पदाधिकारी वा कर्मचारीको नाम</label>
+                <select
+                  value={formData.employeeName}
+                  onChange={e => {
+                    const selectedName = e.target.value;
+                    const selectedUser = users.find(u => u.fullName === selectedName);
+                    setFormData({ 
+                      ...formData, 
+                      employeeName: selectedName,
+                      designation: selectedUser?.designation || ''
+                    });
+                  }}
+                  className="w-full p-2.5 rounded-lg border border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition-all"
+                  required
+                >
+                  <option value="">छान्नुहोस्</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.fullName}>{u.fullName}</option>
+                  ))}
+                </select>
+              </div>
+              <Input
+                label="२. पद"
+                value={formData.designation}
+                onChange={e => setFormData({ ...formData, designation: e.target.value })}
+                required
+              />
+              <Input
+                label="३. कार्यालय"
+                value={formData.office}
+                onChange={e => setFormData({ ...formData, office: e.target.value })}
+                required
+              />
+              <Input
+                label="४. भ्रमण गर्ने स्थान"
+                value={formData.destination}
+                onChange={e => setFormData({ ...formData, destination: e.target.value })}
+                required
+              />
+              <div className="md:col-span-2">
+                <Input
+                  label="५. भ्रमणको उद्देश्य"
+                  value={formData.purpose}
+                  onChange={e => setFormData({ ...formData, purpose: e.target.value })}
+                  required
+                />
+              </div>
+              <NepaliDatePicker
+                label="६. भ्रमण गर्ने अवधि (देखि)"
+                value={formData.fromDate}
+                onChange={val => setFormData({ ...formData, fromDate: val })}
+                required
+              />
+              <NepaliDatePicker
+                label="६. भ्रमण गर्ने अवधि (सम्म)"
+                value={formData.toDate}
+                onChange={val => setFormData({ ...formData, toDate: val })}
+                required
+              />
+              <div className="md:col-span-2 flex flex-col gap-1">
+                <label className="text-sm font-bold text-slate-700">७. भ्रमण गर्ने साधन</label>
+                <select
+                  value={formData.transportMeans}
+                  onChange={e => setFormData({ ...formData, transportMeans: e.target.value })}
+                  className="w-full p-2.5 rounded-lg border border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition-all"
+                  required
+                >
+                  <option value="">छान्नुहोस्</option>
+                  {TRANSPORT_MEANS.map(means => (
+                    <option key={means} value={means}>{means}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="md:col-span-2 border-t border-slate-200 pt-4 mt-2">
+                <h4 className="font-bold text-slate-700 mb-4">८. भ्रमणको निमित्त माग गरेको पेश्की खर्च</h4>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <Input
+                    label="भ्रमणभत्ता"
+                    value={formData.travelAllowance}
+                    onChange={e => setFormData({ ...formData, travelAllowance: e.target.value })}
+                  />
+                  <Input
+                    label="दैनिकभत्ता"
+                    value={formData.dailyAllowance}
+                    onChange={e => setFormData({ ...formData, dailyAllowance: e.target.value })}
+                  />
+                  <Input
+                    label="फुटकर खर्च"
+                    value={formData.miscExpense}
+                    onChange={e => setFormData({ ...formData, miscExpense: e.target.value })}
+                  />
+                </div>
+              </div>
+              
+              <div className="md:col-span-2">
+                <Input
+                  label="९. भ्रमण सम्बन्धि अन्य आदेश"
+                  value={formData.otherOrders}
+                  onChange={e => setFormData({ ...formData, otherOrders: e.target.value })}
+                />
+              </div>
+
+              <div className="md:col-span-2 flex justify-end gap-3 pt-6 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsFormOpen(false)}
+                  className="flex items-center gap-2 px-6 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg shadow-sm transition-all font-medium"
+                >
+                  <X size={18} /> रद्द
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 px-6 py-2 bg-primary-600 text-white hover:bg-primary-700 rounded-lg shadow-sm transition-all font-medium"
+                >
+                  <Save size={18} /> सुरक्षित गर्नुहोस्
+                </button>
+              </div>
+            </form>
+            <button onClick={() => setIsFormOpen(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-100 rounded-full">
+              <X size={20}/>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Print Modal */}
+      {selectedEntry && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-4xl relative flex flex-col max-h-[95vh]">
+            <div className="flex justify-between items-center p-4 border-b border-slate-200">
+              <h3 className="text-xl font-bold text-slate-800">भ्रमण आदेश प्रिन्ट</h3>
+              <div className="flex gap-2">
+                <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700">
+                  <Printer size={18} /> प्रिन्ट
+                </button>
+                <button onClick={() => setSelectedEntry(null)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full">
+                  <X size={20}/>
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-8 overflow-y-auto bg-slate-50 flex-1 flex justify-center">
+              {/* Print Content */}
+              <div 
+                ref={printRef} 
+                className="bg-white p-12 shadow-sm border border-slate-200"
+                style={{
+                  width: '210mm',
+                  minHeight: '297mm',
+                  margin: '0 auto',
+                  fontFamily: '"Kalimati", "Mangal", sans-serif',
+                  color: '#000',
+                  fontSize: '14px',
+                  lineHeight: '1.6'
+                }}
+              >
+                <div className="text-center mb-8 relative">
+                  <div className="absolute left-0 top-0">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Emblem_of_Nepal.svg/200px-Emblem_of_Nepal.svg.png" alt="Emblem" className="w-24 h-24 object-contain" referrerPolicy="no-referrer" />
+                  </div>
+                  <div className="font-bold text-sm">अनुसूची - १</div>
+                  <div className="text-sm">(नियम ३ को उपनियम (४) सँग सम्बन्धित)</div>
+                  <div className="font-bold text-xl mt-2">चौदण्डीगढी नगरपालिका</div>
+                  <div className="font-bold text-lg">नगर कार्यपालिका कार्यालय, बेल्टार उदयपुर</div>
+                  <div className="font-bold text-lg">कोशी प्रदेश, नेपाल</div>
+                  <div className="font-bold text-xl mt-6 underline underline-offset-4">भ्रमण आदेश</div>
+                </div>
+
+                <div className="flex justify-between mb-6">
+                  <div>
+                    <div>संख्या : {selectedEntry.sankhya}</div>
+                    <div>च.नं. : {selectedEntry.chalaniNo}</div>
+                    <div>क.स.नं. : {selectedEntry.ksNo}</div>
+                  </div>
+                  <div className="text-right">
+                    <div>मिति : {selectedEntry.date}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 mb-12">
+                  <div className="flex"><span className="w-6">१.</span><span>भ्रमण गर्ने पदाधिकारी वा कर्मचारीको नाम :- <span className="font-bold">{selectedEntry.employeeName}</span> ।</span></div>
+                  <div className="flex"><span className="w-6">२.</span><span>पद :- {selectedEntry.designation} ।</span></div>
+                  <div className="flex"><span className="w-6">३.</span><span>कार्यालय :- {selectedEntry.office} ।</span></div>
+                  <div className="flex"><span className="w-6">४.</span><span>भ्रमण गर्ने स्थान :- {selectedEntry.destination} ।</span></div>
+                  <div className="flex"><span className="w-6">५.</span><span>भ्रमणको उद्देश्य :- {selectedEntry.purpose} ।</span></div>
+                  <div className="flex"><span className="w-6">६.</span><span>भ्रमण गर्ने अवधि :- मिति {selectedEntry.fromDate} गते देखि {selectedEntry.toDate} गते सम्म ।</span></div>
+                  <div className="flex"><span className="w-6">७.</span><span>भ्रमण गर्ने साधन :- {selectedEntry.transportMeans} ।</span></div>
+                  <div className="flex"><span className="w-6">८.</span><span>भ्रमणको निमित्त माग गरेको पेश्की खर्च :-</span></div>
+                  <div className="pl-6 space-y-1">
+                    <div>भ्रमणभत्ता : {selectedEntry.travelAllowance}</div>
+                    <div>दैनिकभत्ता : {selectedEntry.dailyAllowance}</div>
+                    <div>फुटकर खर्च : {selectedEntry.miscExpense}</div>
+                  </div>
+                  <div className="flex"><span className="w-6">९.</span><span>भ्रमण सम्बन्धि अन्य आदेश : {selectedEntry.otherOrders}</span></div>
+                </div>
+
+                <div className="flex justify-between mt-16 text-center">
+                  <div className="w-48">
+                    <div className="border-b border-dashed border-black mb-2"></div>
+                    <div>भ्रमण गर्ने कर्मचारी</div>
+                    <div className="text-left mt-1">मिति :-</div>
+                  </div>
+                  <div className="w-48">
+                    <div className="border-b border-dashed border-black mb-2"></div>
+                    <div>सिफारिस गर्ने</div>
+                  </div>
+                  <div className="w-48">
+                    <div className="border-b border-dashed border-black mb-2"></div>
+                    <div>भ्रमण स्वीकृत गर्ने पदाधिकारी</div>
+                    <div className="text-left mt-1">मिति :-</div>
+                  </div>
+                </div>
+
+                <div className="mt-12 border-2 border-black p-4">
+                  <div className="text-center font-bold underline mb-2">(आर्थिक प्रशासनशाखाको प्रयोजनका लागि)</div>
+                  <div className="text-center font-bold underline mb-4">भ्रमणखर्च</div>
+                  
+                  <div className="mb-2">
+                    बजेट नं.................................................. बाट नगद/चेक नं.................................................. रु..................................................
+                  </div>
+                  <div className="mb-8">
+                    अक्षरेपी.................................................................................................... दिइएको छ ।
+                  </div>
+
+                  <div className="flex justify-between">
+                    <div>
+                      <div className="mb-2">बुझिलिनेको सही ..................................................</div>
+                      <div>नाम थर :-</div>
+                      <div>मिति :-</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="mb-2">..................................................</div>
+                      <div>(आर्थिक प्रशासनशाखा)</div>
+                      <div>मिति :-</div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

@@ -118,6 +118,27 @@ export interface Chalani {
   fiscalYear: string;
 }
 
+export interface BharmanAdeshEntry {
+  id: string;
+  date: string;
+  sankhya: string;
+  chalaniNo: string;
+  ksNo: string;
+  employeeName: string;
+  designation: string;
+  office: string;
+  destination: string;
+  purpose: string;
+  fromDate: string;
+  toDate: string;
+  transportMeans: string;
+  travelAllowance: string;
+  dailyAllowance: string;
+  miscExpense: string;
+  otherOrders: string;
+  fiscalYear: string;
+}
+
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;

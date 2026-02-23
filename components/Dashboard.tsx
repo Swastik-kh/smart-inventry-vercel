@@ -11,7 +11,7 @@ import {
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
 import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest, DakhilaPratibedanEntry } from '../types/inventoryTypes';
-import { LeaveApplication, LeaveStatus, Darta, Chalani } from '../types/coreTypes';
+import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry } from '../types/coreTypes';
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -41,6 +41,7 @@ import { ImmunizationTracking } from './ImmunizationTracking';
 import { ImmunizationReport } from './ImmunizationReport';
 import { DartaForm } from './DartaForm';
 import { ChalaniForm } from './ChalaniForm';
+import { BharmanAdesh } from './BharmanAdesh';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -76,7 +77,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   leaveApplications, onAddLeaveApplication, onUpdateLeaveStatus,
   leaveBalances, onSaveLeaveBalance,
   dartaEntries, onSaveDarta,
-  chalaniEntries, onSaveChalani
+  chalaniEntries, onSaveChalani,
+  bharmanAdeshEntries, onSaveBharmanAdesh
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
@@ -603,7 +605,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'jinshi_firta_khata': return <JinshiFirtaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} returnEntries={returnEntries} onSaveReturnEntry={onSaveReturnEntry} issueReports={issueReports} generalSettings={generalSettings} />;
       case 'marmat_adesh': return <MarmatAdesh currentFiscalYear={currentFiscalYear} currentUser={currentUser} marmatEntries={marmatEntries} onSaveMarmatEntry={onSaveMarmatEntry} inventoryItems={inventoryItems} generalSettings={generalSettings} />;
       case 'dhuliyauna_faram': return <DhuliyaunaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} dhuliyaunaEntries={dhuliyaunaEntries} onSaveDhuliyaunaEntry={onSaveDhuliyaunaEntry} stores={stores} />;
-            case 'chalani': {
+      case 'bharman_adesh': return <BharmanAdesh currentFiscalYear={currentFiscalYear} currentUser={currentUser} bharmanAdeshEntries={bharmanAdeshEntries} onSaveEntry={onSaveBharmanAdesh} users={users} />;
+      case 'chalani': {
         const fiscalYearSuffix = currentFiscalYear.slice(2, 4) + currentFiscalYear.slice(7, 9);
         const entriesForYear = chalaniEntries.filter(c => c.fiscalYear === currentFiscalYear);
         
