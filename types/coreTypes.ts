@@ -96,6 +96,28 @@ export interface LeaveBalance {
   lastFiscalYearReset?: string; // YYYY
 }
 
+export interface Darta {
+  id: string;
+  registrationNumber: string;
+  date: string;
+  sender: string;
+  subject: string;
+  recipient: string;
+  remarks?: string;
+  fiscalYear: string;
+}
+
+export interface Chalani {
+  id: string;
+  dispatchNumber: string;
+  date: string;
+  recipient: string;
+  subject: string;
+  sender: string;
+  remarks?: string;
+  fiscalYear: string;
+}
+
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;

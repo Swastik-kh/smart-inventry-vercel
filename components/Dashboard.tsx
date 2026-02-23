@@ -11,7 +11,7 @@ import {
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
 import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest, DakhilaPratibedanEntry } from '../types/inventoryTypes';
-import { LeaveApplication, LeaveStatus } from '../types/coreTypes';
+import { LeaveApplication, LeaveStatus, Darta, Chalani } from '../types/coreTypes';
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -39,7 +39,8 @@ import { GeneralSetting } from './GeneralSetting';
 import { VaccinationServiceTabs } from './VaccinationServiceTabs';
 import { ImmunizationTracking } from './ImmunizationTracking';
 import { ImmunizationReport } from './ImmunizationReport';
-import { PrintOptionsModal } from './PrintOptionsModal';
+import { DartaForm } from './DartaForm';
+import { ChalaniForm } from './ChalaniForm';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -73,7 +74,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   marmatEntries, onSaveMarmatEntry, dhuliyaunaEntries, onSaveDhuliyaunaEntry,
   logBookEntries, onSaveLogBookEntry, onClearData, onUploadData,
   leaveApplications, onAddLeaveApplication, onUpdateLeaveStatus,
-  leaveBalances, onSaveLeaveBalance
+  leaveBalances, onSaveLeaveBalance,
+  dartaEntries, onSaveDarta,
+  chalaniEntries, onSaveChalani
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
@@ -102,6 +105,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   const [expiryModalType, setExpiryModalType] = useState<'expired' | 'near-expiry'>('expired');
   const [showExpiryPrintOptionsModal, setShowExpiryPrintOptionsModal] = useState(false); 
   const [initialDakhilaReportId, setInitialDakhilaReportId] = useState<string | null>(null);
+  const [isDartaFormOpen, setIsDartaFormOpen] = useState(false);
+  const [isChalaniFormOpen, setIsChalaniFormOpen] = useState(false);
   
   const [previewDakhila, setPreviewDakhila] = useState<DakhilaPratibedanEntry | null>(null);
   
@@ -596,6 +601,160 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'jinshi_firta_khata': return <JinshiFirtaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} returnEntries={returnEntries} onSaveReturnEntry={onSaveReturnEntry} issueReports={issueReports} generalSettings={generalSettings} />;
       case 'marmat_adesh': return <MarmatAdesh currentFiscalYear={currentFiscalYear} currentUser={currentUser} marmatEntries={marmatEntries} onSaveMarmatEntry={onSaveMarmatEntry} inventoryItems={inventoryItems} generalSettings={generalSettings} />;
       case 'dhuliyauna_faram': return <DhuliyaunaFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} inventoryItems={inventoryItems} dhuliyaunaEntries={dhuliyaunaEntries} onSaveDhuliyaunaEntry={onSaveDhuliyaunaEntry} stores={stores} />;
+            case 'chalani': {
+        const fiscalYearSuffix = currentFiscalYear.slice(2, 4) + currentFiscalYear.slice(7, 9);
+        const entriesForYear = chalaniEntries.filter(c => c.fiscalYear === currentFiscalYear);
+        
+        const sortedChalaniEntries = [...entriesForYear].sort((a, b) => {
+            const numA = parseInt(a.dispatchNumber.split('-')[0]);
+            const numB = parseInt(b.dispatchNumber.split('-')[0]);
+            return numB - numA;
+        });
+
+        const nextSerialNumber = sortedChalaniEntries.length > 0 ? parseInt(sortedChalaniEntries[0].dispatchNumber.split('-')[0]) + 1 : 1;
+        const nextDispatchNumber = `${nextSerialNumber}-${fiscalYearSuffix}`;
+
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-slate-800">चलानी सूची (आ.व. {currentFiscalYear})</h2>
+                <button onClick={() => setIsChalaniFormOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold shadow-sm hover:bg-primary-700">
+                    <Send size={18} /> नयाँ चलानी
+                </button>
+            </div>
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">चलानी नं.</th>
+                      <th className="p-3">मिति</th>
+                      <th className="p-3">पाउने</th>
+                      <th className="p-3">बिषय</th>
+                      <th className="p-3">पठाउने</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {sortedChalaniEntries.map(c => (
+                      <tr key={c.id}>
+                        <td className="p-3 font-bold">{c.dispatchNumber}</td>
+                        <td className="p-3">{c.date}</td>
+                        <td className="p-3">{c.recipient}</td>
+                        <td className="p-3">{c.subject}</td>
+                        <td className="p-3">{c.sender}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {isChalaniFormOpen && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 flex items-center justify-center p-4 animate-in fade-in">
+                    <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-2xl w-full max-w-3xl relative animate-in zoom-in-95 slide-in-from-bottom-4">
+                        <h3 className="text-2xl font-bold text-slate-800 mb-6">नयाँ चिठीपत्र चलानी</h3>
+                        <ChalaniForm 
+                            currentUser={currentUser!}
+                            nextDispatchNumber={nextDispatchNumber}
+                            onSave={(chalaniData) => {
+                                const newChalani: Chalani = {
+                                    id: Date.now().toString(),
+                                    dispatchNumber: nextDispatchNumber,
+                                    fiscalYear: currentFiscalYear,
+                                    ...chalaniData,
+                                };
+                                onSaveChalani(newChalani);
+                                setIsChalaniFormOpen(false);
+                                alert('चलानी सफलतापूर्वक सुरक्षित गरियो!');
+                            }}
+                            onCancel={() => setIsChalaniFormOpen(false)}
+                        />
+                        <button onClick={() => setIsChalaniFormOpen(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-100 rounded-full">
+                            <X size={20}/>
+                        </button>
+                    </div>
+                </div>
+            )}
+          </div>
+        );
+      }
+      case 'darta': {
+        const fiscalYearSuffix = currentFiscalYear.slice(2, 4) + currentFiscalYear.slice(7, 9);
+        const entriesForYear = dartaEntries.filter(d => d.fiscalYear === currentFiscalYear);
+        
+        const sortedDartaEntries = [...entriesForYear].sort((a, b) => {
+            const numA = parseInt(a.registrationNumber.split('-')[0]);
+            const numB = parseInt(b.registrationNumber.split('-')[0]);
+            return numB - numA;
+        });
+
+        const nextSerialNumber = sortedDartaEntries.length > 0 ? parseInt(sortedDartaEntries[0].registrationNumber.split('-')[0]) + 1 : 1;
+        const nextRegistrationNumber = `${nextSerialNumber}-${fiscalYearSuffix}`;
+
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-slate-800">दर्ता सूची (आ.व. {currentFiscalYear})</h2>
+                <button onClick={() => setIsDartaFormOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold shadow-sm hover:bg-primary-700">
+                    <FilePlus size={18} /> नयाँ दर्ता
+                </button>
+            </div>
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">दर्ता नं.</th>
+                      <th className="p-3">मिति</th>
+                      <th className="p-3">पठाउने</th>
+                      <th className="p-3">बिषय</th>
+                      <th className="p-3">बुझ्ने</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {sortedDartaEntries.map(d => (
+                      <tr key={d.id}>
+                        <td className="p-3 font-bold">{d.registrationNumber}</td>
+                        <td className="p-3">{d.date}</td>
+                        <td className="p-3">{d.sender}</td>
+                        <td className="p-3">{d.subject}</td>
+                        <td className="p-3">{d.recipient}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {isDartaFormOpen && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 flex items-center justify-center p-4 animate-in fade-in">
+                    <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-2xl w-full max-w-3xl relative animate-in zoom-in-95 slide-in-from-bottom-4">
+                        <h3 className="text-2xl font-bold text-slate-800 mb-6">नयाँ चिठीपत्र दर्ता</h3>
+                        <DartaForm 
+                            currentUser={currentUser!}
+                            nextRegistrationNumber={nextRegistrationNumber}
+                            onSave={(dartaData) => {
+                                const newDarta: Darta = {
+                                    id: Date.now().toString(),
+                                    registrationNumber: nextRegistrationNumber,
+                                    fiscalYear: currentFiscalYear,
+                                    ...dartaData,
+                                };
+                                onSaveDarta(newDarta);
+                                setIsDartaFormOpen(false);
+                                alert('दर्ता सफलतापूर्वक सुरक्षित गरियो!');
+                            }}
+                            onCancel={() => setIsDartaFormOpen(false)}
+                        />
+                        <button onClick={() => setIsDartaFormOpen(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-100 rounded-full">
+                            <X size={20}/>
+                        </button>
+                    </div>
+                </div>
+            )}
+          </div>
+        );
+      }
       case 'bida_abedan': return <BidaAbedan 
         currentUser={currentUser} 
         users={users} 

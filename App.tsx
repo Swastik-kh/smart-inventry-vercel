@@ -8,7 +8,7 @@ import {
   User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, 
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
-  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance 
+  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani
 } from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe, off, push } from "firebase/database";
@@ -70,6 +70,8 @@ const App: React.FC = () => {
   const [logBookEntries, setLogBookEntries] = useState<LogBookEntry[]>([]);
   const [leaveApplications, setLeaveApplications] = useState<LeaveApplication[]>([]);
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
+  const [dartaEntries, setDartaEntries] = useState<Darta[]>([]);
+  const [chalaniEntries, setChalaniEntries] = useState<Chalani[]>([]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -154,6 +156,8 @@ const App: React.FC = () => {
     setupOrgListener('logBook', setLogBookEntries);
     setupOrgListener('leaveApplications', setLeaveApplications);
     setupOrgListener('leaveBalances', setLeaveBalances);
+    setupOrgListener('dartaEntries', setDartaEntries);
+    setupOrgListener('chalaniEntries', setChalaniEntries);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser]);
@@ -164,7 +168,7 @@ const App: React.FC = () => {
   };
 
   const getOrgRef = (subPath: string) => {
-      const safeOrgName = currentUser?.organizationName.trim().replace(/[.#$[\]]/g, "_") || "unknown";
+      const safeOrgName = currentUser?.organizationName.trim().replace(/[.#$[\\]]/g, "_") || "unknown";
       return ref(db, `orgData/${safeOrgName}/${subPath}`);
   };
 
@@ -187,6 +191,24 @@ const App: React.FC = () => {
           console.error("Error saving leave balance", error);
           alert("सञ्चित बिदा विवरण सुरक्षित गर्न सकिएन।");
       }
+  };
+
+  const handleSaveDarta = async (darta: Darta) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`dartaEntries/${darta.id}`), darta);
+    } catch (error) { 
+      alert("दर्ता सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleSaveChalani = async (chalani: Chalani) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`chalaniEntries/${chalani.id}`), chalani);
+    } catch (error) { 
+      alert("चलानी सुरक्षित गर्न सकिएन।");
+    }
   };
 
   const handleUpdateLeaveStatus = async (id: string, status: LeaveStatus, rejectionReason?: string) => {
@@ -608,6 +630,10 @@ const App: React.FC = () => {
           onUpdateLeaveStatus={handleUpdateLeaveStatus}
           leaveBalances={leaveBalances}
           onSaveLeaveBalance={handleSaveLeaveBalance}
+    dartaEntries={dartaEntries}
+    onSaveDarta={handleSaveDarta}
+    chalaniEntries={chalaniEntries}
+    onSaveChalani={handleSaveChalani}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
