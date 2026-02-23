@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Calendar, Save, FileText, CheckCircle2, X, BookOpen, User as UserIcon, Check, XCircle, Eye, List, Printer } from 'lucide-react';
+import { Calendar, Save, FileText, CheckCircle2, X, BookOpen, User as UserIcon, Check, XCircle, Eye, List, Printer, ShieldCheck } from 'lucide-react';
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
 import { Select } from './Select';
-import { User, LeaveApplication, LeaveStatus } from '../types/coreTypes';
+import { User, LeaveApplication, LeaveStatus, LeaveBalance, ServiceType } from '../types/coreTypes';
 import { BidaMaagFaram } from './BidaMaagFaram';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
@@ -14,6 +14,8 @@ interface BidaAbedanProps {
   leaveApplications: LeaveApplication[];
   onAddLeaveApplication: (application: LeaveApplication) => void;
   onUpdateLeaveStatus: (id: string, status: LeaveStatus, rejectionReason?: string) => void;
+  leaveBalances: LeaveBalance[];
+  onSaveLeaveBalance: (balance: LeaveBalance) => void;
 }
 
 export const BidaAbedan: React.FC<BidaAbedanProps> = ({ 
@@ -21,7 +23,9 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
   users, 
   leaveApplications, 
   onAddLeaveApplication, 
-  onUpdateLeaveStatus 
+  onUpdateLeaveStatus,
+  leaveBalances,
+  onSaveLeaveBalance
 }) => {
   const [activeTab, setActiveTab] = useState<'apply' | 'applications'>('apply');
   const [formData, setFormData] = useState({
@@ -36,24 +40,41 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
 
   const [showAccumulatedModal, setShowAccumulatedModal] = useState(false);
   const [selectedUserForAccumulated, setSelectedUserForAccumulated] = useState<string>('');
-  const [accumulatedData, setAccumulatedData] = useState({
+  const [accumulatedData, setAccumulatedData] = useState<Partial<LeaveBalance>>({
     casual: 0,
     sick: 0,
     festival: 0,
     home: 0,
-    other: 0
-  });
-
-  // Mock accumulated leave data (This should ideally come from a database)
-  const [accumulatedLeave, setAccumulatedLeave] = useState({
-    casual: 6,
-    sick: 12,
-    festival: 5,
-    home: 30, // Ghar Bida
-    other: 0
+    other: 0,
+    serviceType: 'Permanent'
   });
 
   const [viewApplication, setViewApplication] = useState<LeaveApplication | null>(null);
+
+  React.useEffect(() => {
+    if (selectedUserForAccumulated) {
+      const balance = leaveBalances.find(b => b.userId === selectedUserForAccumulated);
+      if (balance) {
+        setAccumulatedData({
+          casual: balance.casual,
+          sick: balance.sick,
+          festival: balance.festival,
+          home: balance.home,
+          other: balance.other,
+          serviceType: balance.serviceType
+        });
+      } else {
+        setAccumulatedData({
+          casual: 0,
+          sick: 0,
+          festival: 0,
+          home: 0,
+          other: 0,
+          serviceType: 'Permanent'
+        });
+      }
+    }
+  }, [selectedUserForAccumulated, leaveBalances]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,15 +107,37 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
 
   const handleSaveAccumulated = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you would save this to the database for the selected user
-    if (selectedUserForAccumulated === currentUser?.id) {
-        setAccumulatedLeave(accumulatedData);
-    }
+    if (!selectedUserForAccumulated) return;
+
+    const user = users.find(u => u.id === selectedUserForAccumulated);
+    if (!user) return;
+
+    const existingBalance = leaveBalances.find(b => b.userId === selectedUserForAccumulated);
+    
+    const newBalance: LeaveBalance = {
+      id: existingBalance?.id || Date.now().toString(),
+      userId: selectedUserForAccumulated,
+      employeeName: user.fullName,
+      serviceType: accumulatedData.serviceType as ServiceType,
+      casual: accumulatedData.casual || 0,
+      sick: accumulatedData.sick || 0,
+      festival: accumulatedData.festival || 0,
+      home: accumulatedData.home || 0,
+      other: accumulatedData.other || 0,
+      lastAccrualMonth: existingBalance?.lastAccrualMonth,
+      lastFiscalYearReset: existingBalance?.lastFiscalYearReset
+    };
+
+    onSaveLeaveBalance(newBalance);
     alert('सञ्चित बिदा विवरण सुरक्षित गरियो (Accumulated leave record saved)');
     setShowAccumulatedModal(false);
   };
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'APPROVAL';
+
+  const myBalance = leaveBalances.find(b => b.userId === currentUser?.id) || {
+    casual: 0, sick: 0, festival: 0, home: 0, other: 0
+  };
 
   const userOptions = users.map(u => ({ id: u.id, value: u.id, label: `${u.fullName} (${u.designation})` }));
 
@@ -161,6 +204,18 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                 required
                 icon={<UserIcon size={16} />}
                 placeholder="कर्मचारी चयन गर्नुहोस्"
+              />
+
+              <Select
+                label="सेवाको प्रकार (Service Type)"
+                value={accumulatedData.serviceType}
+                onChange={e => setAccumulatedData({...accumulatedData, serviceType: e.target.value as ServiceType})}
+                options={[
+                  { id: 'Permanent', value: 'Permanent', label: 'स्थायी (Permanent)' },
+                  { id: 'Temporary', value: 'Temporary', label: 'अस्थायी/करार (Temporary/Contract)' }
+                ]}
+                required
+                icon={<ShieldCheck size={16} />}
               />
 
               <div className="grid grid-cols-2 gap-4">
@@ -241,7 +296,9 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                 <BidaMaagFaram 
                   application={viewApplication} 
                   currentUser={currentUser}
-                  accumulatedLeave={accumulatedLeave}
+                  accumulatedLeave={leaveBalances.find(b => b.userId === viewApplication.userId) || {
+                    casual: 0, sick: 0, festival: 0, home: 0, other: 0
+                  }}
                   organizationName={currentUser?.organizationName}
                 />
               </div>
@@ -479,19 +536,19 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
              <div className="space-y-3">
                <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
                  <span className="text-sm text-slate-600">भैपरी आउने बिदा</span>
-                 <span className="font-bold text-slate-800">{accumulatedLeave.casual} दिन</span>
+                 <span className="font-bold text-slate-800">{myBalance.casual} दिन</span>
                </div>
                <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
                  <span className="text-sm text-slate-600">बिरामी बिदा</span>
-                 <span className="font-bold text-slate-800">{accumulatedLeave.sick} दिन</span>
+                 <span className="font-bold text-slate-800">{myBalance.sick} दिन</span>
                </div>
                <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
                  <span className="text-sm text-slate-600">पर्व बिदा</span>
-                 <span className="font-bold text-slate-800">{accumulatedLeave.festival} दिन</span>
+                 <span className="font-bold text-slate-800">{myBalance.festival} दिन</span>
                </div>
                <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
                  <span className="text-sm text-slate-600">घर बिदा</span>
-                 <span className="font-bold text-slate-800">{accumulatedLeave.home} दिन</span>
+                 <span className="font-bold text-slate-800">{myBalance.home} दिन</span>
                </div>
                <div className="mt-4 pt-3 border-t border-slate-100">
                  <p className="text-xs text-slate-500 italic text-center">

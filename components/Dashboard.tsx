@@ -72,7 +72,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   dakhilaReports, onSaveDakhilaReport, returnEntries, onSaveReturnEntry, 
   marmatEntries, onSaveMarmatEntry, dhuliyaunaEntries, onSaveDhuliyaunaEntry,
   logBookEntries, onSaveLogBookEntry, onClearData, onUploadData,
-  leaveApplications, onAddLeaveApplication, onUpdateLeaveStatus
+  leaveApplications, onAddLeaveApplication, onUpdateLeaveStatus,
+  leaveBalances, onSaveLeaveBalance
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
@@ -601,6 +602,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         leaveApplications={leaveApplications}
         onAddLeaveApplication={onAddLeaveApplication}
         onUpdateLeaveStatus={onUpdateLeaveStatus}
+        leaveBalances={leaveBalances}
+        onSaveLeaveBalance={onSaveLeaveBalance}
       />;
       case 'log_book': return <LogBook currentUser={currentUser} currentFiscalYear={currentFiscalYear} inventoryItems={inventoryItems} logBookEntries={logBookEntries} onAddLogEntry={onSaveLogBookEntry} />;
       case 'report_inventory_monthly': return <InventoryMonthlyReport 

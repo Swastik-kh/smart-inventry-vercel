@@ -8,7 +8,7 @@ import {
   User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, 
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
-  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus 
+  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance 
 } from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe, off, push } from "firebase/database";
@@ -69,6 +69,7 @@ const App: React.FC = () => {
   const [dhuliyaunaEntries, setDhuliyaunaEntries] = useState<DhuliyaunaEntry[]>([]);
   const [logBookEntries, setLogBookEntries] = useState<LogBookEntry[]>([]);
   const [leaveApplications, setLeaveApplications] = useState<LeaveApplication[]>([]);
+  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -152,6 +153,7 @@ const App: React.FC = () => {
     setupOrgListener('disposalEntries', setDhuliyaunaEntries);
     setupOrgListener('logBook', setLogBookEntries);
     setupOrgListener('leaveApplications', setLeaveApplications);
+    setupOrgListener('leaveBalances', setLeaveBalances);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser]);
@@ -181,6 +183,33 @@ const App: React.FC = () => {
       if (!currentUser) return;
       try {
           const appRef = getOrgRef(`leaveApplications/${id}`);
+          const application = leaveApplications.find(a => a.id === id);
+
+          if (status === 'Approved' && application) {
+              const balance = leaveBalances.find(b => b.userId === application.userId);
+              if (balance) {
+                  const calculateDuration = (start: string, end: string) => {
+                      try {
+                          const d1 = new Date(new NepaliDate(start).toJsDate());
+                          const d2 = new Date(new NepaliDate(end).toJsDate());
+                          const diffTime = Math.abs(d2.getTime() - d1.getTime());
+                          return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                      } catch (e) { return 0; }
+                  };
+
+                  const duration = calculateDuration(application.startDate, application.endDate);
+                  const newBalance = { ...balance };
+                  
+                  if (application.leaveType === 'Casual') newBalance.casual -= duration;
+                  else if (application.leaveType === 'Sick') newBalance.sick -= duration;
+                  else if (application.leaveType === 'Festival') newBalance.festival -= duration;
+                  else if (application.leaveType === 'Home') newBalance.home -= duration;
+                  else if (application.leaveType === 'Other') newBalance.other -= duration;
+
+                  await set(getOrgRef(`leaveBalances/${balance.id}`), newBalance);
+              }
+          }
+
           await update(appRef, { 
               status, 
               rejectionReason: rejectionReason || null, 
@@ -192,6 +221,44 @@ const App: React.FC = () => {
           alert("बिदाको अवस्था अपडेट गर्न सकिएन।");
       }
   };
+
+  // Auto Accrual Logic
+  useEffect(() => {
+      if (!currentUser || leaveBalances.length === 0) return;
+
+      const today = new NepaliDate();
+      const currentMonth = today.format('YYYY-MM');
+      const currentYear = today.format('YYYY');
+
+      const processAccruals = async () => {
+          for (const balance of leaveBalances) {
+              let updated = false;
+              const newBalance = { ...balance };
+
+              // Monthly Accrual for Permanent Employees
+              if (balance.serviceType === 'Permanent' && balance.lastAccrualMonth !== currentMonth) {
+                  newBalance.home = (newBalance.home || 0) + 2.5;
+                  newBalance.sick = (newBalance.sick || 0) + 1;
+                  newBalance.lastAccrualMonth = currentMonth;
+                  updated = true;
+              }
+
+              // Fiscal Year Reset
+              if (balance.lastFiscalYearReset !== currentYear) {
+                  newBalance.casual = 6;
+                  newBalance.festival = 6;
+                  newBalance.lastFiscalYearReset = currentYear;
+                  updated = true;
+              }
+
+              if (updated) {
+                  await set(getOrgRef(`leaveBalances/${balance.id}`), newBalance);
+              }
+          }
+      };
+
+      processAccruals();
+  }, [currentUser, leaveBalances.length]);
 
   const handleSaveUser = async (u: User) => {
       try {
@@ -526,6 +593,8 @@ const App: React.FC = () => {
           leaveApplications={leaveApplications}
           onAddLeaveApplication={handleAddLeaveApplication}
           onUpdateLeaveStatus={handleUpdateLeaveStatus}
+          leaveBalances={leaveBalances}
+          onSaveLeaveBalance={(b) => set(getOrgRef(`leaveBalances/${b.id}`), b)}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">

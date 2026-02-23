@@ -80,6 +80,22 @@ export interface LeaveApplication {
   approvalDate?: string;
 }
 
+export type ServiceType = 'Permanent' | 'Temporary' | 'Contract';
+
+export interface LeaveBalance {
+  id: string;
+  userId: string;
+  employeeName: string;
+  serviceType: ServiceType;
+  casual: number;
+  sick: number;
+  festival: number;
+  home: number;
+  other: number;
+  lastAccrualMonth?: string; // YYYY-MM
+  lastFiscalYearReset?: string; // YYYY
+}
+
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
