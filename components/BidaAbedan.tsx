@@ -289,9 +289,9 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
 
       {/* View Application Modal */}
       {viewApplication && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto print:hidden">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-200 my-8 print:my-0 print:shadow-none print:rounded-none print:max-w-none">
-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 sticky top-0 z-10 print:hidden">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-200 my-8">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 sticky top-0 z-10">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
                 <FileText size={18} className="text-primary-600"/>
                 बिदाको माग फारम (Leave Request Form)
@@ -311,7 +311,7 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
             </div>
             
             <div id="printable-leave-form">
-              <div className="p-6 overflow-y-auto max-h-[80vh] print:max-h-none print:overflow-visible print:p-0">
+              <div className="p-6 overflow-y-auto max-h-[80vh]">
                 <BidaMaagFaram 
                   application={viewApplication} 
                   currentUser={currentUser}
@@ -323,7 +323,7 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
               </div>
             </div>
               
-            <div className="mt-6 flex justify-end gap-3 border-t pt-4 p-6 print:hidden">
+            <div className="mt-6 flex justify-end gap-3 border-t pt-4 p-6">
                 {isAdmin && viewApplication.status === 'Pending' && (
                   <>
                     <button 
