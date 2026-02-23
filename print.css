@@ -1,0 +1,12 @@
+@media print {
+  body > *:not(#printable-leave-form) {
+    display: none;
+  }
+  #printable-leave-form {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
