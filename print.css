@@ -2,17 +2,18 @@
   body * {
     visibility: hidden;
   }
-  #printable-leave-form, #printable-leave-form * {
+  #printable-leave-form, #printable-leave-form *,
+  .printable-content, .printable-content * {
     visibility: visible;
   }
-  #printable-leave-form {
+  #printable-leave-form, .printable-content {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
   }
   /* This targets the div with the scrollbar */
-  #printable-leave-form > div {
+  #printable-leave-form > div, .printable-content > div {
       overflow: visible !important;
       max-height: none !important;
       height: auto !important;

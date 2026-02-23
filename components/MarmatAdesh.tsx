@@ -284,7 +284,7 @@ export const MarmatAdesh: React.FC<MarmatAdeshProps> = ({
       </div>
 
       {/* 3. MAIN FORM CONTENT (A4 Layout - Form 402) */}
-      <div id="marmat-form-container" className="bg-white p-8 md:p-12 rounded-xl shadow-lg max-w-[210mm] mx-auto min-h-[297mm] text-slate-900 font-nepali text-sm print:shadow-none print:p-0 print:max-w-none">
+      <div id="marmat-form-container" className="bg-white p-8 md:p-12 rounded-xl shadow-lg max-w-[210mm] mx-auto min-h-[297mm] text-slate-900 font-nepali text-sm print:shadow-none print:p-0 print:max-w-none printable-content">
         
         {/* Top Right */}
         <div className="text-right text-[10px] font-bold mb-2">

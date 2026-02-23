@@ -326,7 +326,7 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
               {/* Print Content */}
               <div 
                 ref={printRef} 
-                className="bg-white p-12 shadow-sm border border-slate-200"
+                className="bg-white p-12 shadow-sm border border-slate-200 printable-content"
                 style={{
                   width: '210mm',
                   minHeight: '297mm',
