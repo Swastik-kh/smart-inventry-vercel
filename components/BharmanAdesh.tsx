@@ -94,7 +94,7 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
     pageStyle: `
       @page {
         size: A4;
-        margin: 0;
+        margin: 10mm;
       }
       @media print {
         body {
@@ -104,10 +104,9 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
           print-color-adjust: exact;
         }
         .print-container-a4 {
-          width: 210mm !important;
-          height: 297mm !important;
+          width: 100% !important;
           margin: 0 !important;
-          padding: 15mm !important;
+          padding: 0 !important;
           box-sizing: border-box !important;
           border: none !important;
           box-shadow: none !important;
@@ -350,33 +349,34 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
               {/* Print Content */}
               <div 
                 ref={printRef} 
-                className="bg-white p-12 shadow-sm border border-slate-200 print-container-a4"
+                className="bg-white p-8 shadow-sm border border-slate-200 print-container-a4"
                 style={{
-                  width: '210mm',
-                  minHeight: '297mm',
+                  width: '100%',
+                  maxWidth: '210mm',
+                  minHeight: '270mm',
                   margin: '0 auto',
                   fontFamily: '"Kalimati", "Mangal", sans-serif',
                   color: '#000',
-                  fontSize: '14px',
-                  lineHeight: '1.6',
+                  fontSize: '15px',
+                  lineHeight: '1.5',
                   boxSizing: 'border-box'
                 }}
               >
-                <div className="text-center mb-8 relative">
+                <div className="text-center mb-6 relative">
                   <div className="absolute left-0 top-0">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" alt="Emblem" className="w-24 h-24 object-contain" referrerPolicy="no-referrer" />
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" alt="Emblem" className="w-20 h-20 object-contain" referrerPolicy="no-referrer" />
                   </div>
-                  <div className="font-bold text-sm">अनुसूची - १</div>
-                  <div className="text-sm">(नियम ३ को उपनियम (४) सँग सम्बन्धित)</div>
-                  <div className="font-bold text-xl mt-2">{generalSettings.orgNameNepali}</div>
-                  {generalSettings.subTitleNepali && <div className="font-bold text-lg">{generalSettings.subTitleNepali}</div>}
-                  {generalSettings.subTitleNepali2 && <div className="font-bold text-lg">{generalSettings.subTitleNepali2}</div>}
-                  {generalSettings.subTitleNepali3 && <div className="font-bold text-lg">{generalSettings.subTitleNepali3}</div>}
-                  <div className="font-bold text-xl mt-6 underline underline-offset-4">भ्रमण आदेश</div>
+                  <div className="font-bold text-xs">अनुसूची - १</div>
+                  <div className="text-[10px]">(नियम ३ को उपनियम (४) सँग सम्बन्धित)</div>
+                  <div className="font-bold text-xl mt-1">{generalSettings.orgNameNepali}</div>
+                  {generalSettings.subTitleNepali && <div className="font-bold text-lg leading-tight">{generalSettings.subTitleNepali}</div>}
+                  {generalSettings.subTitleNepali2 && <div className="font-bold text-lg leading-tight">{generalSettings.subTitleNepali2}</div>}
+                  {generalSettings.subTitleNepali3 && <div className="font-bold text-lg leading-tight">{generalSettings.subTitleNepali3}</div>}
+                  <div className="font-bold text-2xl mt-4 underline underline-offset-4">भ्रमण आदेश</div>
                 </div>
 
-                <div className="flex justify-between mb-6">
-                  <div>
+                <div className="flex justify-between mb-4">
+                  <div className="space-y-0.5">
                     <div>संख्या : {selectedEntry.sankhya}</div>
                     <div>च.नं. : {selectedEntry.chalaniNo}</div>
                     <div>क.स.नं. : {selectedEntry.ksNo}</div>
@@ -386,56 +386,56 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
                   </div>
                 </div>
 
-                <div className="space-y-3 mb-12">
-                  <div className="flex"><span className="w-6">१.</span><span>भ्रमण गर्ने पदाधिकारी वा कर्मचारीको नाम :- <span className="font-bold">{selectedEntry.employeeName}</span> ।</span></div>
-                  <div className="flex"><span className="w-6">२.</span><span>पद :- {selectedEntry.designation} ।</span></div>
-                  <div className="flex"><span className="w-6">३.</span><span>कार्यालय :- {selectedEntry.office} ।</span></div>
-                  <div className="flex"><span className="w-6">४.</span><span>भ्रमण गर्ने स्थान :- {selectedEntry.destination} ।</span></div>
-                  <div className="flex"><span className="w-6">५.</span><span>भ्रमणको उद्देश्य :- {selectedEntry.purpose} ।</span></div>
-                  <div className="flex"><span className="w-6">६.</span><span>भ्रमण गर्ने अवधि :- मिति {selectedEntry.fromDate} गते देखि {selectedEntry.toDate} गते सम्म ।</span></div>
-                  <div className="flex"><span className="w-6">७.</span><span>भ्रमण गर्ने साधन :- {selectedEntry.transportMeans} ।</span></div>
-                  <div className="flex"><span className="w-6">८.</span><span>भ्रमणको निमित्त माग गरेको पेश्की खर्च :-</span></div>
+                <div className="space-y-2 mb-8">
+                  <div className="flex"><span className="w-6 shrink-0">१.</span><span>भ्रमण गर्ने पदाधिकारी वा कर्मचारीको नाम :- <span className="font-bold">{selectedEntry.employeeName}</span> ।</span></div>
+                  <div className="flex"><span className="w-6 shrink-0">२.</span><span>पद :- {selectedEntry.designation} ।</span></div>
+                  <div className="flex"><span className="w-6 shrink-0">३.</span><span>कार्यालय :- {selectedEntry.office} ।</span></div>
+                  <div className="flex"><span className="w-6 shrink-0">४.</span><span>भ्रमण गर्ने स्थान :- {selectedEntry.destination} ।</span></div>
+                  <div className="flex"><span className="w-6 shrink-0">५.</span><span>भ्रमणको उद्देश्य :- {selectedEntry.purpose} ।</span></div>
+                  <div className="flex"><span className="w-6 shrink-0">६.</span><span>भ्रमण गर्ने अवधि :- मिति {selectedEntry.fromDate} गते देखि {selectedEntry.toDate} गते सम्म ।</span></div>
+                  <div className="flex"><span className="w-6 shrink-0">७.</span><span>भ्रमण गर्ने साधन :- {selectedEntry.transportMeans} ।</span></div>
+                  <div className="flex"><span className="w-6 shrink-0">८.</span><span>भ्रमणको निमित्त माग गरेको पेश्की खर्च :-</span></div>
                   
-                  <div className="pl-6 space-y-1">
-                    <div>भ्रमणभत्ता : {selectedEntry.travelAllowance}</div>
-                    <div>दैनिकभत्ता : {selectedEntry.dailyAllowance}</div>
-                    <div>फुटकर खर्च : {selectedEntry.miscExpense}</div>
+                  <div className="pl-8 space-y-0.5">
+                    <div>भ्रमणभत्ता : {selectedEntry.travelAllowance || '-'}</div>
+                    <div>दैनिकभत्ता : {selectedEntry.dailyAllowance || '-'}</div>
+                    <div>फुटकर खर्च : {selectedEntry.miscExpense || '-'}</div>
                   </div>
 
-                  <div className="flex"><span className="w-6">९.</span><span>भ्रमण सम्बन्धि अन्य आदेश : {selectedEntry.otherOrders}</span></div>
+                  <div className="flex"><span className="w-6 shrink-0">९.</span><span>भ्रमण सम्बन्धि अन्य आदेश : {selectedEntry.otherOrders || '-'}</span></div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 mt-20">
+                <div className="grid grid-cols-3 gap-8 mt-12">
                   <div className="text-left">
-                    <div className="border-b border-dashed border-black mb-2 w-40"></div>
-                    <div className="font-bold">भ्रमण गर्ने कर्मचारी</div>
-                    <div className="mt-2">मिति :- ....................</div>
+                    <div className="border-b border-dashed border-black mb-2 w-full"></div>
+                    <div className="font-bold text-sm">भ्रमण गर्ने कर्मचारी</div>
+                    <div className="mt-1 text-xs">मिति :- ....................</div>
                   </div>
                   <div className="text-center">
-                    <div className="border-b border-dashed border-black mb-2 mx-auto w-40"></div>
-                    <div className="font-bold">सिफारिस गर्ने</div>
-                    <div className="mt-2">मिति :- ....................</div>
+                    <div className="border-b border-dashed border-black mb-2 w-full"></div>
+                    <div className="font-bold text-sm">सिफारिस गर्ने</div>
+                    <div className="mt-1 text-xs">मिति :- ....................</div>
                   </div>
                   <div className="text-right">
-                    <div className="border-b border-dashed border-black mb-2 ml-auto w-40"></div>
-                    <div className="font-bold">भ्रमण स्वीकृत गर्ने पदाधिकारी</div>
-                    <div className="mt-2">मिति :- ....................</div>
+                    <div className="border-b border-dashed border-black mb-2 w-full"></div>
+                    <div className="font-bold text-sm">भ्रमण स्वीकृत गर्ने पदाधिकारी</div>
+                    <div className="mt-1 text-xs">मिति :- ....................</div>
                   </div>
                 </div>
 
-                <div className="flex justify-center mt-12">
-                  <div className="border-2 border-black p-6 w-full max-w-2xl">
-                    <div className="text-center font-bold underline mb-2">(आर्थिक प्रशासनशाखाको प्रयोजनका लागि)</div>
-                    <div className="text-center font-bold underline mb-4">भ्रमणखर्च</div>
+                <div className="flex justify-center mt-8">
+                  <div className="border border-black p-5 w-full">
+                    <div className="text-center font-bold underline mb-1 text-sm">(आर्थिक प्रशासनशाखाको प्रयोजनका लागि)</div>
+                    <div className="text-center font-bold underline mb-3">भ्रमणखर्च</div>
                     
-                    <div className="mb-2">
+                    <div className="mb-2 text-sm">
                       बजेट नं.................................................. बाट नगद/चेक नं.................................................. रु..................................................
                     </div>
-                    <div className="mb-8">
+                    <div className="mb-6 text-sm">
                       अक्षरेपी.................................................................................................... दिइएको छ ।
                     </div>
 
-                    <div className="flex justify-between">
+                    <div className="flex justify-between text-sm">
                       <div>
                         <div className="mb-2">बुझिलिनेको सही ..................................................</div>
                         <div>नाम थर :-</div>
