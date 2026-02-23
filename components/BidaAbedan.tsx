@@ -15,7 +15,7 @@ interface BidaAbedanProps {
   onAddLeaveApplication: (application: LeaveApplication) => void;
   onUpdateLeaveStatus: (id: string, status: LeaveStatus, rejectionReason?: string) => void;
   leaveBalances: LeaveBalance[];
-  onSaveLeaveBalance: (balance: LeaveBalance) => void;
+  onSaveLeaveBalance: (balance: LeaveBalance) => Promise<void>;
 }
 
 export const BidaAbedan: React.FC<BidaAbedanProps> = ({ 
@@ -48,6 +48,8 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
     other: 0,
     serviceType: 'Permanent'
   });
+
+  const [isSaving, setIsSaving] = useState(false);
 
   const [viewApplication, setViewApplication] = useState<LeaveApplication | null>(null);
 
@@ -105,32 +107,39 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
     });
   };
 
-  const handleSaveAccumulated = (e: React.FormEvent) => {
+  const handleSaveAccumulated = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUserForAccumulated) return;
 
     const user = users.find(u => u.id === selectedUserForAccumulated);
     if (!user) return;
 
-    const existingBalance = leaveBalances.find(b => b.userId === selectedUserForAccumulated);
-    
-    const newBalance: LeaveBalance = {
-      id: existingBalance?.id || Date.now().toString(),
-      userId: selectedUserForAccumulated,
-      employeeName: user.fullName,
-      serviceType: accumulatedData.serviceType as ServiceType,
-      casual: accumulatedData.casual || 0,
-      sick: accumulatedData.sick || 0,
-      festival: accumulatedData.festival || 0,
-      home: accumulatedData.home || 0,
-      other: accumulatedData.other || 0,
-      lastAccrualMonth: existingBalance?.lastAccrualMonth,
-      lastFiscalYearReset: existingBalance?.lastFiscalYearReset
-    };
+    setIsSaving(true);
+    try {
+        const existingBalance = leaveBalances.find(b => b.userId === selectedUserForAccumulated);
+        
+        const newBalance: LeaveBalance = {
+          id: existingBalance?.id || Date.now().toString(),
+          userId: selectedUserForAccumulated,
+          employeeName: user.fullName,
+          serviceType: accumulatedData.serviceType as ServiceType,
+          casual: accumulatedData.casual || 0,
+          sick: accumulatedData.sick || 0,
+          festival: accumulatedData.festival || 0,
+          home: accumulatedData.home || 0,
+          other: accumulatedData.other || 0,
+          lastAccrualMonth: existingBalance?.lastAccrualMonth,
+          lastFiscalYearReset: existingBalance?.lastFiscalYearReset
+        };
 
-    onSaveLeaveBalance(newBalance);
-    alert('सञ्चित बिदा विवरण सुरक्षित गरियो (Accumulated leave record saved)');
-    setShowAccumulatedModal(false);
+        await onSaveLeaveBalance(newBalance);
+        alert('सञ्चित बिदा विवरण सुरक्षित गरियो (Accumulated leave record saved)');
+        setShowAccumulatedModal(false);
+    } catch (error) {
+        alert('सुरक्षित गर्न सकिएन।');
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'APPROVAL';
@@ -266,10 +275,11 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                 </button>
                 <button 
                   type="submit"
-                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium shadow-sm flex items-center gap-2"
+                  disabled={isSaving}
+                  className={`px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium shadow-sm flex items-center gap-2 ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
                   <Save size={16} />
-                  सुरक्षित गर्नुहोस्
+                  {isSaving ? 'सुरक्षित हुँदैछ...' : 'सुरक्षित गर्नुहोस्'}
                 </button>
               </div>
             </form>

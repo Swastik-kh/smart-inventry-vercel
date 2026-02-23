@@ -129,7 +129,7 @@ export interface DashboardProps {
   onUpdateLeaveStatus: (id: string, status: LeaveStatus, rejectionReason?: string) => void;
   
   leaveBalances: LeaveBalance[];
-  onSaveLeaveBalance: (balance: LeaveBalance) => void;
+  onSaveLeaveBalance: (balance: LeaveBalance) => Promise<void>;
 
   onClearData: (sectionId: string) => void; 
   onUploadData?: (sectionId: string, data: any[]) => void;

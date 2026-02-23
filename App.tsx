@@ -179,6 +179,16 @@ const App: React.FC = () => {
       }
   };
 
+  const handleSaveLeaveBalance = async (balance: LeaveBalance) => {
+      if (!currentUser) return;
+      try {
+          await set(getOrgRef(`leaveBalances/${balance.id}`), balance);
+      } catch (error) {
+          console.error("Error saving leave balance", error);
+          alert("सञ्चित बिदा विवरण सुरक्षित गर्न सकिएन।");
+      }
+  };
+
   const handleUpdateLeaveStatus = async (id: string, status: LeaveStatus, rejectionReason?: string) => {
       if (!currentUser) return;
       try {
@@ -594,7 +604,7 @@ const App: React.FC = () => {
           onAddLeaveApplication={handleAddLeaveApplication}
           onUpdateLeaveStatus={handleUpdateLeaveStatus}
           leaveBalances={leaveBalances}
-          onSaveLeaveBalance={(b) => set(getOrgRef(`leaveBalances/${b.id}`), b)}
+          onSaveLeaveBalance={handleSaveLeaveBalance}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
