@@ -224,7 +224,7 @@ const App: React.FC = () => {
               status, 
               rejectionReason: rejectionReason || null, 
               approvedBy: currentUser.fullName,
-              approverDesignation: currentUser.designation,
+              approverDesignation: allUsers.find(u => u.id === currentUser.id)?.designation || currentUser.designation,
               approvalDate: new NepaliDate().format('YYYY-MM-DD')
           });
       } catch (error) {
