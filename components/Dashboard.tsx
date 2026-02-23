@@ -6,7 +6,7 @@ import {
   ClipboardList, FileSpreadsheet, FilePlus, ShoppingCart, FileOutput, 
   BookOpen, Book, Archive, RotateCcw, Wrench, Scroll, BarChart3,
   Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, AlertTriangle, Calculator, Trash2, TrendingUp, AlertOctagon, Timer, Printer, Baby, Flame, CalendarClock, List,
-  Eye, ShieldAlert, ChevronLeft, Send, MapPin
+  Eye, ShieldAlert, ChevronLeft, Send, MapPin, Search
 } from 'lucide-react';
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
@@ -107,6 +107,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   const [initialDakhilaReportId, setInitialDakhilaReportId] = useState<string | null>(null);
   const [isDartaFormOpen, setIsDartaFormOpen] = useState(false);
   const [isChalaniFormOpen, setIsChalaniFormOpen] = useState(false);
+  const [dartaSearchQuery, setDartaSearchQuery] = useState('');
+  const [chalaniSearchQuery, setChalaniSearchQuery] = useState('');
   
   const [previewDakhila, setPreviewDakhila] = useState<DakhilaPratibedanEntry | null>(null);
   
@@ -614,13 +616,32 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         const nextSerialNumber = sortedChalaniEntries.length > 0 ? parseInt(sortedChalaniEntries[0].dispatchNumber.split('-')[0]) + 1 : 1;
         const nextDispatchNumber = `${nextSerialNumber}-${fiscalYearSuffix}`;
 
+        const filteredChalaniEntries = sortedChalaniEntries.filter(c => 
+            c.dispatchNumber.toLowerCase().includes(chalaniSearchQuery.toLowerCase()) ||
+            c.subject.toLowerCase().includes(chalaniSearchQuery.toLowerCase()) ||
+            c.sender.toLowerCase().includes(chalaniSearchQuery.toLowerCase()) ||
+            c.recipient.toLowerCase().includes(chalaniSearchQuery.toLowerCase())
+        );
+
         return (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-slate-800">चलानी सूची (आ.व. {currentFiscalYear})</h2>
-                <button onClick={() => setIsChalaniFormOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold shadow-sm hover:bg-primary-700">
-                    <Send size={18} /> नयाँ चलानी
-                </button>
+                <div className="flex items-center gap-4">
+                    <div className="relative w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input 
+                            type="text" 
+                            placeholder="खोज्नुहोस्..." 
+                            value={chalaniSearchQuery}
+                            onChange={(e) => setChalaniSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                        />
+                    </div>
+                    <button onClick={() => setIsChalaniFormOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold shadow-sm hover:bg-primary-700">
+                        <Send size={18} /> नयाँ चलानी
+                    </button>
+                </div>
             </div>
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
               <div className="overflow-x-auto">
@@ -635,7 +656,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {sortedChalaniEntries.map(c => (
+                    {filteredChalaniEntries.map(c => (
                       <tr key={c.id}>
                         <td className="p-3 font-bold">{c.dispatchNumber}</td>
                         <td className="p-3">{c.date}</td>
@@ -644,6 +665,11 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                         <td className="p-3">{c.sender}</td>
                       </tr>
                     ))}
+                    {filteredChalaniEntries.length === 0 && (
+                        <tr>
+                            <td colSpan={5} className="p-8 text-center text-slate-500 italic">कुनै चलानी भेटिएन।</td>
+                        </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -691,13 +717,32 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         const nextSerialNumber = sortedDartaEntries.length > 0 ? parseInt(sortedDartaEntries[0].registrationNumber.split('-')[0]) + 1 : 1;
         const nextRegistrationNumber = `${nextSerialNumber}-${fiscalYearSuffix}`;
 
+        const filteredDartaEntries = sortedDartaEntries.filter(d => 
+            d.registrationNumber.toLowerCase().includes(dartaSearchQuery.toLowerCase()) ||
+            d.subject.toLowerCase().includes(dartaSearchQuery.toLowerCase()) ||
+            d.sender.toLowerCase().includes(dartaSearchQuery.toLowerCase()) ||
+            d.recipient.toLowerCase().includes(dartaSearchQuery.toLowerCase())
+        );
+
         return (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-slate-800">दर्ता सूची (आ.व. {currentFiscalYear})</h2>
-                <button onClick={() => setIsDartaFormOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold shadow-sm hover:bg-primary-700">
-                    <FilePlus size={18} /> नयाँ दर्ता
-                </button>
+                <div className="flex items-center gap-4">
+                    <div className="relative w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input 
+                            type="text" 
+                            placeholder="खोज्नुहोस्..." 
+                            value={dartaSearchQuery}
+                            onChange={(e) => setDartaSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                        />
+                    </div>
+                    <button onClick={() => setIsDartaFormOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold shadow-sm hover:bg-primary-700">
+                        <FilePlus size={18} /> नयाँ दर्ता
+                    </button>
+                </div>
             </div>
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
               <div className="overflow-x-auto">
@@ -712,7 +757,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {sortedDartaEntries.map(d => (
+                    {filteredDartaEntries.map(d => (
                       <tr key={d.id}>
                         <td className="p-3 font-bold">{d.registrationNumber}</td>
                         <td className="p-3">{d.date}</td>
@@ -721,6 +766,11 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                         <td className="p-3">{d.recipient}</td>
                       </tr>
                     ))}
+                    {filteredDartaEntries.length === 0 && (
+                        <tr>
+                            <td colSpan={5} className="p-8 text-center text-slate-500 italic">कुनै दर्ता भेटिएन।</td>
+                        </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
