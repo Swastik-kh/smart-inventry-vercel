@@ -221,9 +221,10 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
           <div className="border-t border-dotted border-black w-2/3 pt-1 text-center">
             स्वीकृति दिने अधिकृत
           </div>
-          <div className="mt-2 grid grid-cols-2">
-            <div>पद: {application.approvedBy ? 'Admin' : ''}</div>
-            <div>मिति: {application.status !== 'Pending' ? new NepaliDate().format('YYYY-MM-DD') : ''}</div>
+          <div className="mt-2 grid grid-cols-1 gap-1">
+            <div className="font-bold">{application.approvedBy || ''}</div>
+            <div>पद: {application.approverDesignation || ''}</div>
+            <div>मिति: {application.approvalDate || ''}</div>
           </div>
         </div>
       </div>

@@ -8,10 +8,10 @@ import {
   User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, 
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
-  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord 
+  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus 
 } from './types';
 import { db } from './firebase';
-import { ref, onValue, set, remove, update, get, Unsubscribe, off } from "firebase/database";
+import { ref, onValue, set, remove, update, get, Unsubscribe, off, push } from "firebase/database";
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -68,6 +68,7 @@ const App: React.FC = () => {
   const [marmatEntries, setMarmatEntries] = useState<MarmatEntry[]>([]);
   const [dhuliyaunaEntries, setDhuliyaunaEntries] = useState<DhuliyaunaEntry[]>([]);
   const [logBookEntries, setLogBookEntries] = useState<LogBookEntry[]>([]);
+  const [leaveApplications, setLeaveApplications] = useState<LeaveApplication[]>([]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -150,6 +151,7 @@ const App: React.FC = () => {
     setupOrgListener('marmatEntries', setMarmatEntries);
     setupOrgListener('disposalEntries', setDhuliyaunaEntries);
     setupOrgListener('logBook', setLogBookEntries);
+    setupOrgListener('leaveApplications', setLeaveApplications);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser]);
@@ -162,6 +164,33 @@ const App: React.FC = () => {
   const getOrgRef = (subPath: string) => {
       const safeOrgName = currentUser?.organizationName.trim().replace(/[.#$[\]]/g, "_") || "unknown";
       return ref(db, `orgData/${safeOrgName}/${subPath}`);
+  };
+
+  const handleAddLeaveApplication = async (app: LeaveApplication) => {
+      if (!currentUser) return;
+      try {
+          const orgRef = getOrgRef('leaveApplications');
+          const newRef = push(orgRef);
+          await set(newRef, { ...app, id: newRef.key });
+      } catch (error) {
+          alert("बिदा आवेदन सुरक्षित गर्न सकिएन।");
+      }
+  };
+
+  const handleUpdateLeaveStatus = async (id: string, status: LeaveStatus, rejectionReason?: string) => {
+      if (!currentUser) return;
+      try {
+          const appRef = getOrgRef(`leaveApplications/${id}`);
+          await update(appRef, { 
+              status, 
+              rejectionReason: rejectionReason || null, 
+              approvedBy: currentUser.fullName,
+              approverDesignation: currentUser.designation,
+              approvalDate: new NepaliDate().format('YYYY-MM-DD')
+          });
+      } catch (error) {
+          alert("बिदाको अवस्था अपडेट गर्न सकिएन।");
+      }
   };
 
   const handleSaveUser = async (u: User) => {
@@ -494,6 +523,9 @@ const App: React.FC = () => {
           dakhilaReports={dakhilaReports} onSaveDakhilaReport={(r) => set(getOrgRef(`dakhilaReports/${r.id}`), r)} returnEntries={returnEntries} onSaveReturnEntry={handleSaveReturnEntry}
           marmatEntries={marmatEntries} onSaveMarmatEntry={(e) => set(getOrgRef(`marmatEntries/${e.id}`), e)} dhuliyaunaEntries={dhuliyaunaEntries} onSaveDhuliyaunaEntry={(e) => set(getOrgRef(`disposalEntries/${e.id}`), e)}
           logBookEntries={logBookEntries} onSaveLogBookEntry={(e) => set(getOrgRef(`logBook/${e.id}`), e)} onClearData={(p) => remove(getOrgRef(p))} onUploadData={handleUploadDatabase}
+          leaveApplications={leaveApplications}
+          onAddLeaveApplication={handleAddLeaveApplication}
+          onUpdateLeaveStatus={handleUpdateLeaveStatus}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">

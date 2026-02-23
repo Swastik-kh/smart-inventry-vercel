@@ -71,7 +71,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   stockEntryRequests, onRequestStockEntry, onApproveStockEntry, onRejectStockEntry, stores, onAddStore, onUpdateStore, onDeleteStore,
   dakhilaReports, onSaveDakhilaReport, returnEntries, onSaveReturnEntry, 
   marmatEntries, onSaveMarmatEntry, dhuliyaunaEntries, onSaveDhuliyaunaEntry,
-  logBookEntries, onSaveLogBookEntry, onClearData, onUploadData
+  logBookEntries, onSaveLogBookEntry, onClearData, onUploadData,
+  leaveApplications, onAddLeaveApplication, onUpdateLeaveStatus
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
@@ -103,25 +104,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   
   const [previewDakhila, setPreviewDakhila] = useState<DakhilaPratibedanEntry | null>(null);
   
-  const [leaveApplications, setLeaveApplications] = useState<LeaveApplication[]>(() => {
-    const saved = localStorage.getItem('leave_applications');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem('leave_applications', JSON.stringify(leaveApplications));
-  }, [leaveApplications]);
-
-  const handleAddLeaveApplication = (application: LeaveApplication) => {
-    setLeaveApplications(prev => [application, ...prev]);
-  };
-
-  const handleUpdateLeaveStatus = (id: string, status: LeaveStatus, rejectionReason?: string) => {
-    setLeaveApplications(prev => prev.map(app => 
-      app.id === id ? { ...app, status, rejectionReason, approvedBy: currentUser?.fullName } : app
-    ));
-  };
-
   // New State for Dashboard Date Selection
   const [selectedStatsDate, setSelectedStatsDate] = useState<string>(() => {
       try { return new NepaliDate().format('YYYY-MM-DD'); } catch (e) { return ''; }
@@ -617,8 +599,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         currentUser={currentUser} 
         users={users} 
         leaveApplications={leaveApplications}
-        onAddLeaveApplication={handleAddLeaveApplication}
-        onUpdateLeaveStatus={handleUpdateLeaveStatus}
+        onAddLeaveApplication={onAddLeaveApplication}
+        onUpdateLeaveStatus={onUpdateLeaveStatus}
       />;
       case 'log_book': return <LogBook currentUser={currentUser} currentFiscalYear={currentFiscalYear} inventoryItems={inventoryItems} logBookEntries={logBookEntries} onAddLogEntry={onSaveLogBookEntry} />;
       case 'report_inventory_monthly': return <InventoryMonthlyReport 

@@ -1,5 +1,5 @@
 
-import { User, OrganizationSettings } from './coreTypes';
+import { User, OrganizationSettings, LeaveApplication, LeaveStatus } from './coreTypes';
 import { 
   MagFormEntry, PurchaseOrderEntry, IssueReportEntry, FirmEntry, QuotationEntry, 
   InventoryItem, Store, StockEntryRequest, DakhilaPratibedanEntry, ReturnEntry, 
@@ -123,6 +123,10 @@ export interface DashboardProps {
 
   logBookEntries: LogBookEntry[];
   onSaveLogBookEntry: (entry: LogBookEntry) => void;
+
+  leaveApplications: LeaveApplication[];
+  onAddLeaveApplication: (app: LeaveApplication) => void;
+  onUpdateLeaveStatus: (id: string, status: LeaveStatus, rejectionReason?: string) => void;
 
   onClearData: (sectionId: string) => void; 
 }

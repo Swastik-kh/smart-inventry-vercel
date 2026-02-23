@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Save, FileText, CheckCircle2, X, BookOpen, User as UserIcon, Check, XCircle, Eye, List } from 'lucide-react';
+import { Calendar, Save, FileText, CheckCircle2, X, BookOpen, User as UserIcon, Check, XCircle, Eye, List, Printer } from 'lucide-react';
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
 import { Select } from './Select';
@@ -224,53 +224,64 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
 
       {/* View Application Modal */}
       {viewApplication && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-200 my-8">
-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 sticky top-0 z-10">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto print:bg-white print:p-0 print:static print:block">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-200 my-8 print:my-0 print:shadow-none print:rounded-none print:max-w-none">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 sticky top-0 z-10 print:hidden">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
                 <FileText size={18} className="text-primary-600"/>
                 बिदाको माग फारम (Leave Request Form)
               </h3>
-              <button onClick={() => setViewApplication(null)} className="text-slate-400 hover:text-red-500 transition-colors">
+              <button onClick={() => setViewApplication(null)} className="text-slate-400 hover:text-red-500 transition-colors print:hidden">
                 <X size={20} />
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto max-h-[80vh]">
-              <BidaMaagFaram 
-                application={viewApplication} 
-                currentUser={currentUser}
-                accumulatedLeave={accumulatedLeave}
-                organizationName={currentUser?.organizationName}
-              />
+            <div className="p-6 overflow-y-auto max-h-[80vh] print:max-h-none print:overflow-visible print:p-0">
+              <div className="print:block">
+                <BidaMaagFaram 
+                  application={viewApplication} 
+                  currentUser={currentUser}
+                  accumulatedLeave={accumulatedLeave}
+                  organizationName={currentUser?.organizationName}
+                />
+              </div>
               
-              {isAdmin && viewApplication.status === 'Pending' && (
-                <div className="mt-6 flex justify-end gap-3 border-t pt-4 print:hidden">
-                    <button 
-                      onClick={() => {
-                        const reason = prompt('अस्वीकृत गर्नुको कारण (Rejection Reason):');
-                        if (reason) {
-                            onUpdateLeaveStatus(viewApplication.id, 'Rejected', reason);
-                            setViewApplication(null);
-                        }
-                      }}
-                      className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2"
-                    >
-                      <XCircle size={18} />
-                      अस्वीकृत गर्नुहोस्
-                    </button>
-                    <button 
-                      onClick={() => {
-                        onUpdateLeaveStatus(viewApplication.id, 'Approved');
-                        setViewApplication(null);
-                      }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-                    >
-                      <Check size={18} />
-                      स्वीकृत गर्नुहोस्
-                    </button>
-                </div>
-              )}
+              <div className="mt-6 flex justify-end gap-3 border-t pt-4 print:hidden">
+                  <button 
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
+                  >
+                    <Printer size={18} />
+                    प्रिन्ट (Print)
+                  </button>
+                  {isAdmin && viewApplication.status === 'Pending' && (
+                    <>
+                      <button 
+                        onClick={() => {
+                          const reason = prompt('अस्वीकृत गर्नुको कारण (Rejection Reason):');
+                          if (reason) {
+                              onUpdateLeaveStatus(viewApplication.id, 'Rejected', reason);
+                              setViewApplication(null);
+                          }
+                        }}
+                        className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2"
+                      >
+                        <XCircle size={18} />
+                        अस्वीकृत गर्नुहोस्
+                      </button>
+                      <button 
+                        onClick={() => {
+                          onUpdateLeaveStatus(viewApplication.id, 'Approved');
+                          setViewApplication(null);
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                      >
+                        <Check size={18} />
+                        स्वीकृत गर्नुहोस्
+                      </button>
+                    </>
+                  )}
+              </div>
             </div>
           </div>
         </div>
@@ -347,6 +358,13 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                             title="हेर्नुहोस् (View)"
                           >
                             <Eye size={16} />
+                          </button>
+                          <button 
+                            onClick={() => { setViewApplication(app); setTimeout(() => window.print(), 300); }}
+                            className="p-1.5 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition-colors"
+                            title="प्रिन्ट गर्नुहोस् (Print)"
+                          >
+                            <Printer size={16} />
                           </button>
                           {app.status === 'Pending' && (
                             <>

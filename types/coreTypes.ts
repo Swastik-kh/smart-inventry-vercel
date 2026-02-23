@@ -76,6 +76,8 @@ export interface LeaveApplication {
   appliedDate: string;
   rejectionReason?: string;
   approvedBy?: string;
+  approverDesignation?: string;
+  approvalDate?: string;
 }
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
