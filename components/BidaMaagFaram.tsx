@@ -24,10 +24,10 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
 }) => {
   
   const leaveTypes = [
-    { id: 'casual', label: 'भैपरी आउने र पर्व बिदा', key: 'casual' },
+    { id: 'casual_festival', label: 'भैपरी आउने र पर्व बिदा', key: 'casual_festival' },
     { id: 'home', label: 'घर बिदा', key: 'home' },
     { id: 'sick', label: 'बिरामी बिदा', key: 'sick' },
-    { id: 'maternity', label: 'प्रसुति बिदा', key: 'other' }, // Mapping to other for now
+    { id: 'maternity', label: 'प्रसुति बिदा', key: 'other' },
     { id: 'mourning', label: 'किरिया बिदा', key: 'other' },
     { id: 'study', label: 'अध्ययन बिदा', key: 'other' },
     { id: 'extraordinary', label: 'असाधारण बिदा', key: 'other' },
@@ -50,10 +50,8 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
 
   // Helper to check if a leave type matches the application
   const isSelected = (label: string) => {
-    // Simple mapping logic based on the select options in BidaAbedan
-    if (application.leaveType === 'Casual' && label.includes('भैपरी')) return true;
+    if (application.leaveType === 'Casual & Festival' && label.includes('भैपरी')) return true;
     if (application.leaveType === 'Sick' && label.includes('बिरामी')) return true;
-    if (application.leaveType === 'Festival' && label.includes('पर्व')) return true;
     if (application.leaveType === 'Home' && label.includes('घर')) return true;
     if (application.leaveType === 'Other' && 
         !label.includes('भैपरी') && 
@@ -159,9 +157,13 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
         </div>
 
         {leaveTypes.map((type, index) => {
-           // Mock logic for balance
-           // @ts-ignore
-           const balance = accumulatedLeave[type.key] || 0;
+           let balance = 0;
+           if (type.key === 'casual_festival') {
+             balance = (accumulatedLeave.casual || 0) + (accumulatedLeave.festival || 0);
+           } else {
+             // @ts-ignore
+             balance = accumulatedLeave[type.key] || 0;
+           }
            const selected = isSelected(type.label);
            const requested = selected ? duration : 0;
            const remaining = balance - (typeof requested === 'number' ? requested : 0);

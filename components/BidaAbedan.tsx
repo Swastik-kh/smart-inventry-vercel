@@ -31,7 +31,7 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
   const [formData, setFormData] = useState({
     employeeName: currentUser?.fullName || '',
     designation: currentUser?.designation || '',
-    leaveType: 'Casual',
+    leaveType: 'Casual & Festival',
     startDate: '',
     endDate: '',
     reason: '',
@@ -229,10 +229,14 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <Input
-                  label="भैपरी आउने बिदा (Casual)"
+                  label="भैपरी आउने र पर्व बिदा"
                   type="number"
-                  value={accumulatedData.casual}
-                  onChange={e => setAccumulatedData({...accumulatedData, casual: Number(e.target.value)})}
+                  value={(accumulatedData.casual || 0) + (accumulatedData.festival || 0)}
+                  onChange={e => setAccumulatedData({
+                    ...accumulatedData, 
+                    casual: Number(e.target.value), 
+                    festival: 0
+                  })}
                   min={0}
                 />
                 <Input
@@ -240,13 +244,6 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                   type="number"
                   value={accumulatedData.sick}
                   onChange={e => setAccumulatedData({...accumulatedData, sick: Number(e.target.value)})}
-                  min={0}
-                />
-                <Input
-                  label="पर्व बिदा (Festival)"
-                  type="number"
-                  value={accumulatedData.festival}
-                  onChange={e => setAccumulatedData({...accumulatedData, festival: Number(e.target.value)})}
                   min={0}
                 />
                 <Input
@@ -493,9 +490,8 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                 value={formData.leaveType}
                 onChange={e => setFormData({...formData, leaveType: e.target.value})}
                 options={[
-                  { id: 'casual', value: 'Casual', label: 'भैपरी आउने बिदा (Casual Leave)' },
+                  { id: 'casual_festival', value: 'Casual & Festival', label: 'भैपरी आउने र पर्व बिदा (Casual & Festival)' },
                   { id: 'sick', value: 'Sick', label: 'बिरामी बिदा (Sick Leave)' },
-                  { id: 'festival', value: 'Festival', label: 'पर्व बिदा (Festival Leave)' },
                   { id: 'home', value: 'Home', label: 'घर बिदा (Home Leave)' },
                   { id: 'other', value: 'Other', label: 'अन्य (Other)' },
                 ]}
@@ -547,16 +543,12 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
              </h3>
              <div className="space-y-3">
                <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
-                 <span className="text-sm text-slate-600">भैपरी आउने बिदा</span>
-                 <span className="font-bold text-slate-800">{myBalance.casual} दिन</span>
+                 <span className="text-sm text-slate-600">भैपरी आउने र पर्व बिदा</span>
+                 <span className="font-bold text-slate-800">{(myBalance.casual || 0) + (myBalance.festival || 0)} दिन</span>
                </div>
                <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
                  <span className="text-sm text-slate-600">बिरामी बिदा</span>
                  <span className="font-bold text-slate-800">{myBalance.sick} दिन</span>
-               </div>
-               <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
-                 <span className="text-sm text-slate-600">पर्व बिदा</span>
-                 <span className="font-bold text-slate-800">{myBalance.festival} दिन</span>
                </div>
                <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100">
                  <span className="text-sm text-slate-600">घर बिदा</span>

@@ -210,9 +210,12 @@ const App: React.FC = () => {
                   const duration = calculateDuration(application.startDate, application.endDate);
                   const newBalance = { ...balance };
                   
-                  if (application.leaveType === 'Casual') newBalance.casual -= duration;
-                  else if (application.leaveType === 'Sick') newBalance.sick -= duration;
-                  else if (application.leaveType === 'Festival') newBalance.festival -= duration;
+                  if (application.leaveType === 'Casual & Festival') {
+                      const combinedBalance = (newBalance.casual || 0) + (newBalance.festival || 0);
+                      const remaining = combinedBalance - duration;
+                      newBalance.casual = Math.max(0, remaining);
+                      newBalance.festival = 0;
+                  } else if (application.leaveType === 'Sick') newBalance.sick -= duration;
                   else if (application.leaveType === 'Home') newBalance.home -= duration;
                   else if (application.leaveType === 'Other') newBalance.other -= duration;
 
