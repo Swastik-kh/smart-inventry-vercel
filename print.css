@@ -11,4 +11,10 @@
     top: 0;
     width: 100%;
   }
+  /* This targets the div with the scrollbar */
+  #printable-leave-form > div {
+      overflow: visible !important;
+      max-height: none !important;
+      height: auto !important;
+  }
 }

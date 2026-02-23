@@ -571,6 +571,64 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
           </div>
         </div>
       )}
+
+      {activeTab === 'apply' && !isAdmin && (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <List size={20} className="text-primary-600"/>
+            My Leave Applications
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                <tr>
+                  <th className="p-3">मिति</th>
+                  <th className="p-3">बिदाको प्रकार</th>
+                  <th className="p-3">अवधि</th>
+                  <th className="p-3">अवस्था</th>
+                  <th className="p-3 text-right">कार्य</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {leaveApplications.filter(app => app.userId === currentUser?.id).length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-slate-400 italic">कुनै आवेदन फेला परेन।</td>
+                  </tr>
+                ) : (
+                  leaveApplications.filter(app => app.userId === currentUser?.id).map(app => (
+                    <tr key={app.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-3">{app.appliedDate}</td>
+                      <td className="p-3">
+                        <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium border border-blue-100">
+                          {app.leaveType}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <div className="text-slate-700">{app.startDate} देखि</div>
+                        <div className="text-slate-700">{app.endDate} सम्म</div>
+                      </td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${app.status === 'Approved' ? 'bg-green-100 text-green-700' : app.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
+                          {app.status === 'Approved' ? 'स्वीकृत' : app.status === 'Rejected' ? 'अस्वीकृत' : 'पेन्डिङ'}
+                        </span>
+                      </td>
+                      <td className="p-3 text-right">
+                        <button 
+                          onClick={() => setViewApplication(app)}
+                          className="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                          title="हेर्नुहोस् (View)"
+                        >
+                          <Eye size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
