@@ -87,6 +87,21 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
     e.preventDefault();
     if (!currentUser) return;
 
+    // Helper to calculate duration
+    const calculateDuration = (start: string, end: string) => {
+      try {
+          const d1 = new Date(new NepaliDate(start).toJsDate());
+          const d2 = new Date(new NepaliDate(end).toJsDate());
+          const diffTime = Math.abs(d2.getTime() - d1.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+          return diffDays;
+      } catch (e) {
+          return 0;
+      }
+    };
+
+    const days = calculateDuration(formData.startDate, formData.endDate);
+
     const newApplication: LeaveApplication = {
       id: Date.now().toString(),
       userId: currentUser.id,
@@ -95,9 +110,11 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
       leaveType: formData.leaveType,
       startDate: formData.startDate,
       endDate: formData.endDate,
+      days: days,
       reason: formData.reason,
       status: 'Pending',
-      appliedDate: new NepaliDate().format('YYYY-MM-DD')
+      appliedDate: new NepaliDate().format('YYYY-MM-DD'),
+      fiscalYear: currentFiscalYear
     };
 
     onAddLeaveApplication(newApplication);
@@ -120,6 +137,13 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
 
     const user = users.find(u => u.id === selectedUserForAccumulated);
     const employeeName = user ? user.fullName : 'Manual Entry';
+
+    // Check if Home Leave exceeds 180 days
+    if ((accumulatedData.home ?? 0) > 180) {
+      alert('घर बिदा १८० दिन भन्दा बढी सञ्चित गर्न मिल्दैन (Home leave cannot exceed 180 days)');
+      setIsSaving(false);
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -553,7 +577,43 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                              {app.status === 'Pending' && (
                                 <div className="flex justify-end gap-2">
                                    <button 
-                                      onClick={() => onUpdateLeaveStatus(app.id, 'Approved')}
+                                      onClick={() => {
+                                        // Check balance before approving
+                                        const balance = leaveBalances.find(b => b.userId === app.userId);
+                                        const requestedDays = app.days;
+                                        let hasBalance = true;
+                                        let balanceType = '';
+
+                                        if (app.leaveType === 'Casual & Festival') {
+                                          // For Casual/Festival, we check against the calculated balance (6 - taken)
+                                          // But here we need to recalculate it or assume admin knows what they are doing?
+                                          // Or we can use the getAccumulatedLeaveForPrint logic.
+                                          const currentBalance = getAccumulatedLeaveForPrint(app.userId);
+                                          const casualFestivalBalance = (currentBalance?.casual || 0) + (currentBalance?.festival || 0);
+                                          if (casualFestivalBalance < requestedDays) {
+                                            hasBalance = false;
+                                            balanceType = 'भैपरी र पर्व';
+                                          }
+                                        } else if (app.leaveType === 'Home') {
+                                          if ((balance?.home || 0) < requestedDays) {
+                                            hasBalance = false;
+                                            balanceType = 'घर';
+                                          }
+                                        } else if (app.leaveType === 'Sick') {
+                                          if ((balance?.sick || 0) < requestedDays) {
+                                            hasBalance = false;
+                                            balanceType = 'बिरामी';
+                                          }
+                                        }
+                                        // Add checks for other leave types if needed
+
+                                        if (!hasBalance) {
+                                          alert(`${balanceType} बिदा मौज्दात अपर्याप्त छ (Insufficient ${balanceType} Leave Balance)`);
+                                          return;
+                                        }
+
+                                        onUpdateLeaveStatus(app.id, 'Approved');
+                                      }}
                                       className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200"
                                       title="Approve"
                                    >

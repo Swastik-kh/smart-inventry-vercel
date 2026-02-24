@@ -72,6 +72,7 @@ export interface LeaveApplication {
   leaveType: string;
   startDate: string;
   endDate: string;
+  days: number;
   reason: string;
   status: LeaveStatus;
   appliedDate: string;
@@ -79,6 +80,7 @@ export interface LeaveApplication {
   approvedBy?: string;
   approverDesignation?: string;
   approvalDate?: string;
+  fiscalYear?: string;
 }
 
 export type ServiceType = 'Permanent' | 'Temporary' | 'Contract';

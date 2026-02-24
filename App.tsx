@@ -271,13 +271,35 @@ const App: React.FC = () => {
                   const newBalance = { ...balance };
                   
                   if (application.leaveType === 'Casual & Festival') {
-                      const combinedBalance = (newBalance.casual || 0) + (newBalance.festival || 0);
-                      const remaining = combinedBalance - duration;
-                      newBalance.casual = Math.max(0, remaining);
-                      newBalance.festival = 0;
-                  } else if (application.leaveType === 'Sick') newBalance.sick -= duration;
-                  else if (application.leaveType === 'Home') newBalance.home -= duration;
-                  else if (application.leaveType === 'Other') newBalance.other -= duration;
+                      // Deduct from Casual first, then Festival
+                      let remainingToDeduct = duration;
+                      
+                      if (newBalance.casual >= remainingToDeduct) {
+                          newBalance.casual -= remainingToDeduct;
+                          remainingToDeduct = 0;
+                      } else {
+                          remainingToDeduct -= newBalance.casual;
+                          newBalance.casual = 0;
+                      }
+
+                      if (remainingToDeduct > 0) {
+                          newBalance.festival = Math.max(0, (newBalance.festival || 0) - remainingToDeduct);
+                      }
+                  } else if (application.leaveType === 'Sick') {
+                      newBalance.sick = (newBalance.sick || 0) - duration;
+                  } else if (application.leaveType === 'Home') {
+                      newBalance.home = (newBalance.home || 0) - duration;
+                  } else if (application.leaveType === 'Maternity') {
+                      newBalance.maternity = (newBalance.maternity || 0) - duration;
+                  } else if (application.leaveType === 'Kiriya') {
+                      newBalance.kiriya = (newBalance.kiriya || 0) - duration;
+                  } else if (application.leaveType === 'Study') {
+                      newBalance.study = (newBalance.study || 0) - duration;
+                  } else if (application.leaveType === 'Extraordinary') {
+                      newBalance.extraordinary = (newBalance.extraordinary || 0) - duration;
+                  } else if (application.leaveType === 'Other') {
+                      newBalance.other = (newBalance.other || 0) - duration;
+                  }
 
                   await set(getOrgRef(`leaveBalances/${balance.id}`), newBalance);
               }
