@@ -323,7 +323,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   const hasAccess = useCallback((menuId: string) => {
     if (!currentUser) return false;
     if (currentUser.role === 'SUPER_ADMIN') return true;
-    return currentUser.allowedMenus?.includes(menuId) || menuId === 'dashboard' || menuId === 'change_password';
+    return currentUser.allowedMenus?.includes(menuId) || menuId === 'dashboard' || menuId === 'change_password' || menuId === 'bida_abedan';
   }, [currentUser]);
 
   interface MenuItem { id: string; label: string; icon: React.ReactNode; subItems?: MenuItem[]; badgeCount?: number; }

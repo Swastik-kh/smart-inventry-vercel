@@ -328,7 +328,218 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
         </div>
       )}
 
-      {/* The rest of your component UI... */}
+      {activeTab === 'apply' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">बिदाको विवरण (Leave Details)</h3>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="कर्मचारीको नाम (Employee Name)"
+                    value={formData.employeeName}
+                    readOnly
+                    className="bg-slate-50"
+                    icon={<UserIcon size={16} />}
+                  />
+                  <Input
+                    label="पद (Designation)"
+                    value={formData.designation}
+                    readOnly
+                    className="bg-slate-50"
+                    icon={<ShieldCheck size={16} />}
+                  />
+                </div>
+
+                <Select
+                  label="बिदाको प्रकार (Leave Type)"
+                  value={formData.leaveType}
+                  onChange={(e) => setFormData({ ...formData, leaveType: e.target.value })}
+                  options={[
+                    { id: 'Casual & Festival', value: 'Casual & Festival', label: 'भैपरी आउने र पर्व बिदा (Casual & Festival)' },
+                    { id: 'Sick', value: 'Sick', label: 'बिरामी बिदा (Sick)' },
+                    { id: 'Home', value: 'Home', label: 'घर बिदा (Home)' },
+                    { id: 'Maternity', value: 'Maternity', label: 'प्रसुति बिदा (Maternity)' },
+                    { id: 'Kiriya', value: 'Kiriya', label: 'किरिया बिदा (Kiriya)' },
+                    { id: 'Study', value: 'Study', label: 'अध्ययन बिदा (Study)' },
+                    { id: 'Extraordinary', value: 'Extraordinary', label: 'असाधारण बिदा (Extraordinary)' },
+                    { id: 'Other', value: 'Other', label: 'अन्य (Other)' }
+                  ]}
+                  required
+                  icon={<List size={16} />}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <NepaliDatePicker
+                    label="देखि (Start Date)"
+                    value={formData.startDate}
+                    onChange={(date) => setFormData({ ...formData, startDate: date })}
+                    required
+                  />
+                  <NepaliDatePicker
+                    label="सम्म (End Date)"
+                    value={formData.endDate}
+                    onChange={(date) => setFormData({ ...formData, endDate: date })}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">कारण (Reason)</label>
+                  <textarea
+                    value={formData.reason}
+                    onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                    className="w-full p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[100px] text-sm"
+                    placeholder="बिदा बस्नुको कारण उल्लेख गर्नुहोस्..."
+                    required
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="w-full bg-primary-600 text-white py-3 rounded-xl font-bold hover:bg-primary-700 transition-all shadow-lg shadow-primary-200 flex items-center justify-center gap-2"
+                  >
+                    <Save size={18} />
+                    बिदा आवेदन पेश गर्नुहोस् (Submit Application)
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center gap-2">
+                  <BookOpen size={18} className="text-blue-600"/>
+                  मेरो बिदा मौज्दात (My Balance)
+                </h3>
+                <div className="space-y-3">
+                   <div className="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
+                      <span className="text-sm font-medium text-slate-600">भैपरी र पर्व</span>
+                      <span className="font-bold text-slate-800">{(myBalance.casual || 0) + (myBalance.festival || 0)} दिन</span>
+                   </div>
+                   <div className="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
+                      <span className="text-sm font-medium text-slate-600">बिरामी</span>
+                      <span className="font-bold text-slate-800">{myBalance.sick || 0} दिन</span>
+                   </div>
+                   <div className="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
+                      <span className="text-sm font-medium text-slate-600">घर बिदा</span>
+                      <span className="font-bold text-slate-800">{myBalance.home || 0} दिन</span>
+                   </div>
+                   <div className="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
+                      <span className="text-sm font-medium text-slate-600">अन्य</span>
+                      <span className="font-bold text-slate-800">{myBalance.other || 0} दिन</span>
+                   </div>
+                </div>
+             </div>
+
+             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">हालैका आवेदनहरू</h3>
+                <div className="space-y-3">
+                  {leaveApplications.filter(app => app.userId === currentUser?.id).slice(0, 5).map(app => (
+                    <div key={app.id} className="p-3 border border-slate-100 rounded-xl bg-slate-50">
+                       <div className="flex justify-between items-start mb-1">
+                          <span className="text-xs font-bold text-slate-700">{app.leaveType}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                            app.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                            app.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>{app.status}</span>
+                       </div>
+                       <p className="text-[10px] text-slate-500">{app.startDate} देखि {app.endDate}</p>
+                    </div>
+                  ))}
+                  {leaveApplications.filter(app => app.userId === currentUser?.id).length === 0 && (
+                    <p className="text-xs text-slate-400 italic text-center py-4">कुनै आवेदन छैन</p>
+                  )}
+                </div>
+             </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+           <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
+              <h3 className="font-bold text-slate-700">बिदा माग आवेदनहरू (Leave Requests)</h3>
+              <span className="bg-primary-100 text-primary-700 px-2 py-1 rounded-lg text-xs font-bold">
+                {pendingApplications.length} Pending
+              </span>
+           </div>
+           <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                 <thead className="bg-slate-50 text-slate-600 font-bold border-b">
+                    <tr>
+                       <th className="p-4">कर्मचारी</th>
+                       <th className="p-4">बिदाको प्रकार</th>
+                       <th className="p-4">अवधि</th>
+                       <th className="p-4">कारण</th>
+                       <th className="p-4">अवस्था</th>
+                       <th className="p-4 text-right">कार्य</th>
+                    </tr>
+                 </thead>
+                 <tbody className="divide-y divide-slate-100">
+                    {leaveApplications.map(app => (
+                       <tr key={app.id} className="hover:bg-slate-50">
+                          <td className="p-4">
+                             <p className="font-bold text-slate-800">{app.employeeName}</p>
+                             <p className="text-xs text-slate-500">{app.designation}</p>
+                          </td>
+                          <td className="p-4">{app.leaveType}</td>
+                          <td className="p-4">
+                             <p className="text-xs font-bold">{app.startDate} - {app.endDate}</p>
+                             <p className="text-[10px] text-slate-400">Applied: {app.appliedDate}</p>
+                          </td>
+                          <td className="p-4 max-w-xs truncate" title={app.reason}>{app.reason}</td>
+                          <td className="p-4">
+                             <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                app.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                                app.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                                'bg-amber-100 text-amber-700'
+                             }`}>
+                                {app.status}
+                             </span>
+                          </td>
+                          <td className="p-4 text-right">
+                             {app.status === 'Pending' && (
+                                <div className="flex justify-end gap-2">
+                                   <button 
+                                      onClick={() => onUpdateLeaveStatus(app.id, 'Approved')}
+                                      className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200"
+                                      title="Approve"
+                                   >
+                                      <CheckCircle2 size={16} />
+                                   </button>
+                                   <button 
+                                      onClick={() => {
+                                         const reason = prompt('Rejection Reason:');
+                                         if (reason) onUpdateLeaveStatus(app.id, 'Rejected', reason);
+                                      }}
+                                      className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                                      title="Reject"
+                                   >
+                                      <XCircle size={16} />
+                                   </button>
+                                </div>
+                             )}
+                             {isAdmin && (
+                                <button 
+                                  onClick={() => onDeleteLeaveApplication(app.id)}
+                                  className="ml-2 p-2 text-slate-400 hover:text-red-500"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                             )}
+                          </td>
+                       </tr>
+                    ))}
+                    {leaveApplications.length === 0 && (
+                       <tr><td colSpan={6} className="p-8 text-center text-slate-400 italic">कुनै आवेदन छैन।</td></tr>
+                    )}
+                 </tbody>
+              </table>
+           </div>
+        </div>
+      )}
     </div>
   );
 };
