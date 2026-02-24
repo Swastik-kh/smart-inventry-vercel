@@ -324,6 +324,7 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                   <Input
                     label="भैपरी आउने र पर्व बिदा"
                     type="number"
+                    step="any"
                     value={accumulatedData.casual ?? 0}
                     onChange={e => setAccumulatedData({ ...accumulatedData, casual: Number(e.target.value) })}
                     min={0}
@@ -331,6 +332,7 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                   <Input
                     label="बिरामी बिदा (Sick)"
                     type="number"
+                    step="any"
                     value={accumulatedData.sick ?? 0}
                     onChange={e => setAccumulatedData({...accumulatedData, sick: Number(e.target.value)})}
                     min={0}
@@ -338,6 +340,7 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                   <Input
                     label="घर बिदा (Home)"
                     type="number"
+                    step="any"
                     value={accumulatedData.home ?? 0}
                     onChange={e => setAccumulatedData({...accumulatedData, home: Number(e.target.value)})}
                     min={0}
@@ -345,6 +348,7 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                    <Input
                     label="प्रसुति बिदा (Maternity)"
                     type="number"
+                    step="any"
                     value={accumulatedData.maternity ?? 0}
                     onChange={e => setAccumulatedData({...accumulatedData, maternity: Number(e.target.value)})}
                     min={0}
@@ -352,6 +356,7 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                   <Input
                     label="किरिया बिदा (Kiriya)"
                     type="number"
+                    step="any"
                     value={accumulatedData.kiriya ?? 0}
                     onChange={e => setAccumulatedData({...accumulatedData, kiriya: Number(e.target.value)})}
                     min={0}
@@ -359,6 +364,7 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                   <Input
                     label="अध्ययन बिदा (Study)"
                     type="number"
+                    step="any"
                     value={accumulatedData.study ?? 0}
                     onChange={e => setAccumulatedData({...accumulatedData, study: Number(e.target.value)})}
                     min={0}
@@ -366,6 +372,7 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                   <Input
                     label="असाधारण बिदा (Extraordinary)"
                     type="number"
+                    step="any"
                     value={accumulatedData.extraordinary ?? 0}
                     onChange={e => setAccumulatedData({...accumulatedData, extraordinary: Number(e.target.value)})}
                     min={0}
@@ -373,6 +380,7 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                    <Input
                     label="अन्य (Other)"
                     type="number"
+                    step="any"
                     value={accumulatedData.other ?? 0}
                     onChange={e => setAccumulatedData({...accumulatedData, other: Number(e.target.value)})}
                     min={0}
