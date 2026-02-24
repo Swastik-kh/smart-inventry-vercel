@@ -99,6 +99,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   }, [currentUser.role]);
 
   const [formData, setFormData] = useState<{
+    id: string;
     username: string;
     password: string;
     fullName: string;
@@ -108,6 +109,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     role: UserRole;
     allowedMenus: string[];
   }>({
+    id: '',
     username: '',
     password: '',
     fullName: '',
@@ -134,7 +136,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
 
   const resetForm = () => {
       setFormData({ 
-        username: '', password: '', fullName: '', designation: '', phoneNumber: '',
+        id: '', username: '', password: '', fullName: '', designation: '', phoneNumber: '',
         organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '',
         role: (rolesForDropdown.length > 0 ? (rolesForDropdown[0].value as UserRole) : 'STAFF'),
         allowedMenus: ['dashboard']
@@ -146,6 +148,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   const handleEditClick = (user: User) => {
       setEditingId(user.id);
       setFormData({
+          id: user.id,
           username: user.username, password: user.password, fullName: user.fullName,
           designation: user.designation, phoneNumber: user.phoneNumber,
           organizationName: user.organizationName,
@@ -229,9 +232,19 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     setIsSaving(true);
     setLocalError(null);
 
+    const newId = formData.id.trim();
+
+    // Validation: Check for duplicate ID (exclude current user if editing)
+    const idExists = users.some(u => u.id === newId && u.id !== editingId);
+    if (idExists) {
+        setLocalError("यो कर्मचारी संकेत नं. (ID) पहिले नै प्रयोगमा छ। कृपया अर्को ID प्रयोग गर्नुहोस्।");
+        setIsSaving(false);
+        return;
+    }
+
     const finalMenus = Array.from(new Set([...formData.allowedMenus, 'dashboard']));
     const userToSave: User = {
-        id: editingId || `user-${Date.now()}`,
+        id: newId,
         username: formData.username.trim().toLowerCase(), 
         password: formData.password.trim(),
         role: formData.role, 
@@ -243,8 +256,20 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     };
 
     try {
-        if (editingId) await onUpdateUser(userToSave);
-        else await onAddUser(userToSave);
+        if (editingId && editingId !== newId) {
+            // ID changed: Create new user with new ID, then delete old user
+            if (window.confirm("तपाईंले कर्मचारी संकेत नं. (ID) परिवर्तन गर्दै हुनुहुन्छ। यसले पुरानो ID को रेकर्ड हटाएर नयाँ ID मा सार्नेछ। के तपाईं निश्चित हुनुहुन्छ?")) {
+                await onAddUser(userToSave); // Create new
+                await onDeleteUser(editingId); // Delete old
+            } else {
+                setIsSaving(false);
+                return;
+            }
+        } else {
+            // ID unchanged or New User
+            if (editingId) await onUpdateUser(userToSave);
+            else await onAddUser(userToSave);
+        }
         
         setShowForm(false);
         resetForm();
@@ -301,7 +326,16 @@ export const UserManagement: React.FC<UserManagementProps> = ({
           )}
 
           <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-x-6 gap-y-4">
-            <Input label="पूरा नाम" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} required icon={<IdCard size={16} />} disabled={isSaving} />
+            <Input 
+                label="कर्मचारी संकेत नं. (User ID)" 
+                value={formData.id} 
+                onChange={e => setFormData({...formData, id: e.target.value})} 
+                required 
+                icon={<IdCard size={16} />} 
+                disabled={isSaving} 
+                placeholder="Unique Employee ID"
+            />
+            <Input label="पूरा नाम" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} required icon={<UserIcon size={16} />} disabled={isSaving} />
             <Input label="पद" value={formData.designation} onChange={e => setFormData({...formData, designation: e.target.value})} required icon={<Briefcase size={16} />} disabled={isSaving} />
             <Input label="फोन नं." value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} required icon={<Phone size={16} />} disabled={isSaving} />
             <Input 
