@@ -108,6 +108,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     organizationName: string;
     role: UserRole;
     allowedMenus: string[];
+    serviceType: 'Permanent' | 'Temporary' | 'Contract';
   }>({
     id: '',
     username: '',
@@ -117,7 +118,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     phoneNumber: '',
     organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '',
     role: (rolesForDropdown.length > 0 ? (rolesForDropdown[0].value as UserRole) : 'STAFF'),
-    allowedMenus: ['dashboard']
+    allowedMenus: ['dashboard'],
+    serviceType: 'Permanent'
   });
 
   const canManageUsers = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN';
@@ -152,7 +154,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
         username: '', password: '', fullName: '', designation: '', phoneNumber: '',
         organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '',
         role: (rolesForDropdown.length > 0 ? (rolesForDropdown[0].value as UserRole) : 'STAFF'),
-        allowedMenus: ['dashboard']
+        allowedMenus: ['dashboard'],
+        serviceType: 'Permanent'
       });
       setEditingId(null);
       setLocalError(null);
@@ -166,7 +169,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
           designation: user.designation, phoneNumber: user.phoneNumber,
           organizationName: user.organizationName,
           role: user.role,
-          allowedMenus: user.allowedMenus || ['dashboard']
+          allowedMenus: user.allowedMenus || ['dashboard'],
+          serviceType: user.serviceType || 'Permanent'
       });
       setShowForm(true);
   };
@@ -265,7 +269,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
         designation: formData.designation.trim(),
         phoneNumber: formData.phoneNumber.trim(), 
         organizationName: formData.organizationName.trim(),
-        allowedMenus: finalMenus
+        allowedMenus: finalMenus,
+        serviceType: formData.serviceType
     };
 
     try {
@@ -349,6 +354,19 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 placeholder="Unique Employee ID"
             />
             <Input label="पूरा नाम" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} required icon={<UserIcon size={16} />} disabled={isSaving} />
+            <Select 
+                label="सेवाको प्रकार" 
+                value={formData.serviceType} 
+                onChange={e => setFormData({...formData, serviceType: e.target.value as any})} 
+                options={[
+                    { id: 'Permanent', value: 'Permanent', label: 'स्थायी (Permanent)' },
+                    { id: 'Temporary', value: 'Temporary', label: 'अस्थायी (Temporary)' },
+                    { id: 'Contract', value: 'Contract', label: 'करार (Contract)' }
+                ]} 
+                required 
+                icon={<Briefcase size={16} />} 
+                disabled={isSaving}
+            />
             <Input label="पद" value={formData.designation} onChange={e => setFormData({...formData, designation: e.target.value})} required icon={<Briefcase size={16} />} disabled={isSaving} />
             <Input label="फोन नं." value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} required icon={<Phone size={16} />} disabled={isSaving} />
             <Input 

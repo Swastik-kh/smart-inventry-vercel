@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { BharmanAdeshEntry, User, OrganizationSettings } from '../types/coreTypes';
+import { BharmanAdeshEntry, User, OrganizationSettings, LeaveBalance } from '../types/coreTypes';
 import { Plus, Printer, Save, X, Eye, Trash2 } from 'lucide-react';
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
@@ -15,6 +15,7 @@ interface BharmanAdeshProps {
   onDeleteEntry: (id: string) => void;
   users: User[];
   generalSettings: OrganizationSettings;
+  leaveBalances: LeaveBalance[];
 }
 
 const TRANSPORT_MEANS = [
@@ -33,7 +34,8 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
   onSaveEntry,
   onDeleteEntry,
   users,
-  generalSettings
+  generalSettings,
+  leaveBalances
 }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<BharmanAdeshEntry | null>(null);
@@ -229,10 +231,18 @@ export const BharmanAdesh: React.FC<BharmanAdeshProps> = ({
                   onChange={e => {
                     const selectedName = e.target.value;
                     const selectedUser = users.find(u => u.fullName === selectedName);
+                    
+                    // Find leave balance record for the selected user
+                    const userBalance = selectedUser ? leaveBalances.find(b => b.userId === selectedUser.id) : undefined;
+                    
+                    // Auto-fill ksNo only if serviceType is 'Permanent' in leave balance record
+                    const autoKsNo = (userBalance && userBalance.serviceType === 'Permanent') ? userBalance.userId : '';
+
                     setFormData({ 
                       ...formData, 
                       employeeName: selectedName,
-                      designation: selectedUser?.designation || ''
+                      designation: selectedUser?.designation || '',
+                      ksNo: autoKsNo
                     });
                   }}
                   className="w-full p-2.5 rounded-lg border border-slate-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition-all"

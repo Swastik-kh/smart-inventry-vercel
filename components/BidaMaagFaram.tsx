@@ -1,5 +1,5 @@
 import React from 'react';
-import { LeaveApplication, User } from '../types/coreTypes';
+import { LeaveApplication, User, OrganizationSettings } from '../types/coreTypes';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -12,25 +12,32 @@ interface BidaMaagFaramProps {
     festival: number;
     home: number;
     other: number;
+    maternity?: number;
+    kiriya?: number;
+    study?: number;
+    extraordinary?: number;
   };
   organizationName?: string;
+  generalSettings?: OrganizationSettings;
 }
 
 export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({ 
   application, 
   currentUser, 
-  accumulatedLeave = { casual: 6, sick: 12, festival: 5, home: 30, other: 0 },
-  organizationName = 'नेपाल सरकार'
+  accumulatedLeave = { casual: 6, sick: 12, festival: 6, home: 30, other: 0, maternity: 0, kiriya: 0, study: 0, extraordinary: 0 },
+  organizationName = 'नेपाल सरकार',
+  generalSettings
 }) => {
   
   const leaveTypes = [
     { id: 'casual_festival', label: 'भैपरी आउने र पर्व बिदा', key: 'casual_festival' },
     { id: 'home', label: 'घर बिदा', key: 'home' },
     { id: 'sick', label: 'बिरामी बिदा', key: 'sick' },
-    { id: 'maternity', label: 'प्रसुति बिदा', key: 'other' },
-    { id: 'mourning', label: 'किरिया बिदा', key: 'other' },
-    { id: 'study', label: 'अध्ययन बिदा', key: 'other' },
-    { id: 'extraordinary', label: 'असाधारण बिदा', key: 'other' },
+    { id: 'maternity', label: 'प्रसुति बिदा', key: 'maternity' },
+    { id: 'mourning', label: 'किरिया बिदा', key: 'kiriya' },
+    { id: 'study', label: 'अध्ययन बिदा', key: 'study' },
+    { id: 'extraordinary', label: 'असाधारण बिदा', key: 'extraordinary' },
+    { id: 'other', label: 'अन्य बिदा', key: 'other' },
   ];
 
   // Helper to calculate duration
@@ -48,15 +55,43 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
 
   const duration = calculateDuration(application.startDate, application.endDate);
 
+  // Helper to calculate reporting date (next day after end date)
+  const getReportingDate = (endDate: string) => {
+    try {
+      const end = new NepaliDate(endDate);
+      // Add 1 day
+      const nextDay = new Date(end.toJsDate().getTime() + 24 * 60 * 60 * 1000);
+      return new NepaliDate(nextDay).format('YYYY-MM-DD');
+    } catch (e) {
+      return '-';
+    }
+  };
+
+  const reportingDate = getReportingDate(application.endDate);
+
+  // Helper to map leave type to Nepali
+  const getNepaliLeaveType = (type: string) => {
+    if (type === 'Casual & Festival') return 'भैपरी आउने र पर्व बिदा';
+    if (type === 'Sick') return 'बिरामी बिदा';
+    if (type === 'Home') return 'घर बिदा';
+    if (type === 'Maternity') return 'प्रसुति बिदा';
+    if (type === 'Kiriya') return 'किरिया बिदा';
+    if (type === 'Study') return 'अध्ययन बिदा';
+    if (type === 'Extraordinary') return 'असाधारण बिदा';
+    if (type === 'Other') return 'अन्य बिदा';
+    return type;
+  };
+
   // Helper to check if a leave type matches the application
   const isSelected = (label: string) => {
     if (application.leaveType === 'Casual & Festival' && label.includes('भैपरी')) return true;
     if (application.leaveType === 'Sick' && label.includes('बिरामी')) return true;
     if (application.leaveType === 'Home' && label.includes('घर')) return true;
-    if (application.leaveType === 'Other' && 
-        !label.includes('भैपरी') && 
-        !label.includes('बिरामी') && 
-        !label.includes('घर')) return true; // Fallback for others
+    if (application.leaveType === 'Maternity' && label.includes('प्रसुति')) return true;
+    if (application.leaveType === 'Kiriya' && label.includes('किरिया')) return true;
+    if (application.leaveType === 'Study' && label.includes('अध्ययन')) return true;
+    if (application.leaveType === 'Extraordinary' && label.includes('असाधारण')) return true;
+    if (application.leaveType === 'Other' && label.includes('अन्य')) return true;
     return false;
   };
 
@@ -76,7 +111,7 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
           </div>
           <div className="p-2 flex">
             <span className="font-bold w-24">मन्त्रालय/ विभाग:</span>
-            <span>{organizationName}</span>
+            <span>{generalSettings?.orgNameNepali || organizationName}</span>
           </div>
         </div>
         <div className="grid grid-cols-2 border-b border-black">
@@ -86,7 +121,7 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
           </div>
           <div className="p-2 flex">
             <span className="font-bold w-24">कार्यालय:</span>
-            <span>{organizationName}</span>
+            <span>{generalSettings?.subTitleNepali3 || organizationName}</span>
           </div>
         </div>
 
@@ -235,7 +270,7 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
       <div className="border-2 border-black mt-6 p-2">
         <div className="text-center font-bold border-b border-black pb-1 mb-2">
           कर्मचारीको जानकारीको निमित्त<br/>
-          नेपाल सरकार
+          {generalSettings?.orgNameNepali || 'नेपाल सरकार'}
         </div>
         <div className="text-center border-b border-dotted border-black pb-2 mb-2">
           ...................................................................................................<br/>
@@ -244,10 +279,10 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
         
         <div className="flex justify-between mb-2">
           <span>प.स.</span>
-          <span>मिति:</span>
+          <span>मिति: {application.status === 'Approved' ? application.approvalDate : ''}</span>
         </div>
         <div className="mb-2">
-          श्री ...................................................................................................
+          श्री {application.employeeName}
         </div>
 
         <div className="border border-black">
@@ -258,10 +293,10 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
             <div className="p-1">कार्यालयमा हाजिर हुने मिति</div>
           </div>
           <div className="grid grid-cols-4 text-center text-xs">
-            <div className="p-1 border-r border-black">{application.leaveType}</div>
+            <div className="p-1 border-r border-black">{getNepaliLeaveType(application.leaveType)}</div>
             <div className="p-1 border-r border-black">{duration} दिन</div>
             <div className="p-1 border-r border-black">{application.startDate}</div>
-            <div className="p-1">{application.endDate}</div>
+            <div className="p-1">{reportingDate}</div>
           </div>
         </div>
 

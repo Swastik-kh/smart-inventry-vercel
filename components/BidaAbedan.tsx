@@ -4,7 +4,7 @@ import { useReactToPrint } from 'react-to-print';
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
 import { Select } from './Select';
-import { User, LeaveApplication, LeaveStatus, LeaveBalance, ServiceType } from '../types/coreTypes';
+import { User, LeaveApplication, LeaveStatus, LeaveBalance, ServiceType, OrganizationSettings } from '../types/coreTypes';
 import { BidaMaagFaram } from './BidaMaagFaram';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
@@ -18,6 +18,8 @@ interface BidaAbedanProps {
   onDeleteLeaveApplication: (id: string) => void;
   leaveBalances: LeaveBalance[];
   onSaveLeaveBalance: (balance: LeaveBalance) => Promise<void>;
+  currentFiscalYear: string;
+  generalSettings: OrganizationSettings;
 }
 
 export const BidaAbedan: React.FC<BidaAbedanProps> = ({
@@ -28,7 +30,9 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
   onUpdateLeaveStatus,
   onDeleteLeaveApplication,
   leaveBalances,
-  onSaveLeaveBalance
+  onSaveLeaveBalance,
+  currentFiscalYear,
+  generalSettings
 }) => {
   const [activeTab, setActiveTab] = useState<'apply' | 'applications'>('apply');
   const [formData, setFormData] = useState({
@@ -149,19 +153,65 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'APPROVAL';
 
-  const myBalance = leaveBalances.find(b => b.userId === currentUser?.id) || {
+  // Calculate taken leaves for Casual and Festival
+  const takenCasual = leaveApplications
+    .filter(app => app.userId === currentUser?.id && app.leaveType === 'भैपरी' && app.status === 'Approved' && app.fiscalYear === currentFiscalYear)
+    .reduce((acc, app) => acc + app.days, 0);
+
+  const takenFestival = leaveApplications
+    .filter(app => app.userId === currentUser?.id && app.leaveType === 'पर्व' && app.status === 'Approved' && app.fiscalYear === currentFiscalYear)
+    .reduce((acc, app) => acc + app.days, 0);
+
+  // Standard entitlement for Casual and Festival is 6 days each
+  const casualBalance = 6 - takenCasual;
+  const festivalBalance = 6 - takenFestival;
+
+  const adminBalance = leaveBalances.find(b => b.userId === currentUser?.id) || {
     casual: 0, sick: 0, festival: 0, home: 0, other: 0, maternity: 0, kiriya: 0, study: 0, extraordinary: 0
+  };
+
+  const myBalance = {
+    ...adminBalance,
+    casual: casualBalance,
+    festival: festivalBalance
   };
 
   const userOptions = users.map(u => ({ id: u.id, value: u.id, label: `${u.fullName} (${u.designation})` }));
 
   const pendingApplications = leaveApplications.filter(app => app.status === 'Pending');
 
+  const [printApplication, setPrintApplication] = useState<LeaveApplication | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: 'Leave_Application',
+    documentTitle: 'Leave_Application_Form',
   });
+
+  const getAccumulatedLeaveForPrint = (userId: string) => {
+    const balance = leaveBalances.find(b => b.userId === userId);
+    if (!balance) return undefined;
+    
+    // Calculate taken leaves for Casual and Festival for this user
+    const takenCasual = leaveApplications
+      .filter(app => app.userId === userId && app.leaveType === 'भैपरी' && app.status === 'Approved' && app.fiscalYear === currentFiscalYear)
+      .reduce((acc, app) => acc + app.days, 0);
+
+    const takenFestival = leaveApplications
+      .filter(app => app.userId === userId && app.leaveType === 'पर्व' && app.status === 'Approved' && app.fiscalYear === currentFiscalYear)
+      .reduce((acc, app) => acc + app.days, 0);
+
+    return {
+      casual: 6 - takenCasual,
+      festival: 6 - takenFestival,
+      sick: balance.sick,
+      home: balance.home,
+      other: balance.other,
+      maternity: balance.maternity,
+      kiriya: balance.kiriya,
+      study: balance.study,
+      extraordinary: balance.extraordinary
+    };
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 relative">
@@ -521,7 +571,14 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                                    </button>
                                 </div>
                              )}
-                             {isAdmin && (
+                              <button 
+                                  onClick={() => setPrintApplication(app)}
+                                  className="ml-2 p-2 text-slate-400 hover:text-blue-500"
+                                  title="Print Form"
+                                >
+                                  <Printer size={16} />
+                                </button>
+                                {isAdmin && (
                                 <button 
                                   onClick={() => onDeleteLeaveApplication(app.id)}
                                   className="ml-2 p-2 text-slate-400 hover:text-red-500"
@@ -538,6 +595,40 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                  </tbody>
               </table>
            </div>
+        </div>
+      )}
+      {printApplication && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+            <div className="p-4 border-b flex justify-between items-center bg-slate-50 rounded-t-xl">
+              <h3 className="font-bold text-lg">बिदा माग फारम प्रिन्ट (Print Preview)</h3>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => handlePrint()}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                >
+                  <Printer size={18} /> Print
+                </button>
+                <button 
+                  onClick={() => setPrintApplication(null)}
+                  className="p-2 hover:bg-slate-200 rounded-full text-slate-500"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-auto p-8 bg-slate-100 flex justify-center">
+              <div ref={printRef} className="bg-white shadow-lg print:shadow-none print:w-full">
+                <BidaMaagFaram 
+                  application={printApplication} 
+                  currentUser={users.find(u => u.id === printApplication.userId) || currentUser}
+                  accumulatedLeave={getAccumulatedLeaveForPrint(printApplication.userId)}
+                  generalSettings={generalSettings}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

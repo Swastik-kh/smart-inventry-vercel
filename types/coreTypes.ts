@@ -33,6 +33,7 @@ export interface User {
   designation: string;
   phoneNumber: string;
   allowedMenus?: string[]; 
+  serviceType?: 'Permanent' | 'Temporary' | 'Contract';
 }
 
 export interface OrganizationSettings {
