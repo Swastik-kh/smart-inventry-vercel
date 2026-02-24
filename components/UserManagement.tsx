@@ -24,6 +24,14 @@ const PERMISSION_STRUCTURE = [
             { id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग (TB/Leprosy)' },
             { id: 'khop_sewa', label: 'खोप सेवा (Vaccination Service)' }, 
             { id: 'rabies', label: 'रेबिज़ खोप क्लिनिक (Rabies Vaccine)' },
+            { 
+                id: 'surakshit_matritwo', 
+                label: 'सुरक्षित मातृत्व सेवा (Safe Motherhood)',
+                children: [
+                    { id: 'garbhawoti_sewa', label: 'गर्भवती सेवा (Pregnancy Service)' },
+                    { id: 'prasuti_sewa', label: 'प्रसूति सेवा (Delivery Service)' },
+                ]
+            },
             { id: 'immunization_tracking', label: 'खोप अनुगमन (Immunization Tracking)' }
         ]
     },

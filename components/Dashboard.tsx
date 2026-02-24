@@ -6,7 +6,7 @@ import {
   ClipboardList, FileSpreadsheet, FilePlus, ShoppingCart, FileOutput, 
   BookOpen, Book, Archive, RotateCcw, Wrench, Scroll, BarChart3,
   Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, AlertTriangle, Calculator, Trash2, TrendingUp, AlertOctagon, Timer, Printer, Baby, Flame, CalendarClock, List,
-  Eye, ShieldAlert, ChevronLeft, Send, MapPin, Search
+  Eye, ShieldAlert, ChevronLeft, Send, MapPin, Search, HeartHandshake
 } from 'lucide-react';
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
@@ -44,6 +44,9 @@ import { ChalaniForm } from './ChalaniForm';
 import { BharmanAdesh } from './BharmanAdesh';
 import { PrintOptionsModal } from './PrintOptionsModal';
 import { OnLeaveToday } from './OnLeaveToday';
+import { SafeMotherhoodService } from './SafeMotherhoodService';
+import { GarbhawotiSewa } from './GarbhawotiSewa';
+import { PrasutiSewa } from './PrasutiSewa';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -350,6 +353,15 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         { id: 'tb_leprosy', label: 'क्षयरोग/कुष्ठरोग', icon: <Activity size={16} /> },  
         { id: 'khop_sewa', label: 'खोप सेवा', icon: <Baby size={16} /> }, 
         { id: 'rabies', label: 'रेबिज़ खोप क्लिनिक', icon: <Syringe size={16} /> }, 
+        { 
+          id: 'surakshit_matritwo', 
+          label: 'सुरक्षित मातृत्व सेवा', 
+          icon: <Baby size={16} />,
+          subItems: [
+            { id: 'garbhawoti_sewa', label: 'गर्भवती सेवा', icon: <HeartHandshake size={16} /> },
+            { id: 'prasuti_sewa', label: 'प्रसूति सेवा', icon: <Baby size={16} /> },
+          ]
+        },
         { id: 'immunization_tracking', label: 'खोप अनुगमन', icon: <Baby size={16} /> } 
       ] 
     },
@@ -857,6 +869,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         currentFiscalYear={currentFiscalYear}
         generalSettings={generalSettings}
       />;
+      case 'surakshit_matritwo': return <SafeMotherhoodService />;
+      case 'garbhawoti_sewa': return <GarbhawotiSewa />;
+      case 'prasuti_sewa': return <PrasutiSewa />;
       case 'log_book': return <LogBook currentUser={currentUser} currentFiscalYear={currentFiscalYear} inventoryItems={inventoryItems} logBookEntries={logBookEntries} onAddLogEntry={onSaveLogBookEntry} />;
       case 'report_inventory_monthly': return <InventoryMonthlyReport 
                                               currentFiscalYear={currentFiscalYear} 
