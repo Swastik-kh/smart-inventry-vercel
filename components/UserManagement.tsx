@@ -134,9 +134,22 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       });
   }, [users, currentUser]);
 
+  const generateUniqueId = () => {
+      const prefix = 'EMP';
+      const randomPart = Math.floor(1000 + Math.random() * 9000); // 4 digit random
+      let newId = `${prefix}-${randomPart}`;
+      // Ensure uniqueness
+      while (users.some(u => u.id === newId)) {
+          const newRandom = Math.floor(1000 + Math.random() * 9000);
+          newId = `${prefix}-${newRandom}`;
+      }
+      return newId;
+  };
+
   const resetForm = () => {
       setFormData({ 
-        id: '', username: '', password: '', fullName: '', designation: '', phoneNumber: '',
+        id: generateUniqueId(), 
+        username: '', password: '', fullName: '', designation: '', phoneNumber: '',
         organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '',
         role: (rolesForDropdown.length > 0 ? (rolesForDropdown[0].value as UserRole) : 'STAFF'),
         allowedMenus: ['dashboard']
@@ -289,7 +302,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
           <p className="text-sm text-slate-500">पहुँच अधिकार र प्रयोगकर्ता सेटअप</p>
         </div>
         {!showForm && (
-          <button onClick={() => setShowForm(true)} className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 shadow-sm flex items-center gap-2 transition-all active:scale-95"><Plus size={18} />नयाँ प्रयोगकर्ता</button>
+          <button onClick={() => { resetForm(); setShowForm(true); }} className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 shadow-sm flex items-center gap-2 transition-all active:scale-95"><Plus size={18} />नयाँ प्रयोगकर्ता</button>
         )}
       </div>
 
