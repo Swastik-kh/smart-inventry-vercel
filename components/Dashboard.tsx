@@ -12,7 +12,7 @@ import {
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
 import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest, DakhilaPratibedanEntry } from '../types/inventoryTypes';
-import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord } from '../types/coreTypes';
+import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord } from '../types/coreTypes';
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -49,6 +49,7 @@ import { SafeMotherhoodService } from './SafeMotherhoodService';
 import { GarbhawotiSewa } from './GarbhawotiSewa';
 import { PrasutiSewa } from './PrasutiSewa';
 import { MulDartaSewa } from './MulDartaSewa';
+import { OPDSewa } from './OPDSewa';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -63,6 +64,9 @@ interface ExtendedDashboardProps extends DashboardProps {
   serviceSeekerRecords: ServiceSeekerRecord[];
   onSaveServiceSeekerRecord: (record: ServiceSeekerRecord) => void;
   onDeleteServiceSeekerRecord: (recordId: string) => void;
+  opdRecords: OPDRecord[];
+  onSaveOPDRecord: (record: OPDRecord) => void;
+  onDeleteOPDRecord: (recordId: string) => void;
 }
 
 interface AppNotification {
@@ -97,7 +101,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   bharmanAdeshEntries, onSaveBharmanAdesh, onDeleteBharmanAdesh,
   garbhawotiRecords, onSaveGarbhawotiRecord, onDeleteGarbhawotiRecord,
   prasutiRecords, onSavePrasutiRecord, onDeletePrasutiRecord,
-  serviceSeekerRecords, onSaveServiceSeekerRecord, onDeleteServiceSeekerRecord
+  serviceSeekerRecords, onSaveServiceSeekerRecord, onDeleteServiceSeekerRecord,
+  opdRecords, onSaveOPDRecord, onDeleteOPDRecord
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
@@ -912,8 +917,16 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         onSaveRecord={onSaveServiceSeekerRecord}
         onDeleteRecord={onDeleteServiceSeekerRecord}
         currentFiscalYear={currentFiscalYear}
+        currentUser={currentUser}
       />;
-      case 'opd_sewa':
+      case 'opd_sewa': return <OPDSewa 
+        serviceSeekerRecords={serviceSeekerRecords}
+        opdRecords={opdRecords}
+        onSaveRecord={onSaveOPDRecord}
+        onDeleteRecord={onDeleteOPDRecord}
+        currentFiscalYear={currentFiscalYear}
+        currentUser={currentUser}
+      />;
       case 'emergency_sewa':
       case 'prayogsala_sewa':
       case 'dispensory_sewa':

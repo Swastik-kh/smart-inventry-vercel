@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ClipboardList, Plus, X, Pencil, Trash2, Search } from 'lucide-react';
-import { ServiceSeekerRecord } from '../types/coreTypes';
+import { ServiceSeekerRecord, User } from '../types/coreTypes';
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
 
@@ -12,6 +12,7 @@ interface MulDartaSewaProps {
   onSaveRecord: (record: ServiceSeekerRecord) => void;
   onDeleteRecord: (recordId: string) => void;
   currentFiscalYear: string;
+  currentUser: User;
 }
 
 const initialFormData: Omit<ServiceSeekerRecord, 'id' | 'fiscalYear'> = {
@@ -29,7 +30,7 @@ const initialFormData: Omit<ServiceSeekerRecord, 'id' | 'fiscalYear'> = {
   remarks: '',
 };
 
-export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecord, onDeleteRecord, currentFiscalYear }) => {
+export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecord, onDeleteRecord, currentFiscalYear, currentUser }) => {
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [formData, setFormData] = useState(initialFormData);
@@ -133,6 +134,8 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
      r.phone.includes(searchQuery))
   );
 
+  const canEditDelete = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN';
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
@@ -202,14 +205,16 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
                     </span>
                   </td>
                   <td className="p-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => handleEdit(record)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors">
-                        <Pencil size={16} />
-                      </button>
-                      <button onClick={() => handleDelete(record.id)} className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                    {canEditDelete && (
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => handleEdit(record)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors">
+                          <Pencil size={16} />
+                        </button>
+                        <button onClick={() => handleDelete(record.id)} className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

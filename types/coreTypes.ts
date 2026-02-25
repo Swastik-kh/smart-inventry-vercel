@@ -195,6 +195,29 @@ export interface ServiceSeekerRecord {
   remarks?: string;
 }
 
+export interface PrescriptionItem {
+  id: string;
+  medicineName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions?: string;
+}
+
+export interface OPDRecord {
+  id: string;
+  fiscalYear: string;
+  serviceSeekerId: string;
+  uniquePatientId: string;
+  visitDate: string;
+  chiefComplaints: string;
+  diagnosis: string;
+  investigation: string;
+  prescriptions: PrescriptionItem[];
+  advice?: string;
+  nextVisitDate?: string;
+}
+
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;

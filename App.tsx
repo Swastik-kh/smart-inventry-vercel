@@ -9,7 +9,7 @@ import {
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
   DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani, BharmanAdeshEntry,
-  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord
+  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord
 } from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe, off, push } from "firebase/database";
@@ -77,6 +77,7 @@ const App: React.FC = () => {
   const [garbhawotiRecords, setGarbhawotiRecords] = useState<GarbhawotiRecord[]>([]);
   const [prasutiRecords, setPrasutiRecords] = useState<PrasutiRecord[]>([]);
   const [serviceSeekerRecords, setServiceSeekerRecords] = useState<ServiceSeekerRecord[]>([]);
+  const [opdRecords, setOpdRecords] = useState<OPDRecord[]>([]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -167,6 +168,7 @@ const App: React.FC = () => {
     setupOrgListener('garbhawotiRecords', setGarbhawotiRecords);
     setupOrgListener('prasutiRecords', setPrasutiRecords);
     setupOrgListener('serviceSeekerRecords', setServiceSeekerRecords);
+    setupOrgListener('opdRecords', setOpdRecords);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser]);
@@ -307,6 +309,24 @@ const App: React.FC = () => {
       await remove(getOrgRef(`serviceSeekerRecords/${id}`));
     } catch (error) {
       alert("सेवाग्राही दर्ता हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveOPDRecord = async (record: OPDRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`opdRecords/${record.id}`), record);
+    } catch (error) {
+      alert("OPD रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteOPDRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`opdRecords/${id}`));
+    } catch (error) {
+      alert("OPD रेकर्ड हटाउन सकिएन।");
     }
   };
 
@@ -779,6 +799,9 @@ const App: React.FC = () => {
     serviceSeekerRecords={serviceSeekerRecords}
     onSaveServiceSeekerRecord={handleSaveServiceSeekerRecord}
     onDeleteServiceSeekerRecord={handleDeleteServiceSeekerRecord}
+    opdRecords={opdRecords}
+    onSaveOPDRecord={handleSaveOPDRecord}
+    onDeleteOPDRecord={handleDeleteOPDRecord}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
