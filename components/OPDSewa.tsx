@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Search, Save, Printer, Plus, Trash2, FileText, User, Calendar, Stethoscope, Activity, Pill, FlaskConical } from 'lucide-react';
+import { Search, Save, Printer, Plus, Trash2, FileText, User, Calendar, Stethoscope, Activity, Pill, FlaskConical, History } from 'lucide-react';
 import { ServiceSeekerRecord, OPDRecord, PrescriptionItem } from '../types/coreTypes';
 import { Input } from './Input';
 // @ts-ignore
@@ -47,6 +47,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
   const [currentPrescription, setCurrentPrescription] = useState<PrescriptionItem>(initialPrescriptionItem);
   const [searchResults, setSearchResults] = useState<ServiceSeekerRecord[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -89,6 +90,39 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
       nextVisitDate: ''
     });
     setPrescriptionItems([]);
+    setEditingRecordId(null);
+  };
+
+  const handleRestore = () => {
+    if (!currentPatient) return;
+    
+    // Filter records for this patient
+    const patientRecords = opdRecords.filter(r => r.uniquePatientId === currentPatient.uniquePatientId);
+    
+    if (patientRecords.length === 0) {
+      alert('यो बिरामीको कुनै पुरानो रेकर्ड भेटिएन।');
+      return;
+    }
+
+    // Sort by date descending (assuming ID is timestamp based or use visitDate)
+    const sortedRecords = [...patientRecords].sort((a, b) => {
+        // Sort by ID descending (newest first) as ID is timestamp
+        return b.id.localeCompare(a.id);
+    });
+
+    const latestRecord = sortedRecords[0];
+
+    setOpdData({
+      chiefComplaints: latestRecord.chiefComplaints,
+      diagnosis: latestRecord.diagnosis,
+      investigation: latestRecord.investigation,
+      prescriptions: latestRecord.prescriptions || [],
+      advice: latestRecord.advice,
+      nextVisitDate: latestRecord.nextVisitDate
+    });
+    setPrescriptionItems(latestRecord.prescriptions || []);
+    setEditingRecordId(latestRecord.id);
+    alert(`पुरानो रेकर्ड (मिति: ${latestRecord.visitDate}) रिस्टोर गरियो। अब सेभ गर्दा यो रेकर्ड अपडेट हुनेछ।`);
   };
 
   const handleAddPrescription = () => {
@@ -106,12 +140,20 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
   const handleSave = () => {
     if (!currentPatient) return;
 
+    // If editing, use existing ID, else generate new
+    const recordId = editingRecordId || Date.now().toString();
+    
+    // If editing, keep original date, else use today
+    const visitDate = editingRecordId 
+      ? (opdRecords.find(r => r.id === editingRecordId)?.visitDate || new NepaliDate().format('YYYY-MM-DD'))
+      : new NepaliDate().format('YYYY-MM-DD');
+
     const newRecord: OPDRecord = {
-      id: Date.now().toString(),
+      id: recordId,
       fiscalYear: currentFiscalYear,
       serviceSeekerId: currentPatient.id,
       uniquePatientId: currentPatient.uniquePatientId,
-      visitDate: new NepaliDate().format('YYYY-MM-DD'),
+      visitDate: visitDate,
       chiefComplaints: opdData.chiefComplaints || '',
       diagnosis: opdData.diagnosis || '',
       investigation: opdData.investigation || '',
@@ -121,8 +163,19 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
     };
 
     onSaveRecord(newRecord);
-    alert('OPD रेकर्ड सुरक्षित गरियो।');
-    // Optional: Clear form or keep it for printing? Usually keep for printing.
+    alert(editingRecordId ? 'OPD रेकर्ड अपडेट गरियो।' : 'OPD रेकर्ड सुरक्षित गरियो।');
+    
+    // Clear form
+    setOpdData({
+      chiefComplaints: '',
+      diagnosis: '',
+      investigation: '',
+      prescriptions: [],
+      advice: '',
+      nextVisitDate: ''
+    });
+    setPrescriptionItems([]);
+    setEditingRecordId(null);
   };
 
   const handlePrint = useReactToPrint({
@@ -357,6 +410,13 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
 
                 <div className="flex justify-end gap-4 pt-4 border-t">
                   <button 
+                    onClick={handleRestore}
+                    className="px-6 py-2.5 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 flex items-center gap-2 shadow-sm font-medium border border-amber-200"
+                    title="Restore Previous Record"
+                  >
+                    <History size={18} /> Restore Previous
+                  </button>
+                  <button 
                     onClick={handlePrint}
                     className="px-6 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 flex items-center gap-2 shadow-sm"
                   >
@@ -366,7 +426,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
                     onClick={handleSave}
                     className="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2 shadow-sm font-medium"
                   >
-                    <Save size={18} /> सुरक्षित गर्नुहोस्
+                    <Save size={18} /> {editingRecordId ? 'अपडेट गर्नुहोस्' : 'सुरक्षित गर्नुहोस्'}
                   </button>
                 </div>
               </div>
