@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Search, Save, Printer, Plus, Trash2, FileText, User, Calendar, Stethoscope, Activity, Pill, FlaskConical, History } from 'lucide-react';
-import { ServiceSeekerRecord, OPDRecord, PrescriptionItem } from '../types/coreTypes';
+import { Search, Save, Printer, Plus, Trash2, FileText, User, Calendar, Stethoscope, Activity, Pill, FlaskConical, History, X } from 'lucide-react';
+import { ServiceSeekerRecord, OPDRecord, PrescriptionItem, ServiceItem } from '../types/coreTypes';
 import { Input } from './Input';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
@@ -13,6 +13,7 @@ interface OPDSewaProps {
   onDeleteRecord: (recordId: string) => void;
   currentFiscalYear: string;
   currentUser: any;
+  serviceItems: ServiceItem[];
 }
 
 const initialPrescriptionItem: PrescriptionItem = {
@@ -30,7 +31,8 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
   onSaveRecord, 
   onDeleteRecord, 
   currentFiscalYear,
-  currentUser
+  currentUser,
+  serviceItems
 }) => {
   const [searchId, setSearchId] = useState('');
   const [currentPatient, setCurrentPatient] = useState<ServiceSeekerRecord | null>(null);
@@ -48,6 +50,10 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
   const [searchResults, setSearchResults] = useState<ServiceSeekerRecord[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+  
+  // Investigation Search State
+  const [investigationSearch, setInvestigationSearch] = useState('');
+  const [showInvestigationResults, setShowInvestigationResults] = useState(false);
   
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -137,6 +143,17 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
     setPrescriptionItems(prescriptionItems.filter(item => item.id !== id));
   };
 
+  const handleAddInvestigation = (serviceName: string) => {
+    const currentInv = opdData.investigation || '';
+    const separator = currentInv ? '\n' : '';
+    setOpdData({
+      ...opdData,
+      investigation: `${currentInv}${separator}${serviceName}`
+    });
+    setInvestigationSearch('');
+    setShowInvestigationResults(false);
+  };
+
   const handleSave = () => {
     if (!currentPatient) return;
 
@@ -182,6 +199,10 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
     contentRef: printRef,
     documentTitle: `Prescription-${currentPatient?.uniquePatientId}`,
   });
+
+  const filteredServices = serviceItems?.filter(item => 
+    item.serviceName.toLowerCase().includes(investigationSearch.toLowerCase())
+  ) || [];
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
@@ -291,8 +312,43 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
                       placeholder="सम्भावित रोगको पहिचान..."
                     />
                   </div>
-                  <div>
+                  <div className="relative">
                     <label className="block text-sm font-medium text-slate-700 mb-2">जाँच (Investigation)</label>
+                    
+                    {/* Investigation Search */}
+                    <div className="relative mb-2">
+                       <input
+                         type="text"
+                         value={investigationSearch}
+                         onChange={(e) => {
+                           setInvestigationSearch(e.target.value);
+                           setShowInvestigationResults(true);
+                         }}
+                         placeholder="Search Service / Investigation..."
+                         className="w-full p-2 pl-8 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                       />
+                       <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                       
+                       {showInvestigationResults && investigationSearch && (
+                         <div className="absolute top-full left-0 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto mt-1">
+                           {filteredServices.length > 0 ? (
+                             filteredServices.map(service => (
+                               <div 
+                                 key={service.id}
+                                 onClick={() => handleAddInvestigation(service.serviceName)}
+                                 className="p-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-slate-50 last:border-0"
+                               >
+                                 <div className="font-medium text-slate-700">{service.serviceName}</div>
+                                 <div className="text-xs text-slate-500">{service.category}</div>
+                               </div>
+                             ))
+                           ) : (
+                             <div className="p-2 text-xs text-slate-500 text-center">No services found</div>
+                           )}
+                         </div>
+                       )}
+                    </div>
+
                     <textarea
                       value={opdData.investigation}
                       onChange={(e) => setOpdData({...opdData, investigation: e.target.value})}

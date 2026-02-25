@@ -938,6 +938,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         onDeleteRecord={onDeleteOPDRecord}
         currentFiscalYear={currentFiscalYear}
         currentUser={currentUser}
+        serviceItems={serviceItems}
       />;
       case 'service_billing': return <ServiceBilling 
         serviceSeekerRecords={serviceSeekerRecords}
@@ -947,6 +948,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         onSaveRecord={onSaveBillingRecord}
         onDeleteRecord={onDeleteBillingRecord}
         currentUser={currentUser}
+        serviceItems={serviceItems}
       />;
       case 'emergency_sewa':
       case 'prayogsala_sewa':

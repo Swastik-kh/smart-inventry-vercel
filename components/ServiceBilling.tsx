@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Search, FileText, User, Calendar, Activity, AlertCircle, Plus, Trash2, Printer, Save, CreditCard, Banknote, History } from 'lucide-react';
-import { ServiceSeekerRecord, OPDRecord, BillingRecord, BillingItem } from '../types/coreTypes';
+import { ServiceSeekerRecord, OPDRecord, BillingRecord, BillingItem, ServiceItem } from '../types/coreTypes';
 import { Input } from './Input';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
@@ -14,6 +14,7 @@ interface ServiceBillingProps {
   onSaveRecord: (record: BillingRecord) => void;
   onDeleteRecord: (id: string) => void;
   currentUser: any;
+  serviceItems: ServiceItem[];
 }
 
 export const ServiceBilling: React.FC<ServiceBillingProps> = ({ 
@@ -23,7 +24,8 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({
   billingRecords,
   onSaveRecord,
   onDeleteRecord,
-  currentUser
+  currentUser,
+  serviceItems
 }) => {
   const [searchId, setSearchId] = useState('');
   const [currentPatient, setCurrentPatient] = useState<ServiceSeekerRecord | null>(null);
@@ -90,6 +92,33 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({
 
     setBillingItems([...billingItems, item]);
     setNewItem({ serviceName: '', price: '', quantity: '1' });
+  };
+
+  const handleCopyToBill = (investigation: string) => {
+    if (!investigation) return;
+
+    const itemsToAdd: BillingItem[] = [];
+    // Split by newline or comma
+    const serviceNames = investigation.split(/[\n,]/).map(s => s.trim()).filter(s => s);
+
+    serviceNames.forEach((name, index) => {
+      // Find service in settings to get rate
+      const service = serviceItems.find(s => s.serviceName === name) || 
+                      serviceItems.find(s => s.serviceName.toLowerCase() === name.toLowerCase());
+      
+      const price = service ? service.rate : 0;
+      
+      const item: BillingItem = {
+        id: Date.now().toString() + '-' + index + '-' + Math.random().toString(36).substr(2, 5), // Ensure unique ID
+        serviceName: name,
+        price: price,
+        quantity: 1,
+        total: price * 1
+      };
+      itemsToAdd.push(item);
+    });
+
+    setBillingItems(prev => [...prev, ...itemsToAdd]);
   };
 
   const handleRemoveItem = (id: string) => {
@@ -193,7 +222,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({
                         <div className="flex justify-between items-center mb-1">
                           <span className="text-xs font-bold text-slate-500">{record.visitDate}</span>
                           <button 
-                            onClick={() => setNewItem({...newItem, serviceName: record.investigation})}
+                            onClick={() => handleCopyToBill(record.investigation)}
                             className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded hover:bg-blue-200"
                           >
                             Copy to Bill
