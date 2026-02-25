@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { Search, FileText, User, Activity, Save, Printer, History, FlaskConical, Trash2 } from 'lucide-react';
+import { Search, FileText, User, Activity, Save, Printer, History, FlaskConical, Trash2, CheckCircle2, Beaker } from 'lucide-react';
 import { ServiceSeekerRecord, BillingRecord, ServiceItem, LabReport, LabTestResult } from '../types/coreTypes';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
@@ -16,6 +16,10 @@ interface PrayogsalaSewaProps {
   currentUser: any;
 }
 
+interface PendingTest extends LabTestResult {
+  invoiceNumber: string;
+}
+
 export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
   serviceSeekerRecords,
   billingRecords,
@@ -28,8 +32,9 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
 }) => {
   const [searchId, setSearchId] = useState('');
   const [currentPatient, setCurrentPatient] = useState<ServiceSeekerRecord | null>(null);
-  const [pendingTests, setPendingTests] = useState<LabTestResult[]>([]);
+  const [pendingTests, setPendingTests] = useState<PendingTest[]>([]);
   const [currentReport, setCurrentReport] = useState<LabReport | null>(null);
+  const [activeTab, setActiveTab] = useState<'sample' | 'result'>('sample');
   
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -63,77 +68,132 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
     // 1. Get all bills for this patient
     const patientBills = billingRecords.filter(b => b.serviceSeekerId === patientId);
     
-    // 2. Extract all items from bills
-    const allBilledItems = patientBills.flatMap(b => b.items);
+    // 2. Extract all items from bills with their invoice numbers
+    const allBilledItems = patientBills.flatMap(b => 
+      b.items.map(item => ({ ...item, invoiceNumber: b.billNumber }))
+    );
 
     // 3. Filter items that are Lab Investigations
-    // We match by serviceName against serviceItems where category is 'Lab Investigation'
     const labServiceNames = new Set(
       serviceItems
-        .filter(s => s.category === 'Lab Investigation')
-        .map(s => s.serviceName)
+        .filter(s => s.category === 'Lab')
+        .map(s => s.serviceName.trim().toLowerCase())
     );
 
-    const labItems = allBilledItems.filter(item => 
-      labServiceNames.has(item.serviceName) || 
-      // Fallback: check if serviceName contains 'test' or 'lab' if not found in settings (optional, maybe risky)
-      // For now, strictly rely on Service Settings or if user manually added something that matches.
-      // Actually, let's also include items if we can find them in serviceItems and they are Lab.
-      serviceItems.some(s => s.serviceName === item.serviceName && s.category === 'Lab Investigation')
-    );
+    const labItems = allBilledItems.filter(item => {
+      const itemName = item.serviceName.trim().toLowerCase();
+      return labServiceNames.has(itemName) || 
+             serviceItems.some(s => s.serviceName.trim().toLowerCase() === itemName && s.category === 'Lab');
+    });
 
-    // 4. Prepare initial result objects
-    // We might want to filter out tests that are already reported? 
-    // For simplicity, let's list them all, and user can choose which to report.
-    // Or better: Show them as "Available for Reporting".
-    
-    const tests: LabTestResult[] = labItems.map((item, index) => {
-      const serviceDef = serviceItems.find(s => s.serviceName === item.serviceName);
+    // 4. Check existing reports
+    const existingReports = labReports.filter(r => r.serviceSeekerId === patientId);
+
+    // 5. Prepare tests for the UI
+    const tests: PendingTest[] = labItems.map((item, index) => {
+      const itemName = item.serviceName.trim().toLowerCase();
+      const serviceDef = serviceItems.find(s => s.serviceName.trim().toLowerCase() === itemName);
+      
+      // Find if this specific test from this specific invoice is already in an existing report
+      const existingReport = existingReports.find(r => 
+        r.invoiceNumber === item.invoiceNumber && 
+        r.tests.some(t => t.testName.trim().toLowerCase() === itemName)
+      );
+      const existingTest = existingReport?.tests.find(t => t.testName.trim().toLowerCase() === itemName);
+
       return {
-        id: `TEST-${Date.now()}-${index}`,
+        id: existingTest?.id || `TEST-${item.invoiceNumber}-${index}`,
         testName: item.serviceName,
-        result: '',
-        normalRange: serviceDef?.valueRange || '',
-        unit: '', // We don't have unit in ServiceItem yet, maybe add later?
-        remarks: ''
+        result: existingTest?.result || '',
+        normalRange: existingTest?.normalRange || serviceDef?.valueRange || '',
+        unit: existingTest?.unit || '',
+        remarks: existingTest?.remarks || '',
+        sampleCollected: existingTest?.sampleCollected || false,
+        sampleCollectedDate: existingTest?.sampleCollectedDate || '',
+        sampleCollectedBy: existingTest?.sampleCollectedBy || '',
+        invoiceNumber: item.invoiceNumber
       };
     });
 
-    // Remove duplicates if multiple bills have same test? 
-    // Maybe user wants to report multiple times? 
-    // Let's keep them unique by name for now to avoid clutter, or just list distinct tests.
-    // If a patient did CBC twice, they might want two reports. 
-    // But usually we report on the latest or specific bill.
-    // For now, let's just show unique test names found in bills.
+    // Grouping: We want to show tests per invoice
+    // But for the state, we keep the flat list
+    setPendingTests(tests);
+  };
+
+  const handleCollectSample = (id: string) => {
+    setPendingTests(prev => prev.map(t => t.id === id ? { 
+      ...t, 
+      sampleCollected: true, 
+      sampleCollectedDate: new NepaliDate().format('YYYY-MM-DD HH:mm'),
+      sampleCollectedBy: currentUser?.username || 'System'
+    } : t));
+  };
+
+  const handleSaveCollection = (invoiceNumber: string) => {
+    if (!currentPatient) return;
+
+    const invoiceTests = pendingTests.filter(t => t.invoiceNumber === invoiceNumber && t.sampleCollected);
     
-    const uniqueTests = Array.from(new Map(tests.map(t => [t.testName, t])).values());
-    setPendingTests(uniqueTests);
+    if (invoiceTests.length === 0) {
+      alert("कृपया कम्तिमा एउटा नमुना संकलन गर्नुहोस् (Please collect at least one sample)");
+      return;
+    }
+
+    // Check if a report already exists for this invoice
+    const existingReport = labReports.find(r => 
+      r.serviceSeekerId === currentPatient.id && 
+      r.invoiceNumber === invoiceNumber
+    );
+
+    const reportToSave: LabReport = {
+      id: existingReport?.id || Date.now().toString(),
+      fiscalYear: currentFiscalYear,
+      reportDate: existingReport?.reportDate || new NepaliDate().format('YYYY-MM-DD'),
+      serviceSeekerId: currentPatient.id,
+      patientName: currentPatient.name,
+      age: currentPatient.age,
+      gender: currentPatient.gender,
+      invoiceNumber: invoiceNumber,
+      tests: invoiceTests.map(({ invoiceNumber, ...rest }) => rest),
+      status: existingReport?.status === 'Completed' ? 'Completed' : 'Sample Collected',
+      createdBy: existingReport?.createdBy || currentUser?.username || 'Unknown'
+    };
+
+    onSaveRecord(reportToSave);
+    alert(`Invoice ${invoiceNumber} को नमुना संकलन सुरक्षित गरियो।`);
+    loadPendingTests(currentPatient.id);
   };
 
   const handleResultChange = (id: string, field: keyof LabTestResult, value: string) => {
     setPendingTests(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
   };
 
-  const handleSaveReport = () => {
+  const handleSaveReport = (invoiceNumber: string) => {
     if (!currentPatient) return;
 
-    // Filter out tests with empty results (optional, or allow saving partial)
-    const testsToSave = pendingTests.filter(t => t.result.trim() !== '');
+    const invoiceTests = pendingTests.filter(t => t.invoiceNumber === invoiceNumber && t.sampleCollected);
+    const testsWithResults = invoiceTests.filter(t => t.result.trim() !== '');
 
-    if (testsToSave.length === 0) {
+    if (testsWithResults.length === 0) {
       alert("कृपया कम्तिमा एउटा टेस्टको नतिजा भर्नुहोस् (Please enter at least one result)");
       return;
     }
 
+    const existingReport = labReports.find(r => 
+      r.serviceSeekerId === currentPatient.id && 
+      r.invoiceNumber === invoiceNumber
+    );
+
     const newReport: LabReport = {
-      id: Date.now().toString(),
+      id: existingReport?.id || Date.now().toString(),
       fiscalYear: currentFiscalYear,
       reportDate: new NepaliDate().format('YYYY-MM-DD'),
       serviceSeekerId: currentPatient.id,
       patientName: currentPatient.name,
       age: currentPatient.age,
       gender: currentPatient.gender,
-      tests: testsToSave,
+      invoiceNumber: invoiceNumber,
+      tests: invoiceTests.map(({ invoiceNumber, ...rest }) => rest),
       status: 'Completed',
       createdBy: currentUser?.username || 'Unknown'
     };
@@ -141,6 +201,7 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
     onSaveRecord(newReport);
     setCurrentReport(newReport);
     alert('रिपोर्ट सुरक्षित गरियो।');
+    loadPendingTests(currentPatient.id);
   };
 
   const handlePrint = useReactToPrint({
@@ -152,6 +213,15 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
     if (!currentPatient) return [];
     return labReports.filter(r => r.serviceSeekerId === currentPatient.id).sort((a, b) => b.id.localeCompare(a.id));
   }, [labReports, currentPatient]);
+
+  const groupedPendingTests = useMemo(() => {
+    const groups: Record<string, PendingTest[]> = {};
+    pendingTests.forEach(t => {
+      if (!groups[t.invoiceNumber]) groups[t.invoiceNumber] = [];
+      groups[t.invoiceNumber].push(t);
+    });
+    return groups;
+  }, [pendingTests]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
@@ -207,7 +277,7 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
                     <div key={report.id} className="flex justify-between items-center p-2 hover:bg-slate-50 border-b border-slate-100 text-sm">
                       <div>
                          <p className="font-medium">{report.reportDate}</p>
-                         <p className="text-xs text-slate-500">{report.tests.length} Tests</p>
+                         <p className="text-xs text-slate-500">{report.tests.length} Tests {report.invoiceNumber && `(Inv: ${report.invoiceNumber})`}</p>
                       </div>
                       <div className="text-right space-x-2">
                         <button 
@@ -238,81 +308,158 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
 
           {/* Right Column: Lab Report Form */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-              <h3 className="font-bold text-slate-800 text-lg mb-6 border-b pb-4 flex items-center gap-2">
-                <Activity size={20} className="text-blue-600" />
-                नयाँ रिपोर्ट (New Report)
-              </h3>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="flex border-b">
+                <button 
+                  onClick={() => setActiveTab('sample')}
+                  className={`flex-1 py-4 font-bold text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'sample' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' : 'text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <Beaker size={18} /> नमुना संकलन (Sample Collection)
+                </button>
+                <button 
+                  onClick={() => setActiveTab('result')}
+                  className={`flex-1 py-4 font-bold text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'result' ? 'bg-green-50 text-green-700 border-b-2 border-green-600' : 'text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <Activity size={18} /> रिपोर्ट प्रविष्टि (Result Entry)
+                </button>
+              </div>
 
-              {pendingTests.length > 0 ? (
-                <div className="space-y-6">
-                  <div className="border rounded-lg overflow-hidden">
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-slate-100 text-slate-700 font-bold">
-                        <tr>
-                          <th className="p-3 w-1/4">Test Name</th>
-                          <th className="p-3 w-1/4">Result</th>
-                          <th className="p-3 w-1/6">Unit</th>
-                          <th className="p-3 w-1/6">Normal Range</th>
-                          <th className="p-3 w-1/6">Remarks</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {pendingTests.map((test) => (
-                          <tr key={test.id} className="hover:bg-slate-50">
-                            <td className="p-3 font-medium">{test.testName}</td>
-                            <td className="p-3">
-                              <input 
-                                type="text" 
-                                value={test.result}
-                                onChange={(e) => handleResultChange(test.id, 'result', e.target.value)}
-                                className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                                placeholder="Result"
-                              />
-                            </td>
-                            <td className="p-3">
-                              <input 
-                                type="text" 
-                                value={test.unit}
-                                onChange={(e) => handleResultChange(test.id, 'unit', e.target.value)}
-                                className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                                placeholder="Unit"
-                              />
-                            </td>
-                            <td className="p-3 text-slate-500 text-xs">
-                              {test.normalRange}
-                            </td>
-                            <td className="p-3">
-                              <input 
-                                type="text" 
-                                value={test.remarks}
-                                onChange={(e) => handleResultChange(test.id, 'remarks', e.target.value)}
-                                className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                                placeholder="Remarks"
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+              <div className="p-6">
+                {Object.keys(groupedPendingTests).length > 0 ? (
+                  <div className="space-y-8">
+                    {(Object.entries(groupedPendingTests) as [string, PendingTest[]][]).map(([invoiceNumber, tests]) => (
+                      <div key={invoiceNumber} className="space-y-4 border-l-4 border-primary-500 pl-4 py-2">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                            <FileText size={16} className="text-primary-600" />
+                            Invoice: {invoiceNumber}
+                          </h4>
+                          {activeTab === 'sample' ? (
+                            <button 
+                              onClick={() => handleSaveCollection(invoiceNumber)}
+                              className="bg-primary-600 text-white px-4 py-1.5 rounded-lg hover:bg-primary-700 text-xs font-bold shadow-sm flex items-center gap-2"
+                            >
+                              <Save size={14} /> Save Collection
+                            </button>
+                          ) : (
+                            tests.some(t => t.sampleCollected) && (
+                              <button 
+                                onClick={() => handleSaveReport(invoiceNumber)}
+                                className="bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 text-xs font-bold shadow-sm flex items-center gap-2"
+                              >
+                                <Save size={14} /> Save Report
+                              </button>
+                            )
+                          )}
+                        </div>
 
-                  <div className="flex justify-end">
-                    <button 
-                      onClick={handleSaveReport}
-                      className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-bold shadow-sm flex items-center gap-2"
-                    >
-                      <Save size={20} /> Save Report
-                    </button>
+                        <div className="border rounded-lg overflow-hidden">
+                          <table className="w-full text-sm text-left">
+                            <thead className="bg-slate-50 text-slate-600 font-bold">
+                              {activeTab === 'sample' ? (
+                                <tr>
+                                  <th className="p-3">Test Name</th>
+                                  <th className="p-3">Status</th>
+                                  <th className="p-3">Collection Date</th>
+                                  <th className="p-3 text-center">Action</th>
+                                </tr>
+                              ) : (
+                                <tr>
+                                  <th className="p-3 w-1/4">Test Name</th>
+                                  <th className="p-3 w-1/4">Result</th>
+                                  <th className="p-3 w-1/6">Unit</th>
+                                  <th className="p-3 w-1/6">Normal Range</th>
+                                  <th className="p-3 w-1/6">Remarks</th>
+                                </tr>
+                              )}
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {activeTab === 'sample' ? (
+                                tests.map((test) => (
+                                  <tr key={test.id} className="hover:bg-slate-50">
+                                    <td className="p-3 font-medium">{test.testName}</td>
+                                    <td className="p-3">
+                                      {test.sampleCollected ? (
+                                        <span className="inline-flex items-center gap-1 text-green-600 font-bold bg-green-50 px-2 py-1 rounded-full text-xs">
+                                          <CheckCircle2 size={12} /> Collected
+                                        </span>
+                                      ) : (
+                                        <span className="text-slate-400 text-xs italic">Pending</span>
+                                      )}
+                                    </td>
+                                    <td className="p-3 text-xs text-slate-500">
+                                      {test.sampleCollectedDate || '-'}
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      {!test.sampleCollected && (
+                                        <button 
+                                          onClick={() => handleCollectSample(test.id)}
+                                          className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs font-bold shadow-sm"
+                                        >
+                                          Collect Sample
+                                        </button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))
+                              ) : (
+                                tests.filter(t => t.sampleCollected).map((test) => (
+                                  <tr key={test.id} className="hover:bg-slate-50">
+                                    <td className="p-3 font-medium">{test.testName}</td>
+                                    <td className="p-3">
+                                      <input 
+                                        type="text" 
+                                        value={test.result}
+                                        onChange={(e) => handleResultChange(test.id, 'result', e.target.value)}
+                                        className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                                        placeholder="Result"
+                                      />
+                                    </td>
+                                    <td className="p-3">
+                                      <input 
+                                        type="text" 
+                                        value={test.unit}
+                                        onChange={(e) => handleResultChange(test.id, 'unit', e.target.value)}
+                                        className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                                        placeholder="Unit"
+                                      />
+                                    </td>
+                                    <td className="p-3 text-slate-500 text-xs">
+                                      {test.normalRange}
+                                    </td>
+                                    <td className="p-3">
+                                      <input 
+                                        type="text" 
+                                        value={test.remarks}
+                                        onChange={(e) => handleResultChange(test.id, 'remarks', e.target.value)}
+                                        className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                                        placeholder="Remarks"
+                                      />
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                              {activeTab === 'result' && tests.filter(t => t.sampleCollected).length === 0 && (
+                                <tr>
+                                  <td colSpan={5} className="p-8 text-center text-slate-400 italic">
+                                    कृपया पहिला नमुना संकलन (Sample Collection) गर्नुहोस्।
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-12 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-                  <Activity className="mx-auto h-12 w-12 text-slate-300 mb-3" />
-                  <p className="text-slate-500">यो बिरामीको लागि कुनै ल्याब बिल भेटिएन।</p>
-                  <p className="text-xs text-slate-400 mt-1">कृपया पहिला सेवा बिलिङ (Service Billing) मा ल्याब टेस्टको बिल काट्नुहोस्।</p>
-                </div>
-              )}
+                ) : (
+                  <div className="text-center py-12 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                    <Activity className="mx-auto h-12 w-12 text-slate-300 mb-3" />
+                    <p className="text-slate-500">यो बिरामीको लागि कुनै ल्याब बिल भेटिएन।</p>
+                    <p className="text-xs text-slate-400 mt-1">कृपया पहिला सेवा बिलिङ (Service Billing) मा ल्याब टेस्टको बिल काट्नुहोस्।</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -338,6 +485,7 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
             <div className="space-y-1 text-right">
               <p><strong>Report Date:</strong> {currentReport?.reportDate}</p>
               <p><strong>Report ID:</strong> {currentReport?.id}</p>
+              {currentReport?.invoiceNumber && <p><strong>Invoice No:</strong> {currentReport.invoiceNumber}</p>}
             </div>
           </div>
 

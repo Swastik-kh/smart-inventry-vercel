@@ -258,6 +258,9 @@ export interface LabTestResult {
   normalRange?: string;
   unit?: string;
   remarks?: string;
+  sampleCollected?: boolean;
+  sampleCollectedDate?: string;
+  sampleCollectedBy?: string;
 }
 
 export interface LabReport {
@@ -269,8 +272,9 @@ export interface LabReport {
   age: string;
   gender: string;
   referredBy?: string;
+  invoiceNumber?: string;
   tests: LabTestResult[];
-  status: 'Pending' | 'Completed';
+  status: 'Sample Pending' | 'Sample Collected' | 'Completed';
   createdBy?: string;
 }
 
