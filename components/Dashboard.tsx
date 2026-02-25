@@ -6,12 +6,13 @@ import {
   ClipboardList, FileSpreadsheet, FilePlus, ShoppingCart, FileOutput, 
   BookOpen, Book, Archive, RotateCcw, Wrench, Scroll, BarChart3,
   Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, AlertTriangle, Calculator, Trash2, TrendingUp, AlertOctagon, Timer, Printer, Baby, Flame, CalendarClock, List,
-  Eye, ShieldAlert, ChevronLeft, Send, MapPin, Search, HeartHandshake
+  Eye, ShieldAlert, ChevronLeft, Send, MapPin, Search, HeartHandshake,
+  UserPlus, FlaskConical, Pill, Accessibility, Scan, Waves, Siren
 } from 'lucide-react';
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
 import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest, DakhilaPratibedanEntry } from '../types/inventoryTypes';
-import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry } from '../types/coreTypes';
+import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord } from '../types/coreTypes';
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -47,11 +48,21 @@ import { OnLeaveToday } from './OnLeaveToday';
 import { SafeMotherhoodService } from './SafeMotherhoodService';
 import { GarbhawotiSewa } from './GarbhawotiSewa';
 import { PrasutiSewa } from './PrasutiSewa';
+import { MulDartaSewa } from './MulDartaSewa';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
 interface ExtendedDashboardProps extends DashboardProps {
   onUploadData: (sectionId: string, data: any[], extraMeta?: any) => Promise<void>;
+  garbhawotiRecords: GarbhawotiRecord[];
+  onSaveGarbhawotiRecord: (record: GarbhawotiRecord) => void;
+  onDeleteGarbhawotiRecord: (recordId: string) => void;
+  prasutiRecords: PrasutiRecord[];
+  onSavePrasutiRecord: (record: PrasutiRecord) => void;
+  onDeletePrasutiRecord: (recordId: string) => void;
+  serviceSeekerRecords: ServiceSeekerRecord[];
+  onSaveServiceSeekerRecord: (record: ServiceSeekerRecord) => void;
+  onDeleteServiceSeekerRecord: (recordId: string) => void;
 }
 
 interface AppNotification {
@@ -83,7 +94,10 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   leaveBalances, onSaveLeaveBalance,
   dartaEntries, onSaveDarta, onDeleteDarta,
   chalaniEntries, onSaveChalani, onDeleteChalani,
-  bharmanAdeshEntries, onSaveBharmanAdesh, onDeleteBharmanAdesh
+  bharmanAdeshEntries, onSaveBharmanAdesh, onDeleteBharmanAdesh,
+  garbhawotiRecords, onSaveGarbhawotiRecord, onDeleteGarbhawotiRecord,
+  prasutiRecords, onSavePrasutiRecord, onDeletePrasutiRecord,
+  serviceSeekerRecords, onSaveServiceSeekerRecord, onDeleteServiceSeekerRecord
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
@@ -339,6 +353,16 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       label: 'सेवा (Services)', 
       icon: <Stethoscope size={20} />, 
       subItems: [ 
+        { id: 'mul_darta', label: 'मूल दर्ता सेवा', icon: <ClipboardList size={16} /> },
+        { id: 'opd_sewa', label: 'ओ.पी.डी. सेवा', icon: <UserPlus size={16} /> },
+        { id: 'emergency_sewa', label: 'आकस्मिक सेवा (Emergency)', icon: <Siren size={16} /> },
+        { id: 'prayogsala_sewa', label: 'प्रयोगशाला सेवा', icon: <FlaskConical size={16} /> },
+        { id: 'dispensory_sewa', label: 'डिस्पेन्सरी सेवा', icon: <Pill size={16} /> },
+        { id: 'pariwar_niyojan', label: 'परिवार नियोजन सेवा', icon: <Users size={16} /> },
+        { id: 'xray_sewa', label: 'एक्स-रे सेवा', icon: <Scan size={16} /> },
+        { id: 'ecg_sewa', label: 'ई.सी.जी. सेवा', icon: <Activity size={16} /> },
+        { id: 'usg_sewa', label: 'यु.एस.जी. सेवा', icon: <Waves size={16} /> },
+        { id: 'phisiotherapy', label: 'फिजियोथेरापी सेवा', icon: <Accessibility size={16} /> },
         { 
           id: 'administration', 
           label: 'प्रशासन', 
@@ -870,8 +894,43 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         generalSettings={generalSettings}
       />;
       case 'surakshit_matritwo': return <SafeMotherhoodService />;
-      case 'garbhawoti_sewa': return <GarbhawotiSewa />;
-      case 'prasuti_sewa': return <PrasutiSewa />;
+      case 'garbhawoti_sewa': return <GarbhawotiSewa 
+        records={garbhawotiRecords}
+        onSaveRecord={onSaveGarbhawotiRecord}
+        onDeleteRecord={onDeleteGarbhawotiRecord}
+        currentFiscalYear={currentFiscalYear}
+      />;
+      case 'prasuti_sewa': return <PrasutiSewa 
+        garbhawotiRecords={garbhawotiRecords}
+        prasutiRecords={prasutiRecords}
+        onSaveRecord={onSavePrasutiRecord}
+        onDeleteRecord={onDeletePrasutiRecord}
+        currentFiscalYear={currentFiscalYear}
+      />;
+      case 'mul_darta': return <MulDartaSewa 
+        records={serviceSeekerRecords}
+        onSaveRecord={onSaveServiceSeekerRecord}
+        onDeleteRecord={onDeleteServiceSeekerRecord}
+        currentFiscalYear={currentFiscalYear}
+      />;
+      case 'opd_sewa':
+      case 'emergency_sewa':
+      case 'prayogsala_sewa':
+      case 'dispensory_sewa':
+      case 'pariwar_niyojan':
+      case 'xray_sewa':
+      case 'ecg_sewa':
+      case 'usg_sewa':
+      case 'phisiotherapy':
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400">
+            <div className="bg-slate-100 p-6 rounded-full mb-4">
+              <Stethoscope size={48} className="opacity-20" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-600 mb-2">यो सेवा हाल निर्माणाधीन छ।</h3>
+            <p className="text-sm">चाँडै नै यो सेवा उपलब्ध हुनेछ।</p>
+          </div>
+        );
       case 'log_book': return <LogBook currentUser={currentUser} currentFiscalYear={currentFiscalYear} inventoryItems={inventoryItems} logBookEntries={logBookEntries} onAddLogEntry={onSaveLogBookEntry} />;
       case 'report_inventory_monthly': return <InventoryMonthlyReport 
                                               currentFiscalYear={currentFiscalYear} 

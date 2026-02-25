@@ -11,6 +11,16 @@ const PERMISSION_STRUCTURE = [
         id: 'services', 
         label: 'सेवा (Services)',
         children: [
+            { id: 'mul_darta', label: 'मूल दर्ता सेवा (Main Registration)' },
+            { id: 'opd_sewa', label: 'ओ.पी.डी. सेवा (OPD Service)' },
+            { id: 'emergency_sewa', label: 'आकस्मिक सेवा (Emergency Service)' },
+            { id: 'prayogsala_sewa', label: 'प्रयोगशाला सेवा (Lab Service)' },
+            { id: 'dispensory_sewa', label: 'डिस्पेन्सरी सेवा (Dispensary Service)' },
+            { id: 'pariwar_niyojan', label: 'परिवार नियोजन सेवा (Family Planning)' },
+            { id: 'xray_sewa', label: 'एक्स-रे सेवा (X-ray Service)' },
+            { id: 'ecg_sewa', label: 'ई.सी.जी. सेवा (ECG Service)' },
+            { id: 'usg_sewa', label: 'यु.एस.जी. सेवा (USG Service)' },
+            { id: 'phisiotherapy', label: 'फिजियोथेरापी सेवा (Physiotherapy)' },
             { 
                 id: 'administration', 
                 label: 'प्रशासन (Administration)',

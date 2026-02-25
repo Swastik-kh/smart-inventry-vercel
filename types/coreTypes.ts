@@ -146,6 +146,52 @@ export interface BharmanAdeshEntry {
   fiscalYear: string;
 }
 
+export interface GarbhawotiRecord {
+  id: string;
+  fiscalYear: string;
+  name: string;
+  husbandName: string;
+  address: string;
+  age: number;
+  lmp: string; // Last Menstrual Period
+  edd: string; // Estimated Date of Delivery
+  gravida: number;
+  ancDate: string;
+  weight: number;
+  bp: string;
+  hb: string;
+  ironTablets: number;
+  ttDose: string;
+}
+
+export interface PrasutiRecord {
+  id: string;
+  fiscalYear: string;
+  garbhawotiId: string; // Link to GarbhawotiRecord
+  name: string;
+  deliveryDate: string;
+  deliveryPlace: string;
+  deliveredBy: string;
+  deliveryOutcome: string; // Live birth, stillbirth
+  newbornGender: 'Male' | 'Female' | 'Other';
+  newbornWeight: number;
+  complications: string;
+}
+
+export interface ServiceSeekerRecord {
+  id: string;
+  registrationNumber: string;
+  date: string;
+  name: string;
+  age: string;
+  gender: 'Male' | 'Female' | 'Other';
+  address: string;
+  phone: string;
+  serviceType: string; // OPD, Emergency, Vaccination, etc.
+  fiscalYear: string;
+  remarks?: string;
+}
+
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;

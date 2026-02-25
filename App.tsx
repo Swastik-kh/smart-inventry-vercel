@@ -8,7 +8,8 @@ import {
   User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, 
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
-  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani, BharmanAdeshEntry
+  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani, BharmanAdeshEntry,
+  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord
 } from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe, off, push } from "firebase/database";
@@ -73,6 +74,9 @@ const App: React.FC = () => {
   const [dartaEntries, setDartaEntries] = useState<Darta[]>([]);
   const [chalaniEntries, setChalaniEntries] = useState<Chalani[]>([]);
   const [bharmanAdeshEntries, setBharmanAdeshEntries] = useState<BharmanAdeshEntry[]>([]);
+  const [garbhawotiRecords, setGarbhawotiRecords] = useState<GarbhawotiRecord[]>([]);
+  const [prasutiRecords, setPrasutiRecords] = useState<PrasutiRecord[]>([]);
+  const [serviceSeekerRecords, setServiceSeekerRecords] = useState<ServiceSeekerRecord[]>([]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -160,6 +164,9 @@ const App: React.FC = () => {
     setupOrgListener('dartaEntries', setDartaEntries);
     setupOrgListener('chalaniEntries', setChalaniEntries);
     setupOrgListener('bharmanAdeshEntries', setBharmanAdeshEntries);
+    setupOrgListener('garbhawotiRecords', setGarbhawotiRecords);
+    setupOrgListener('prasutiRecords', setPrasutiRecords);
+    setupOrgListener('serviceSeekerRecords', setServiceSeekerRecords);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser]);
@@ -246,6 +253,60 @@ const App: React.FC = () => {
       await remove(getOrgRef(`bharmanAdeshEntries/${id}`));
     } catch (error) {
       alert("भ्रमण आदेश हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveGarbhawotiRecord = async (record: GarbhawotiRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`garbhawotiRecords/${record.id}`), record);
+    } catch (error) {
+      alert("गर्भवती रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteGarbhawotiRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`garbhawotiRecords/${id}`));
+    } catch (error) {
+      alert("गर्भवती रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSavePrasutiRecord = async (record: PrasutiRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`prasutiRecords/${record.id}`), record);
+    } catch (error) {
+      alert("प्रसूति रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeletePrasutiRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`prasutiRecords/${id}`));
+    } catch (error) {
+      alert("प्रसूति रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveServiceSeekerRecord = async (record: ServiceSeekerRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`serviceSeekerRecords/${record.id}`), record);
+    } catch (error) {
+      alert("सेवाग्राही दर्ता सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteServiceSeekerRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`serviceSeekerRecords/${id}`));
+    } catch (error) {
+      alert("सेवाग्राही दर्ता हटाउन सकिएन।");
     }
   };
 
@@ -709,6 +770,15 @@ const App: React.FC = () => {
     bharmanAdeshEntries={bharmanAdeshEntries}
     onSaveBharmanAdesh={handleSaveBharmanAdesh}
     onDeleteBharmanAdesh={handleDeleteBharmanAdesh}
+    garbhawotiRecords={garbhawotiRecords}
+    onSaveGarbhawotiRecord={handleSaveGarbhawotiRecord}
+    onDeleteGarbhawotiRecord={handleDeleteGarbhawotiRecord}
+    prasutiRecords={prasutiRecords}
+    onSavePrasutiRecord={handleSavePrasutiRecord}
+    onDeletePrasutiRecord={handleDeletePrasutiRecord}
+    serviceSeekerRecords={serviceSeekerRecords}
+    onSaveServiceSeekerRecord={handleSaveServiceSeekerRecord}
+    onDeleteServiceSeekerRecord={handleDeleteServiceSeekerRecord}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
