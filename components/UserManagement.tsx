@@ -13,6 +13,7 @@ const PERMISSION_STRUCTURE = [
         children: [
             { id: 'mul_darta', label: 'मूल दर्ता सेवा (Main Registration)' },
             { id: 'opd_sewa', label: 'ओ.पी.डी. सेवा (OPD Service)' },
+            { id: 'service_billing', label: 'सेवा बिलिङ (Service Billing)' },
             { id: 'emergency_sewa', label: 'आकस्मिक सेवा (Emergency Service)' },
             { id: 'prayogsala_sewa', label: 'प्रयोगशाला सेवा (Lab Service)' },
             { id: 'dispensory_sewa', label: 'डिस्पेन्सरी सेवा (Dispensary Service)' },

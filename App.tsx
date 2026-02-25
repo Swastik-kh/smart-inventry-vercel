@@ -9,7 +9,7 @@ import {
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
   DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani, BharmanAdeshEntry,
-  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord
+  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, BillingRecord
 } from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe, off, push } from "firebase/database";
@@ -78,6 +78,7 @@ const App: React.FC = () => {
   const [prasutiRecords, setPrasutiRecords] = useState<PrasutiRecord[]>([]);
   const [serviceSeekerRecords, setServiceSeekerRecords] = useState<ServiceSeekerRecord[]>([]);
   const [opdRecords, setOpdRecords] = useState<OPDRecord[]>([]);
+  const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -169,6 +170,7 @@ const App: React.FC = () => {
     setupOrgListener('prasutiRecords', setPrasutiRecords);
     setupOrgListener('serviceSeekerRecords', setServiceSeekerRecords);
     setupOrgListener('opdRecords', setOpdRecords);
+    setupOrgListener('billingRecords', setBillingRecords);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser]);
@@ -327,6 +329,24 @@ const App: React.FC = () => {
       await remove(getOrgRef(`opdRecords/${id}`));
     } catch (error) {
       alert("OPD रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveBillingRecord = async (record: BillingRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`billingRecords/${record.id}`), record);
+    } catch (error) {
+      alert("बिलिङ रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteBillingRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`billingRecords/${id}`));
+    } catch (error) {
+      alert("बिलिङ रेकर्ड हटाउन सकिएन।");
     }
   };
 
@@ -802,6 +822,9 @@ const App: React.FC = () => {
     opdRecords={opdRecords}
     onSaveOPDRecord={handleSaveOPDRecord}
     onDeleteOPDRecord={handleDeleteOPDRecord}
+    billingRecords={billingRecords}
+    onSaveBillingRecord={handleSaveBillingRecord}
+    onDeleteBillingRecord={handleDeleteBillingRecord}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">

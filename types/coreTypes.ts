@@ -218,6 +218,30 @@ export interface OPDRecord {
   nextVisitDate?: string;
 }
 
+export interface BillingItem {
+  id: string;
+  serviceName: string;
+  price: number;
+  quantity: number;
+  total: number;
+}
+
+export interface BillingRecord {
+  id: string;
+  fiscalYear: string;
+  billDate: string;
+  invoiceNumber: string;
+  serviceSeekerId: string;
+  patientName: string;
+  items: BillingItem[];
+  subTotal: number;
+  discount: number;
+  grandTotal: number;
+  paymentMode: 'Cash' | 'Online' | 'Credit';
+  remarks?: string;
+  createdBy?: string;
+}
+
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
