@@ -12,7 +12,7 @@ import {
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
 import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest, DakhilaPratibedanEntry } from '../types/inventoryTypes';
-import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, BillingRecord } from '../types/coreTypes';
+import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, BillingRecord, ServiceItem } from '../types/coreTypes';
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -51,6 +51,7 @@ import { PrasutiSewa } from './PrasutiSewa';
 import { MulDartaSewa } from './MulDartaSewa';
 import { OPDSewa } from './OPDSewa';
 import { ServiceBilling } from './ServiceBilling';
+import { ServiceSettings } from './ServiceSettings';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -71,6 +72,9 @@ interface ExtendedDashboardProps extends DashboardProps {
   billingRecords: BillingRecord[];
   onSaveBillingRecord: (record: BillingRecord) => void;
   onDeleteBillingRecord: (recordId: string) => void;
+  serviceItems: ServiceItem[];
+  onSaveServiceItem: (item: ServiceItem) => void;
+  onDeleteServiceItem: (id: string) => void;
 }
 
 interface AppNotification {
@@ -107,7 +111,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   prasutiRecords, onSavePrasutiRecord, onDeletePrasutiRecord,
   serviceSeekerRecords, onSaveServiceSeekerRecord, onDeleteServiceSeekerRecord,
   opdRecords, onSaveOPDRecord, onDeleteOPDRecord,
-  billingRecords, onSaveBillingRecord, onDeleteBillingRecord
+  billingRecords, onSaveBillingRecord, onDeleteBillingRecord,
+  serviceItems, onSaveServiceItem, onDeleteServiceItem
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
@@ -437,6 +442,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       icon: <Settings size={20} />,
       subItems: [
         { id: 'general_setting', label: 'सामान्य सेटिङ', icon: <Sliders size={16} /> },
+        { id: 'service_settings', label: 'सेवा सेटिङ (Service Settings)', icon: <Activity size={16} /> },
         { id: 'store_setup', label: 'स्टोर सेटअप', icon: <Store size={16} /> },
         { id: 'user_management', label: 'प्रयोगकर्ता व्यवस्थापन', icon: <Users size={16} /> },
         { id: 'change_password', label: 'पासवर्ड परिवर्तन', icon: <KeyRound size={16} /> },
@@ -974,6 +980,13 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                                             />;
       case 'database_management': return <DatabaseManagement currentUser={currentUser} users={users} inventoryItems={inventoryItems} magForms={magForms} purchaseOrders={purchaseOrders} issueReports={issueReports} rabiesPatients={rabiesPatients} tbPatients={tbPatients} firms={firms} stores={stores} dakhilaReports={dakhilaReports} returnEntries={returnEntries} marmatEntries={marmatEntries} dhuliyaunaEntries={dhuliyaunaEntries} logBookEntries={logBookEntries} onClearData={onClearData} onUploadData={onUploadData} />;
       case 'general_setting': return <GeneralSetting currentUser={currentUser} settings={generalSettings} onUpdateSettings={onUpdateGeneralSettings} />;
+      case 'service_settings': return <ServiceSettings 
+        serviceItems={serviceItems}
+        onSaveServiceItem={onSaveServiceItem}
+        onDeleteServiceItem={onDeleteServiceItem}
+        currentFiscalYear={currentFiscalYear}
+      />;
+      case 'store_setup': return <StoreSetup stores={stores} onAddStore={onAddStore} onUpdateStore={onUpdateStore} onDeleteStore={onDeleteStore} />;
       default: return null;
     }
   };

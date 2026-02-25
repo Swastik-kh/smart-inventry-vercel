@@ -242,6 +242,15 @@ export interface BillingRecord {
   createdBy?: string;
 }
 
+export interface ServiceItem {
+  id: string;
+  serviceName: string;
+  category: string; // e.g., OPD, Lab, X-Ray, etc.
+  rate: number;
+  valueRange?: string; // Only for Lab Investigation
+  fiscalYear: string;
+}
+
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;

@@ -9,7 +9,7 @@ import {
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
   DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani, BharmanAdeshEntry,
-  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, BillingRecord
+  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, BillingRecord, ServiceItem
 } from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe, off, push } from "firebase/database";
@@ -79,6 +79,7 @@ const App: React.FC = () => {
   const [serviceSeekerRecords, setServiceSeekerRecords] = useState<ServiceSeekerRecord[]>([]);
   const [opdRecords, setOpdRecords] = useState<OPDRecord[]>([]);
   const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
+  const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -171,6 +172,7 @@ const App: React.FC = () => {
     setupOrgListener('serviceSeekerRecords', setServiceSeekerRecords);
     setupOrgListener('opdRecords', setOpdRecords);
     setupOrgListener('billingRecords', setBillingRecords);
+    setupOrgListener('serviceItems', setServiceItems);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser]);
@@ -347,6 +349,24 @@ const App: React.FC = () => {
       await remove(getOrgRef(`billingRecords/${id}`));
     } catch (error) {
       alert("बिलिङ रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveServiceItem = async (item: ServiceItem) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`serviceItems/${item.id}`), item);
+    } catch (error) {
+      alert("सेवा सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteServiceItem = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`serviceItems/${id}`));
+    } catch (error) {
+      alert("सेवा हटाउन सकिएन।");
     }
   };
 
@@ -825,6 +845,9 @@ const App: React.FC = () => {
     billingRecords={billingRecords}
     onSaveBillingRecord={handleSaveBillingRecord}
     onDeleteBillingRecord={handleDeleteBillingRecord}
+    serviceItems={serviceItems}
+    onSaveServiceItem={handleSaveServiceItem}
+    onDeleteServiceItem={handleDeleteServiceItem}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
