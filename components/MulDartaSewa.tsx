@@ -4,6 +4,9 @@ import { ServiceSeekerRecord } from '../types/coreTypes';
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
 
+// @ts-ignore
+import NepaliDate from 'nepali-date-converter';
+
 interface MulDartaSewaProps {
   records: ServiceSeekerRecord[];
   onSaveRecord: (record: ServiceSeekerRecord) => void;
@@ -12,14 +15,17 @@ interface MulDartaSewaProps {
 }
 
 const initialFormData: Omit<ServiceSeekerRecord, 'id' | 'fiscalYear'> = {
+  uniquePatientId: '',
   registrationNumber: '',
   date: '',
   name: '',
   age: '',
   gender: 'Male',
+  casteCode: '',
   address: '',
   phone: '',
   serviceType: 'OPD',
+  visitType: 'New',
   remarks: '',
 };
 
@@ -31,7 +37,25 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
 
   const handleAddNew = () => {
     setIsEditing(null);
-    setFormData(initialFormData);
+    const newUniqueId = `PID-${Date.now().toString().slice(-6)}`;
+    
+    // Calculate next registration number
+    const currentYearRecords = records.filter(r => r.fiscalYear === currentFiscalYear);
+    const maxRegNum = currentYearRecords.reduce((max, r) => {
+      const num = parseInt(r.registrationNumber, 10);
+      return !isNaN(num) && num > max ? num : max;
+    }, 0);
+    const nextRegNum = (maxRegNum + 1).toString().padStart(4, '0');
+    
+    // Auto-populate today's date
+    const today = new NepaliDate().format('YYYY-MM-DD');
+
+    setFormData({ 
+      ...initialFormData, 
+      uniquePatientId: newUniqueId,
+      registrationNumber: nextRegNum,
+      date: today
+    });
     setShowForm(true);
   };
 
@@ -48,6 +72,36 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // Auto-detect follow-up logic
+    if (name === 'name' || name === 'phone') {
+      const checkName = name === 'name' ? value : formData.name;
+      const checkPhone = name === 'phone' ? value : formData.phone;
+      
+      if (checkName && checkName.length > 2) {
+        const existingPatient = records.find(r => 
+          r.fiscalYear === currentFiscalYear && 
+          r.name.toLowerCase() === checkName.toLowerCase() &&
+          (!checkPhone || r.phone === checkPhone)
+        );
+        
+        if (existingPatient) {
+          setFormData(prev => ({ 
+            ...prev, 
+            [name]: value,
+            visitType: 'Follow-up',
+            uniquePatientId: existingPatient.uniquePatientId,
+            casteCode: existingPatient.casteCode || prev.casteCode,
+            age: existingPatient.age || prev.age,
+            gender: existingPatient.gender || prev.gender,
+            address: existingPatient.address || prev.address,
+            phone: existingPatient.phone || prev.phone
+          }));
+          return;
+        }
+      }
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -114,12 +168,15 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
             <thead className="bg-slate-50 text-slate-600 font-medium">
               <tr>
                 <th className="p-4">दर्ता नं.</th>
+                <th className="p-4">बिरामी ID</th>
                 <th className="p-4">मिति</th>
                 <th className="p-4">नाम</th>
                 <th className="p-4">उमेर/लिङ्ग</th>
+                <th className="p-4">जातिगत कोड</th>
                 <th className="p-4">ठेगाना</th>
                 <th className="p-4">फोन</th>
                 <th className="p-4">सेवाको प्रकार</th>
+                <th className="p-4">किसिम</th>
                 <th className="p-4 text-right">कार्य</th>
               </tr>
             </thead>
@@ -127,14 +184,21 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
               {filteredRecords.map(record => (
                 <tr key={record.id} className="hover:bg-slate-50 transition-colors">
                   <td className="p-4 font-bold text-primary-700">{record.registrationNumber}</td>
+                  <td className="p-4 font-mono text-xs text-slate-500">{record.uniquePatientId}</td>
                   <td className="p-4">{record.date}</td>
                   <td className="p-4 font-medium">{record.name}</td>
                   <td className="p-4">{record.age} / {record.gender}</td>
+                  <td className="p-4 text-center">{record.casteCode || '-'}</td>
                   <td className="p-4">{record.address}</td>
                   <td className="p-4 font-mono">{record.phone}</td>
                   <td className="p-4">
                     <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold uppercase">
                       {record.serviceType}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${record.visitType === 'New' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                      {record.visitType}
                     </span>
                   </td>
                   <td className="p-4 text-right">
@@ -151,7 +215,7 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
               ))}
               {filteredRecords.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center p-12 text-slate-500 italic">कुनै रेकर्ड भेटिएन।</td>
+                  <td colSpan={11} className="text-center p-12 text-slate-500 italic">कुनै रेकर्ड भेटिएन।</td>
                 </tr>
               )}
             </tbody>
@@ -179,13 +243,26 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
                   value={formData.registrationNumber} 
                   onChange={handleChange} 
                   required 
+                  readOnly
+                  className="bg-slate-50 text-slate-500 cursor-not-allowed"
                 />
-                <NepaliDatePicker 
-                  label="दर्ता मिति *" 
-                  value={formData.date} 
-                  onChange={handleDateChange} 
-                  required 
+                <Input 
+                  label="बिरामी ID (Unique)" 
+                  name="uniquePatientId" 
+                  value={formData.uniquePatientId} 
+                  onChange={handleChange} 
+                  readOnly
+                  className="bg-slate-50 text-slate-500 cursor-not-allowed"
                 />
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">दर्ता मिति *</label>
+                  <input 
+                    type="text" 
+                    value={formData.date} 
+                    readOnly 
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none bg-slate-50 text-slate-500 cursor-not-allowed text-sm"
+                  />
+                </div>
                 <Input 
                   label="सेवाग्राहीको नाम *" 
                   name="name" 
@@ -200,6 +277,23 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
                   onChange={handleChange} 
                   required 
                 />
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">जातिगत कोड (Caste Code)</label>
+                  <select 
+                    name="casteCode" 
+                    value={formData.casteCode} 
+                    onChange={handleChange} 
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  >
+                    <option value="">छान्नुहोस्</option>
+                    <option value="1">1 - दलित (Dalit)</option>
+                    <option value="2">2 - जनजाति (Janajati)</option>
+                    <option value="3">3 - मधेशी (Madhesi)</option>
+                    <option value="4">4 - मुस्लिम (Muslim)</option>
+                    <option value="5">5 - ब्राह्मण/क्षेत्री (Brahmin/Chhetri)</option>
+                    <option value="6">6 - अन्य (Other)</option>
+                  </select>
+                </div>
                 <div className="flex flex-col">
                   <label className="text-sm font-medium text-slate-600 mb-1 block">लिङ्ग *</label>
                   <select 
@@ -227,6 +321,19 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
                   value={formData.phone} 
                   onChange={handleChange} 
                 />
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">बिरामीको किसिम (Visit Type) *</label>
+                  <select 
+                    name="visitType" 
+                    value={formData.visitType} 
+                    onChange={handleChange} 
+                    required 
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  >
+                    <option value="New">नयाँ (New)</option>
+                    <option value="Follow-up">पुनः (Follow-up)</option>
+                  </select>
+                </div>
                 <div className="flex flex-col">
                   <label className="text-sm font-medium text-slate-600 mb-1 block">सेवाको प्रकार *</label>
                   <select 

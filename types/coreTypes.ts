@@ -180,14 +180,17 @@ export interface PrasutiRecord {
 
 export interface ServiceSeekerRecord {
   id: string;
+  uniquePatientId: string; // Unique ID for the patient
   registrationNumber: string;
   date: string;
   name: string;
   age: string;
   gender: 'Male' | 'Female' | 'Other';
+  casteCode: string; // Caste/Ethnicity Code
   address: string;
   phone: string;
   serviceType: string; // OPD, Emergency, Vaccination, etc.
+  visitType: 'New' | 'Follow-up'; // New or Follow-up
   fiscalYear: string;
   remarks?: string;
 }
