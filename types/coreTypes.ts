@@ -251,6 +251,29 @@ export interface ServiceItem {
   fiscalYear: string;
 }
 
+export interface LabTestResult {
+  id: string;
+  testName: string;
+  result: string;
+  normalRange?: string;
+  unit?: string;
+  remarks?: string;
+}
+
+export interface LabReport {
+  id: string;
+  fiscalYear: string;
+  reportDate: string;
+  serviceSeekerId: string;
+  patientName: string;
+  age: string;
+  gender: string;
+  referredBy?: string;
+  tests: LabTestResult[];
+  status: 'Pending' | 'Completed';
+  createdBy?: string;
+}
+
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;

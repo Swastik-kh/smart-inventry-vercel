@@ -12,7 +12,7 @@ import {
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
 import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest, DakhilaPratibedanEntry } from '../types/inventoryTypes';
-import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, BillingRecord, ServiceItem } from '../types/coreTypes';
+import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, BillingRecord, ServiceItem, LabReport } from '../types/coreTypes';
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -52,6 +52,7 @@ import { MulDartaSewa } from './MulDartaSewa';
 import { OPDSewa } from './OPDSewa';
 import { ServiceBilling } from './ServiceBilling';
 import { ServiceSettings } from './ServiceSettings';
+import { PrayogsalaSewa } from './PrayogsalaSewa';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -75,6 +76,9 @@ interface ExtendedDashboardProps extends DashboardProps {
   serviceItems: ServiceItem[];
   onSaveServiceItem: (item: ServiceItem) => void;
   onDeleteServiceItem: (id: string) => void;
+  labReports: LabReport[];
+  onSaveLabReport: (record: LabReport) => void;
+  onDeleteLabReport: (id: string) => void;
 }
 
 interface AppNotification {
@@ -112,7 +116,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   serviceSeekerRecords, onSaveServiceSeekerRecord, onDeleteServiceSeekerRecord,
   opdRecords, onSaveOPDRecord, onDeleteOPDRecord,
   billingRecords, onSaveBillingRecord, onDeleteBillingRecord,
-  serviceItems, onSaveServiceItem, onDeleteServiceItem
+  serviceItems, onSaveServiceItem, onDeleteServiceItem,
+  labReports, onSaveLabReport, onDeleteLabReport
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
@@ -951,7 +956,25 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         serviceItems={serviceItems}
       />;
       case 'emergency_sewa':
-      case 'prayogsala_sewa':
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400">
+            <div className="bg-slate-100 p-6 rounded-full mb-4">
+              <Stethoscope size={48} className="opacity-20" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-600 mb-2">यो सेवा हाल निर्माणाधीन छ।</h3>
+            <p className="text-sm">चाँडै नै यो सेवा उपलब्ध हुनेछ।</p>
+          </div>
+        );
+      case 'prayogsala_sewa': return <PrayogsalaSewa 
+        serviceSeekerRecords={serviceSeekerRecords}
+        billingRecords={billingRecords}
+        serviceItems={serviceItems}
+        labReports={labReports}
+        onSaveRecord={onSaveLabReport}
+        onDeleteRecord={onDeleteLabReport}
+        currentFiscalYear={currentFiscalYear}
+        currentUser={currentUser}
+      />;
       case 'dispensory_sewa':
       case 'pariwar_niyojan':
       case 'xray_sewa':

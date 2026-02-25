@@ -9,7 +9,7 @@ import {
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
   DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani, BharmanAdeshEntry,
-  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, BillingRecord, ServiceItem
+  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, BillingRecord, ServiceItem, LabReport
 } from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe, off, push } from "firebase/database";
@@ -80,6 +80,7 @@ const App: React.FC = () => {
   const [opdRecords, setOpdRecords] = useState<OPDRecord[]>([]);
   const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
+  const [labReports, setLabReports] = useState<LabReport[]>([]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -173,6 +174,7 @@ const App: React.FC = () => {
     setupOrgListener('opdRecords', setOpdRecords);
     setupOrgListener('billingRecords', setBillingRecords);
     setupOrgListener('serviceItems', setServiceItems);
+    setupOrgListener('labReports', setLabReports);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser]);
@@ -367,6 +369,24 @@ const App: React.FC = () => {
       await remove(getOrgRef(`serviceItems/${id}`));
     } catch (error) {
       alert("सेवा हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveLabReport = async (record: LabReport) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`labReports/${record.id}`), record);
+    } catch (error) {
+      alert("ल्याब रिपोर्ट सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteLabReport = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`labReports/${id}`));
+    } catch (error) {
+      alert("ल्याब रिपोर्ट हटाउन सकिएन।");
     }
   };
 
@@ -848,6 +868,9 @@ const App: React.FC = () => {
     serviceItems={serviceItems}
     onSaveServiceItem={handleSaveServiceItem}
     onDeleteServiceItem={handleDeleteServiceItem}
+    labReports={labReports}
+    onSaveLabReport={handleSaveLabReport}
+    onDeleteLabReport={handleDeleteLabReport}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
