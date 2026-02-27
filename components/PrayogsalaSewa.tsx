@@ -106,7 +106,7 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
         testName: item.serviceName,
         result: existingTest?.result || '',
         normalRange: existingTest?.normalRange || serviceDef?.valueRange || '',
-        unit: existingTest?.unit || '',
+        unit: existingTest?.unit || serviceDef?.unit || '',
         remarks: existingTest?.remarks || '',
         sampleCollected: existingTest?.sampleCollected || false,
         sampleCollectedDate: existingTest?.sampleCollectedDate || '',

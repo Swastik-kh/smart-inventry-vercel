@@ -35,7 +35,8 @@ export const ServiceSettings: React.FC<ServiceSettingsProps> = ({
     serviceName: '',
     category: 'OPD',
     rate: 0,
-    valueRange: ''
+    valueRange: '',
+    unit: ''
   });
 
   const resetForm = () => {
@@ -43,7 +44,8 @@ export const ServiceSettings: React.FC<ServiceSettingsProps> = ({
       serviceName: '',
       category: 'OPD',
       rate: 0,
-      valueRange: ''
+      valueRange: '',
+      unit: ''
     });
     setEditingId(null);
     setShowForm(false);
@@ -54,7 +56,8 @@ export const ServiceSettings: React.FC<ServiceSettingsProps> = ({
       serviceName: item.serviceName,
       category: item.category,
       rate: item.rate,
-      valueRange: item.valueRange || ''
+      valueRange: item.valueRange || '',
+      unit: item.unit || ''
     });
     setEditingId(item.id);
     setShowForm(true);
@@ -144,14 +147,20 @@ export const ServiceSettings: React.FC<ServiceSettingsProps> = ({
             />
 
             {formData.category === 'Lab' && (
-              <div className="md:col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-100">
+              <div className="md:col-span-2 bg-purple-50 p-4 rounded-xl border border-purple-100 grid md:grid-cols-2 gap-4">
                 <Input 
                   label="Value Range (For Lab Reports)" 
                   value={formData.valueRange || ''} 
                   onChange={e => setFormData({...formData, valueRange: e.target.value})} 
-                  placeholder="Ex: 4.0 - 11.0 x 10^9/L"
+                  placeholder="Ex: 4.0 - 11.0"
                 />
-                <p className="text-xs text-purple-600 mt-1">Note: This range will appear on lab reports.</p>
+                <Input 
+                  label="Unit (For Lab Reports)" 
+                  value={formData.unit || ''} 
+                  onChange={e => setFormData({...formData, unit: e.target.value})} 
+                  placeholder="Ex: x 10^9/L, mg/dL"
+                />
+                <p className="md:col-span-2 text-xs text-purple-600">Note: These details will appear on lab reports.</p>
               </div>
             )}
 
@@ -179,6 +188,7 @@ export const ServiceSettings: React.FC<ServiceSettingsProps> = ({
                 <th className="px-6 py-4">Category</th>
                 <th className="px-6 py-4 text-right">Rate (Rs.)</th>
                 <th className="px-6 py-4">Value Range</th>
+                <th className="px-6 py-4">Unit</th>
                 <th className="px-6 py-4 text-right">Action</th>
               </tr>
             </thead>
@@ -198,6 +208,7 @@ export const ServiceSettings: React.FC<ServiceSettingsProps> = ({
                     </td>
                     <td className="px-6 py-4 text-right font-mono font-medium text-slate-700">{item.rate.toFixed(2)}</td>
                     <td className="px-6 py-4 text-xs text-slate-500 font-mono">{item.valueRange || '-'}</td>
+                    <td className="px-6 py-4 text-xs text-slate-500 font-mono">{item.unit || '-'}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         <button onClick={() => handleEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors">

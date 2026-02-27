@@ -218,6 +218,43 @@ export interface OPDRecord {
   nextVisitDate?: string;
 }
 
+export interface EmergencyRecord {
+  id: string;
+  fiscalYear: string;
+  serviceSeekerId: string;
+  uniquePatientId: string;
+  visitDate: string;
+  chiefComplaints: string;
+  diagnosis: string;
+  investigation: string;
+  emergencyPrescriptions: PrescriptionItem[];
+  dischargePrescriptions: PrescriptionItem[];
+  advice?: string;
+  nextVisitDate?: string;
+  triage?: 'Red' | 'Yellow' | 'Green' | 'Black';
+  vitals?: {
+    temp?: string;
+    bp?: string;
+    pulse?: string;
+    rr?: string;
+    spo2?: string;
+  };
+}
+
+export interface CBIMNCIRecord {
+  id: string;
+  fiscalYear: string;
+  serviceSeekerId: string;
+  uniquePatientId: string;
+  visitDate: string;
+  chiefComplaints: string;
+  diagnosis: string;
+  investigation: string;
+  prescriptions: PrescriptionItem[];
+  advice?: string;
+  nextVisitDate?: string;
+}
+
 export interface BillingItem {
   id: string;
   serviceName: string;
@@ -248,6 +285,7 @@ export interface ServiceItem {
   category: string; // e.g., OPD, Lab, X-Ray, etc.
   rate: number;
   valueRange?: string; // Only for Lab Investigation
+  unit?: string; // Only for Lab Investigation
   fiscalYear: string;
 }
 

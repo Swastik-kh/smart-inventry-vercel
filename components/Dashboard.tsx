@@ -12,7 +12,7 @@ import {
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
 import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest, DakhilaPratibedanEntry } from '../types/inventoryTypes';
-import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, BillingRecord, ServiceItem, LabReport } from '../types/coreTypes';
+import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport } from '../types/coreTypes';
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -50,6 +50,8 @@ import { GarbhawotiSewa } from './GarbhawotiSewa';
 import { PrasutiSewa } from './PrasutiSewa';
 import { MulDartaSewa } from './MulDartaSewa';
 import { OPDSewa } from './OPDSewa';
+import { EmergencySewa } from './EmergencySewa';
+import { CBIMNCISewa } from './CBIMNCISewa';
 import { ServiceBilling } from './ServiceBilling';
 import { ServiceSettings } from './ServiceSettings';
 import { PrayogsalaSewa } from './PrayogsalaSewa';
@@ -70,6 +72,12 @@ interface ExtendedDashboardProps extends DashboardProps {
   opdRecords: OPDRecord[];
   onSaveOPDRecord: (record: OPDRecord) => void;
   onDeleteOPDRecord: (recordId: string) => void;
+  emergencyRecords: EmergencyRecord[];
+  onSaveEmergencyRecord: (record: EmergencyRecord) => void;
+  onDeleteEmergencyRecord: (recordId: string) => void;
+  cbimnciRecords: CBIMNCIRecord[];
+  onSaveCBIMNCIRecord: (record: CBIMNCIRecord) => void;
+  onDeleteCBIMNCIRecord: (recordId: string) => void;
   billingRecords: BillingRecord[];
   onSaveBillingRecord: (record: BillingRecord) => void;
   onDeleteBillingRecord: (recordId: string) => void;
@@ -115,6 +123,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   prasutiRecords, onSavePrasutiRecord, onDeletePrasutiRecord,
   serviceSeekerRecords, onSaveServiceSeekerRecord, onDeleteServiceSeekerRecord,
   opdRecords, onSaveOPDRecord, onDeleteOPDRecord,
+  emergencyRecords, onSaveEmergencyRecord, onDeleteEmergencyRecord,
+  cbimnciRecords, onSaveCBIMNCIRecord, onDeleteCBIMNCIRecord,
   billingRecords, onSaveBillingRecord, onDeleteBillingRecord,
   serviceItems, onSaveServiceItem, onDeleteServiceItem,
   labReports, onSaveLabReport, onDeleteLabReport
@@ -375,8 +385,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       subItems: [ 
         { id: 'mul_darta', label: 'मूल दर्ता सेवा', icon: <ClipboardList size={16} /> },
         { id: 'opd_sewa', label: 'ओ.पी.डी. सेवा', icon: <UserPlus size={16} /> },
-        { id: 'service_billing', label: 'सेवा बिलिङ (Service Billing)', icon: <FileText size={16} /> },
         { id: 'emergency_sewa', label: 'आकस्मिक सेवा (Emergency)', icon: <Siren size={16} /> },
+        { id: 'cbimnci_sewa', label: 'CBIMNCI सेवा', icon: <Baby size={16} /> },
+        { id: 'service_billing', label: 'सेवा बिलिङ (Service Billing)', icon: <FileText size={16} /> },
         { id: 'prayogsala_sewa', label: 'प्रयोगशाला सेवा', icon: <FlaskConical size={16} /> },
         { id: 'dispensory_sewa', label: 'डिस्पेन्सरी सेवा', icon: <Pill size={16} /> },
         { id: 'pariwar_niyojan', label: 'परिवार नियोजन सेवा', icon: <Users size={16} /> },
@@ -955,16 +966,24 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         currentUser={currentUser}
         serviceItems={serviceItems}
       />;
-      case 'emergency_sewa':
-        return (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400">
-            <div className="bg-slate-100 p-6 rounded-full mb-4">
-              <Stethoscope size={48} className="opacity-20" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-600 mb-2">यो सेवा हाल निर्माणाधीन छ।</h3>
-            <p className="text-sm">चाँडै नै यो सेवा उपलब्ध हुनेछ।</p>
-          </div>
-        );
+      case 'emergency_sewa': return <EmergencySewa 
+        serviceSeekerRecords={serviceSeekerRecords}
+        emergencyRecords={emergencyRecords}
+        onSaveRecord={onSaveEmergencyRecord}
+        onDeleteRecord={onDeleteEmergencyRecord}
+        currentFiscalYear={currentFiscalYear}
+        currentUser={currentUser}
+        serviceItems={serviceItems}
+      />;
+      case 'cbimnci_sewa': return <CBIMNCISewa 
+        serviceSeekerRecords={serviceSeekerRecords}
+        cbimnciRecords={cbimnciRecords}
+        onSaveRecord={onSaveCBIMNCIRecord}
+        onDeleteRecord={onDeleteCBIMNCIRecord}
+        currentFiscalYear={currentFiscalYear}
+        currentUser={currentUser}
+        serviceItems={serviceItems}
+      />;
       case 'prayogsala_sewa': return <PrayogsalaSewa 
         serviceSeekerRecords={serviceSeekerRecords}
         billingRecords={billingRecords}

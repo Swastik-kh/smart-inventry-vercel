@@ -9,7 +9,7 @@ import {
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
   DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani, BharmanAdeshEntry,
-  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, BillingRecord, ServiceItem, LabReport
+  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport
 } from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe, off, push } from "firebase/database";
@@ -40,7 +40,7 @@ const DEFAULT_ADMIN: User = {
     fullName: 'Administrator',
     designation: 'System Manager',
     phoneNumber: '98XXXXXXXX',
-    allowedMenus: ['dashboard', 'inventory', 'settings', 'services', 'khop_sewa']
+    allowedMenus: ['dashboard', 'inventory', 'settings', 'services', 'khop_sewa', 'emergency_sewa', 'cbimnci_sewa']
 };
 
 const App: React.FC = () => {
@@ -78,6 +78,8 @@ const App: React.FC = () => {
   const [prasutiRecords, setPrasutiRecords] = useState<PrasutiRecord[]>([]);
   const [serviceSeekerRecords, setServiceSeekerRecords] = useState<ServiceSeekerRecord[]>([]);
   const [opdRecords, setOpdRecords] = useState<OPDRecord[]>([]);
+  const [emergencyRecords, setEmergencyRecords] = useState<EmergencyRecord[]>([]);
+  const [cbimnciRecords, setCbimnciRecords] = useState<CBIMNCIRecord[]>([]);
   const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
   const [labReports, setLabReports] = useState<LabReport[]>([]);
@@ -172,6 +174,8 @@ const App: React.FC = () => {
     setupOrgListener('prasutiRecords', setPrasutiRecords);
     setupOrgListener('serviceSeekerRecords', setServiceSeekerRecords);
     setupOrgListener('opdRecords', setOpdRecords);
+    setupOrgListener('emergencyRecords', setEmergencyRecords);
+    setupOrgListener('cbimnciRecords', setCbimnciRecords);
     setupOrgListener('billingRecords', setBillingRecords);
     setupOrgListener('serviceItems', setServiceItems);
     setupOrgListener('labReports', setLabReports);
@@ -333,6 +337,42 @@ const App: React.FC = () => {
       await remove(getOrgRef(`opdRecords/${id}`));
     } catch (error) {
       alert("OPD रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveEmergencyRecord = async (record: EmergencyRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`emergencyRecords/${record.id}`), record);
+    } catch (error) {
+      alert("Emergency रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteEmergencyRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`emergencyRecords/${id}`));
+    } catch (error) {
+      alert("Emergency रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveCBIMNCIRecord = async (record: CBIMNCIRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`cbimnciRecords/${record.id}`), record);
+    } catch (error) {
+      alert("CBIMNCI रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteCBIMNCIRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`cbimnciRecords/${id}`));
+    } catch (error) {
+      alert("CBIMNCI रेकर्ड हटाउन सकिएन।");
     }
   };
 
@@ -862,6 +902,12 @@ const App: React.FC = () => {
     opdRecords={opdRecords}
     onSaveOPDRecord={handleSaveOPDRecord}
     onDeleteOPDRecord={handleDeleteOPDRecord}
+    emergencyRecords={emergencyRecords}
+    onSaveEmergencyRecord={handleSaveEmergencyRecord}
+    onDeleteEmergencyRecord={handleDeleteEmergencyRecord}
+    cbimnciRecords={cbimnciRecords}
+    onSaveCBIMNCIRecord={handleSaveCBIMNCIRecord}
+    onDeleteCBIMNCIRecord={handleDeleteCBIMNCIRecord}
     billingRecords={billingRecords}
     onSaveBillingRecord={handleSaveBillingRecord}
     onDeleteBillingRecord={handleDeleteBillingRecord}

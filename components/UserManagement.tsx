@@ -15,6 +15,7 @@ const PERMISSION_STRUCTURE = [
             { id: 'opd_sewa', label: 'ओ.पी.डी. सेवा (OPD Service)' },
             { id: 'service_billing', label: 'सेवा बिलिङ (Service Billing)' },
             { id: 'emergency_sewa', label: 'आकस्मिक सेवा (Emergency Service)' },
+            { id: 'cbimnci_sewa', label: 'CBIMNCI सेवा (CBIMNCI Service)' },
             { id: 'prayogsala_sewa', label: 'प्रयोगशाला सेवा (Lab Service)' },
             { id: 'dispensory_sewa', label: 'डिस्पेन्सरी सेवा (Dispensary Service)' },
             { id: 'pariwar_niyojan', label: 'परिवार नियोजन सेवा (Family Planning)' },
