@@ -187,6 +187,8 @@ export interface ServiceSeekerRecord {
   age: string; // Keep for display/legacy
   ageYears?: number;
   ageMonths?: number;
+  dobBs?: string;
+  dobAd?: string;
   gender: 'Male' | 'Female' | 'Other';
   casteCode: string; // Caste/Ethnicity Code
   address: string;

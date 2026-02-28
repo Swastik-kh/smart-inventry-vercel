@@ -454,6 +454,14 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <Input label="तौल (kg)" type="number" step="0.01" value={assessmentData.weight || ''} onChange={(e) => setAssessmentData({...assessmentData, weight: e.target.value})} />
+                {zScore && (
+                  <div className="p-2 bg-purple-100 rounded-lg border border-purple-200">
+                    <p className="text-xs font-bold text-purple-800">WAZ Score: {zScore}</p>
+                    <p className="text-[10px] text-purple-600">
+                      {parseFloat(zScore) < -3 ? 'Severe Underweight' : parseFloat(zScore) < -2 ? 'Underweight' : 'Normal Weight'}
+                    </p>
+                  </div>
+                )}
                 <label className="text-sm font-medium text-slate-700 block">स्तनपानको अवस्था</label>
                 <div className="space-y-1">
                   {['२४ घण्टामा १० पटक भन्दा कम स्तनपान', 'थप खाना वा झोल दिने गरेको', 'स्तनपान गराउन गाह्रो भएको'].map(sign => (
@@ -727,6 +735,14 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <Input label="तौल (kg)" type="number" step="0.1" value={assessmentData.weight || ''} onChange={(e) => setAssessmentData({...assessmentData, weight: e.target.value})} />
+                {zScore && (
+                  <div className="p-2 bg-purple-100 rounded-lg border border-purple-200">
+                    <p className="text-xs font-bold text-purple-800">Weight-for-Age Z-Score: {zScore}</p>
+                    <p className="text-[10px] text-purple-600">
+                      {parseFloat(zScore) < -3 ? 'Severe Underweight' : parseFloat(zScore) < -2 ? 'Underweight' : 'Normal Weight'}
+                    </p>
+                  </div>
+                )}
                 <Input label="MUAC (mm)" type="number" value={assessmentData.muac || ''} onChange={(e) => setAssessmentData({...assessmentData, muac: e.target.value})} />
                 <label className="text-sm font-medium text-slate-700 block">रक्तअल्पता (Anemia)</label>
                 <select 
@@ -974,9 +990,21 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       if (classifications.includes('Severe Dehydration')) {
         treatments.push('Give fluid for severe dehydration (Plan C)');
         treatments.push('Refer URGENTLY to hospital');
+        treatments.push('If child can drink, give ORS by mouth while drip is being set up');
+        treatments.push('Give 100 ml/kg Ringer\'s Lactate (or Normal Saline)');
       }
       if (classifications.includes('Some Dehydration')) {
         treatments.push('Give fluid and food for some dehydration (Plan B)');
+        treatments.push('Give 75 ml/kg of ORS in the clinic over 4 hours');
+        treatments.push('Show mother how to give ORS solution');
+        treatments.push('After 4 hours, reassess child and classify for dehydration');
+      }
+      if (classifications.includes('No Dehydration')) {
+        treatments.push('Treat diarrhea at home (Plan A)');
+        treatments.push('Give extra fluid (as much as child will take)');
+        treatments.push('Give Zinc Supplement for 10 days (2-6m: 10mg, >6m: 20mg)');
+        treatments.push('Continue feeding');
+        treatments.push('Advise mother when to return immediately');
       }
     } else {
       if (classifications.includes('Very Severe Disease')) {
@@ -986,7 +1014,14 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         treatments.push('Keep child warm');
       }
       if (classifications.includes('Pneumonia')) {
-        treatments.push('Give Amoxicillin for 5 days');
+        const weight = parseFloat(assessmentData.weight) || 0;
+        let amoxDose = '';
+        if (weight >= 4 && weight < 7) amoxDose = '250mg (1 tab or 5ml syrup) twice daily';
+        else if (weight >= 7 && weight < 10) amoxDose = '375mg (1.5 tab or 7.5ml syrup) twice daily';
+        else if (weight >= 10 && weight < 14) amoxDose = '500mg (2 tab or 10ml syrup) twice daily';
+        else if (weight >= 14 && weight < 19) amoxDose = '750mg (3 tab or 15ml syrup) twice daily';
+        
+        treatments.push(`Give Amoxicillin for 5 days: ${amoxDose}`);
         treatments.push('Soothe the throat and relieve cough with safe remedy');
         treatments.push('Advise mother when to return immediately');
         treatments.push('Follow-up in 3 days');
@@ -994,9 +1029,21 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       if (classifications.includes('Severe Dehydration')) {
         treatments.push('Give fluid for severe dehydration (Plan C)');
         treatments.push('Refer URGENTLY to hospital');
+        treatments.push('If child can drink, give ORS by mouth while drip is being set up');
+        treatments.push('Give 100 ml/kg Ringer\'s Lactate (or Normal Saline)');
       }
       if (classifications.includes('Some Dehydration')) {
         treatments.push('Give fluid and food for some dehydration (Plan B)');
+        treatments.push('Give 75 ml/kg of ORS in the clinic over 4 hours');
+        treatments.push('Show mother how to give ORS solution');
+        treatments.push('After 4 hours, reassess child and classify for dehydration');
+      }
+      if (classifications.includes('No Dehydration')) {
+        treatments.push('Treat diarrhea at home (Plan A)');
+        treatments.push('Give extra fluid (as much as child will take)');
+        treatments.push('Give Zinc Supplement for 10 days (2-6m: 10mg, >6m: 20mg)');
+        treatments.push('Continue feeding');
+        treatments.push('Advise mother when to return immediately');
       }
       if (classifications.includes('Severe Persistent Diarrhea')) {
         treatments.push('Treat dehydration before referral');
@@ -1012,12 +1059,23 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         treatments.push('Follow-up in 3 days');
       }
       if (classifications.includes('Malaria')) {
-        treatments.push('Give ACT for 3 days');
-        treatments.push('Give Paracetamol for high fever');
+        const weight = parseFloat(assessmentData.weight) || 0;
+        let actDose = '';
+        if (weight >= 5 && weight < 15) actDose = '1 tablet (20/120) once daily for 3 days';
+        else if (weight >= 15 && weight < 25) actDose = '2 tablets (20/120) once daily for 3 days';
+        
+        treatments.push(`Give ACT for 3 days: ${actDose}`);
+        treatments.push('Give Paracetamol for high fever (>= 38.5C)');
         treatments.push('Follow-up in 3 days if fever persists');
       }
       if (classifications.includes('Acute Ear Infection')) {
-        treatments.push('Give Amoxicillin for 5 days');
+        const weight = parseFloat(assessmentData.weight) || 0;
+        let amoxDose = '';
+        if (weight >= 4 && weight < 7) amoxDose = '250mg twice daily';
+        else if (weight >= 7 && weight < 10) amoxDose = '375mg twice daily';
+        else if (weight >= 10 && weight < 14) amoxDose = '500mg twice daily';
+        
+        treatments.push(`Give Amoxicillin for 5 days: ${amoxDose}`);
         treatments.push('Give Paracetamol for pain');
         treatments.push('Dry the ear by wicking if there is discharge');
         treatments.push('Follow-up in 5 days');
@@ -1051,6 +1109,67 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     return treatments;
   };
 
+  const calculateZScore = () => {
+    if (!assessmentData.weight || !currentPatient) return null;
+    const weight = parseFloat(assessmentData.weight);
+    
+    // Calculate precise age in months
+    const today = new Date();
+    const birthDate = currentPatient.dobAd ? new Date(currentPatient.dobAd) : null;
+    let ageMonths = (currentPatient.ageYears || 0) * 12 + (currentPatient.ageMonths || 0);
+    
+    if (birthDate) {
+      const diffTime = Math.abs(today.getTime() - birthDate.getTime());
+      ageMonths = diffTime / (1000 * 60 * 60 * 24 * 30.44);
+    }
+
+    // More granular WHO Weight-for-Age Z-score (WAZ) logic (Approximate Median and SD)
+    const wazData: any = {
+      0: { m: 3.3, s: 0.4 },
+      1: { m: 4.5, s: 0.5 },
+      2: { m: 5.6, s: 0.6 },
+      3: { m: 6.4, s: 0.7 },
+      4: { m: 7.0, s: 0.8 },
+      5: { m: 7.5, s: 0.8 },
+      6: { m: 7.9, s: 0.8 },
+      9: { m: 8.9, s: 0.9 },
+      12: { m: 9.6, s: 1.0 },
+      15: { m: 10.3, s: 1.1 },
+      18: { m: 10.9, s: 1.1 },
+      21: { m: 11.5, s: 1.2 },
+      24: { m: 12.2, s: 1.3 },
+      30: { m: 13.3, s: 1.4 },
+      36: { m: 14.3, s: 1.6 },
+      42: { m: 15.3, s: 1.7 },
+      48: { m: 16.3, s: 1.9 },
+      54: { m: 17.3, s: 2.0 },
+      60: { m: 18.3, s: 2.2 }
+    };
+
+    const ages = Object.keys(wazData).map(Number).sort((a, b) => a - b);
+    
+    // Linear interpolation for more accuracy
+    let m, s;
+    if (ageMonths <= 0) {
+      m = wazData[0].m;
+      s = wazData[0].s;
+    } else if (ageMonths >= 60) {
+      m = wazData[60].m;
+      s = wazData[60].s;
+    } else {
+      const lowerAge = ages.filter(a => a <= ageMonths).pop() || 0;
+      const upperAge = ages.find(a => a > ageMonths) || 60;
+      const factor = (ageMonths - lowerAge) / (upperAge - lowerAge);
+      
+      m = wazData[lowerAge].m + factor * (wazData[upperAge].m - wazData[lowerAge].m);
+      s = wazData[lowerAge].s + factor * (wazData[upperAge].s - wazData[lowerAge].s);
+    }
+    
+    const zScore = (weight - m) / s;
+    return zScore.toFixed(2);
+  };
+
+  const zScore = calculateZScore();
   const suggestedClassifications = getClassification();
   const suggestedNextVisit = getSuggestedNextVisit(suggestedClassifications);
   const suggestedTreatments = getSuggestedTreatment(suggestedClassifications);

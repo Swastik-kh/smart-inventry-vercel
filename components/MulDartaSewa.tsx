@@ -23,6 +23,8 @@ const initialFormData: Omit<ServiceSeekerRecord, 'id' | 'fiscalYear'> = {
   age: '',
   ageYears: 0,
   ageMonths: 0,
+  dobBs: '',
+  dobAd: '',
   gender: 'Male',
   casteCode: '',
   address: '',
@@ -98,6 +100,8 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
             age: existingPatient.age || prev.age,
             ageYears: existingPatient.ageYears || prev.ageYears,
             ageMonths: existingPatient.ageMonths || prev.ageMonths,
+            dobBs: existingPatient.dobBs || prev.dobBs,
+            dobAd: existingPatient.dobAd || prev.dobAd,
             gender: existingPatient.gender || prev.gender,
             address: existingPatient.address || prev.address,
             phone: existingPatient.phone || prev.phone
@@ -113,6 +117,37 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
 
   const handleDateChange = (value: string) => {
     setFormData(prev => ({ ...prev, date: value }));
+  };
+
+  const handleDOBChange = (value: string) => {
+    let dateAd = '';
+    if (value) {
+      try {
+        const nd = new NepaliDate(value);
+        dateAd = nd.toJsDate().toISOString().split('T')[0];
+        
+        // Auto-calculate age
+        const today = new NepaliDate();
+        const diffYears = today.getYear() - nd.getYear();
+        let diffMonths = today.getMonth() - nd.getMonth();
+        if (diffMonths < 0) {
+          // diffYears--; // Not necessarily, depends on day
+          diffMonths += 12;
+        }
+        
+        setFormData(prev => ({ 
+          ...prev, 
+          dobBs: value, 
+          dobAd: dateAd,
+          ageYears: diffYears >= 0 ? diffYears : 0,
+          ageMonths: diffMonths >= 0 ? diffMonths : 0
+        }));
+      } catch (e) {
+        setFormData(prev => ({ ...prev, dobBs: value }));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, dobBs: value, dobAd: '' }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -265,6 +300,11 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
                   onChange={handleChange} 
                   readOnly
                   className="bg-slate-50 text-slate-500 cursor-not-allowed"
+                />
+                <NepaliDatePicker 
+                  label="जन्म मिति (Date of Birth)" 
+                  value={formData.dobBs || ''} 
+                  onChange={handleDOBChange} 
                 />
                 <div className="flex flex-col">
                   <label className="text-sm font-medium text-slate-600 mb-1 block">दर्ता मिति *</label>
