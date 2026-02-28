@@ -27,7 +27,7 @@ const initialFormData: Omit<GarbhawotiRecord, 'id' | 'fiscalYear'> = {
   ttDose: '',
 };
 
-export const GarbhawotiSewa: React.FC<GarbhawotiSewaProps> = ({ records, onSaveRecord, onDeleteRecord, currentFiscalYear }) => {
+export const GarbhawotiSewa: React.FC<GarbhawotiSewaProps> = ({ records = [], onSaveRecord, onDeleteRecord, currentFiscalYear }) => {
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [formData, setFormData] = useState(initialFormData);

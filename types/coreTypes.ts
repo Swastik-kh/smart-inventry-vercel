@@ -272,6 +272,9 @@ export interface DispensaryRecord {
   items: {
     medicineName: string;
     quantity: number;
+    unit?: string;
+    batchNo?: string;
+    expiryDate?: string;
     dosage: string;
     instructions?: string;
   }[];

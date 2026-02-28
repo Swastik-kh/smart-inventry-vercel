@@ -25,6 +25,7 @@ import { FirmListing } from './FirmListing';
 import { Quotation } from './Quotation'; 
 import { JinshiMaujdat } from './JinshiMaujdat'; 
 import { StoreSetup } from './StoreSetup'; 
+import { CBIMNCIReport } from './CBIMNCIReport';
 import { InventoryMonthlyReport } from './InventoryMonthlyReport'; 
 import { StockEntryApproval } from './StockEntryApproval'; 
 import { DakhilaPratibedan } from './DakhilaPratibedan'; 
@@ -106,33 +107,33 @@ interface AppNotification {
 const READ_NOTIFS_KEY_PREFIX = 'smart_inv_read_notifs_v4_';
 
 export const Dashboard: React.FC<ExtendedDashboardProps> = ({ 
-  onLogout, currentUser, currentFiscalYear, users, onAddUser, onUpdateUser, onDeleteUser, onChangePassword, isDbLocked,
-  generalSettings, onUpdateGeneralSettings, magForms, onSaveMagForm, onDeleteMagForm,
-  purchaseOrders, onUpdatePurchaseOrder, issueReports, onUpdateIssueReport, 
-  rabiesPatients, onAddRabiesPatient, onUpdatePatient, onDeletePatient,
-  tbPatients, onAddTbPatient, onUpdateTbPatient, onDeleteTbPatient, 
-  garbhawatiPatients, onAddGarbhawatiPatient, onUpdateGarbhawatiPatient, onDeleteGarbhawatiPatient, 
-  bachhaImmunizationRecords, onAddBachhaImmunizationRecord, onUpdateBachhaImmunizationRecord, onDeleteBachhaImmunizationRecord, 
-  firms, onAddFirm, quotations, onAddQuotation, inventoryItems, onAddInventoryItem, onUpdateInventoryItem, onDeleteInventoryItem,
-  stockEntryRequests, onRequestStockEntry, onApproveStockEntry, onRejectStockEntry, stores, onAddStore, onUpdateStore, onDeleteStore,
-  dakhilaReports, onSaveDakhilaReport, returnEntries, onSaveReturnEntry, 
-  marmatEntries, onSaveMarmatEntry, dhuliyaunaEntries, onSaveDhuliyaunaEntry,
-  logBookEntries, onSaveLogBookEntry, onClearData, onUploadData,
-  leaveApplications, onAddLeaveApplication, onUpdateLeaveStatus, onDeleteLeaveApplication,
-  leaveBalances, onSaveLeaveBalance,
-  dartaEntries, onSaveDarta, onDeleteDarta,
-  chalaniEntries, onSaveChalani, onDeleteChalani,
-  bharmanAdeshEntries, onSaveBharmanAdesh, onDeleteBharmanAdesh,
-  garbhawotiRecords, onSaveGarbhawotiRecord, onDeleteGarbhawotiRecord,
-  prasutiRecords, onSavePrasutiRecord, onDeletePrasutiRecord,
-  serviceSeekerRecords, onSaveServiceSeekerRecord, onDeleteServiceSeekerRecord,
-  opdRecords, onSaveOPDRecord, onDeleteOPDRecord,
-  emergencyRecords, onSaveEmergencyRecord, onDeleteEmergencyRecord,
-  cbimnciRecords, onSaveCBIMNCIRecord, onDeleteCBIMNCIRecord,
-  billingRecords, onSaveBillingRecord, onDeleteBillingRecord,
-  dispensaryRecords, onSaveDispensaryRecord, onDeleteDispensaryRecord,
-  serviceItems, onSaveServiceItem, onDeleteServiceItem,
-  labReports, onSaveLabReport, onDeleteLabReport
+  onLogout, currentUser, currentFiscalYear, users = [], onAddUser, onUpdateUser, onDeleteUser, onChangePassword, isDbLocked,
+  generalSettings, onUpdateGeneralSettings, magForms = [], onSaveMagForm, onDeleteMagForm,
+  purchaseOrders = [], onUpdatePurchaseOrder, issueReports = [], onUpdateIssueReport, 
+  rabiesPatients = [], onAddRabiesPatient, onUpdatePatient, onDeletePatient,
+  tbPatients = [], onAddTbPatient, onUpdateTbPatient, onDeleteTbPatient, 
+  garbhawatiPatients = [], onAddGarbhawatiPatient, onUpdateGarbhawatiPatient, onDeleteGarbhawatiPatient, 
+  bachhaImmunizationRecords = [], onAddBachhaImmunizationRecord, onUpdateBachhaImmunizationRecord, onDeleteBachhaImmunizationRecord, 
+  firms = [], onAddFirm, quotations = [], onAddQuotation, inventoryItems = [], onAddInventoryItem, onUpdateInventoryItem, onDeleteInventoryItem,
+  stockEntryRequests = [], onRequestStockEntry, onApproveStockEntry, onRejectStockEntry, stores = [], onAddStore, onUpdateStore, onDeleteStore,
+  dakhilaReports = [], onSaveDakhilaReport, returnEntries = [], onSaveReturnEntry, 
+  marmatEntries = [], onSaveMarmatEntry, dhuliyaunaEntries = [], onSaveDhuliyaunaEntry,
+  logBookEntries = [], onSaveLogBookEntry, onClearData, onUploadData,
+  leaveApplications = [], onAddLeaveApplication, onUpdateLeaveStatus, onDeleteLeaveApplication,
+  leaveBalances = [], onSaveLeaveBalance,
+  dartaEntries = [], onSaveDarta, onDeleteDarta,
+  chalaniEntries = [], onSaveChalani, onDeleteChalani,
+  bharmanAdeshEntries = [], onSaveBharmanAdesh, onDeleteBharmanAdesh,
+  garbhawotiRecords = [], onSaveGarbhawotiRecord, onDeleteGarbhawotiRecord,
+  prasutiRecords = [], onSavePrasutiRecord, onDeletePrasutiRecord,
+  serviceSeekerRecords = [], onSaveServiceSeekerRecord, onDeleteServiceSeekerRecord,
+  opdRecords = [], onSaveOPDRecord, onDeleteOPDRecord,
+  emergencyRecords = [], onSaveEmergencyRecord, onDeleteEmergencyRecord,
+  cbimnciRecords = [], onSaveCBIMNCIRecord, onDeleteCBIMNCIRecord,
+  billingRecords = [], onSaveBillingRecord, onDeleteBillingRecord,
+  dispensaryRecords = [], onSaveDispensaryRecord, onDeleteDispensaryRecord,
+  serviceItems = [], onSaveServiceItem, onDeleteServiceItem,
+  labReports = [], onSaveLabReport, onDeleteLabReport
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
@@ -454,6 +455,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       subItems: [
         { id: 'report_khop', label: 'खोप रिपोर्ट', icon: <Baby size={16} /> },
         { id: 'report_rabies', label: 'रेबिज़ रिपोर्ट', icon: <Syringe size={16} /> },
+        { id: 'report_cbimnci', label: 'CBIMNCI रिपोर्ट', icon: <FileText size={16} /> },
         { id: 'report_inventory_monthly', label: 'जिन्सी मासिक रिपोर्ट', icon: <FileText size={16} /> },
       ]
     },
@@ -635,10 +637,10 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                   <table className="w-full text-xs text-left print-table">
                       <thead className="bg-slate-50 font-bold"><tr><th className="p-2 border-b">बिरामीको नाम</th><th className="p-2 border-b text-center">डोज</th><th className="p-2 border-b text-right">सम्पर्क</th></tr></thead>
                       <tbody className="divide-y">
-                          {rabiesPatients.filter(p => p.schedule.some(d => fixDate(d.dateBs || '') === fixDate(selectedStatsDate))).map(p => (
-                              <tr key={p.id} className="hover:bg-slate-50"><td className="p-2 font-bold">{p.name}</td><td className="p-2 text-center"><div className="flex justify-center gap-1">{p.schedule.filter(d => fixDate(d.dateBs || '') === fixDate(selectedStatsDate)).map(d => ( <span key={d.day} className={`px-2 py-0.5 rounded-full font-black text-[10px] ${d.status === 'Given' ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'}`}>D{d.day}</span> ))}</div></td><td className="p-2 text-right font-mono">{p.phone}</td></tr>
+                          {(rabiesPatients || []).filter(p => (p.schedule || []).some(d => fixDate(d.dateBs || '') === fixDate(selectedStatsDate))).map(p => (
+                              <tr key={p.id} className="hover:bg-slate-50"><td className="p-2 font-bold">{p.name}</td><td className="p-2 text-center"><div className="flex justify-center gap-1">{(p.schedule || []).filter(d => fixDate(d.dateBs || '') === fixDate(selectedStatsDate)).map(d => ( <span key={d.day} className={`px-2 py-0.5 rounded-full font-black text-[10px] ${d.status === 'Given' ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'}`}>D{d.day}</span> ))}</div></td><td className="p-2 text-right font-mono">{p.phone}</td></tr>
                           ))}
-                          {rabiesPatients.filter(p => p.schedule.some(d => fixDate(d.dateBs || '') === fixDate(selectedStatsDate))).length === 0 && <tr><td colSpan={3} className="p-8 text-center text-slate-400 italic">छानिएको मितिमा कुनै सेवाग्राही छैनन्।</td></tr>}
+                          {(rabiesPatients || []).filter(p => (p.schedule || []).some(d => fixDate(d.dateBs || '') === fixDate(selectedStatsDate))).length === 0 && <tr><td colSpan={3} className="p-8 text-center text-slate-400 italic">छानिएको मितिमा कुनै सेवाग्राही छैनन्।</td></tr>}
                       </tbody>
                   </table>
                </div>
@@ -659,6 +661,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'tb_leprosy': return <TBPatientRegistration currentFiscalYear={currentFiscalYear} patients={tbPatients} onAddPatient={onAddTbPatient} onUpdatePatient={onUpdateTbPatient} onDeletePatient={onDeleteTbPatient} />;
       case 'rabies': return <RabiesRegistration currentFiscalYear={currentFiscalYear} patients={rabiesPatients} onAddPatient={onAddRabiesPatient} onUpdatePatient={onUpdatePatient} onDeletePatient={onDeletePatient} currentUser={currentUser} />;
       case 'report_rabies': return <RabiesReport currentFiscalYear={currentFiscalYear} currentUser={currentUser} patients={rabiesPatients} />;
+      case 'report_cbimnci': return <CBIMNCIReport cbimnciRecords={cbimnciRecords} serviceSeekerRecords={serviceSeekerRecords} currentFiscalYear={currentFiscalYear} />;
       case 'mag_faram': return <MagFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} existingForms={magForms} onSave={onSaveMagForm} onDelete={onDeleteMagForm} inventoryItems={inventoryItems} stores={stores} generalSettings={generalSettings} />;
       case 'kharid_adesh': return <KharidAdesh orders={purchaseOrders} currentFiscalYear={currentFiscalYear} onSave={onUpdatePurchaseOrder} currentUser={currentUser} firms={firms} quotations={quotations} onDakhilaClick={(po) => { setActiveItem('jinshi_maujdat'); setPendingPoDakhila(po); }} generalSettings={generalSettings} inventoryItems={inventoryItems} />;
       case 'nikasha_pratibedan': return <NikashaPratibedan reports={issueReports} onSave={onUpdateIssueReport} currentUser={currentUser} currentFiscalYear={currentFiscalYear} generalSettings={generalSettings} />;

@@ -21,10 +21,10 @@ interface PendingTest extends LabTestResult {
 }
 
 export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
-  serviceSeekerRecords,
-  billingRecords,
-  serviceItems,
-  labReports,
+  serviceSeekerRecords = [],
+  billingRecords = [],
+  serviceItems = [],
+  labReports = [],
   onSaveRecord,
   onDeleteRecord,
   currentFiscalYear,

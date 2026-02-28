@@ -86,7 +86,7 @@ const formatAdDateToBsDisplay = (adDateStr: string) => {
 
 export const RabiesRegistration: React.FC<RabiesRegistrationProps> = ({ 
   currentFiscalYear, 
-  patients, 
+  patients = [], 
   onAddPatient, 
   // Fix: Renamed onUpdateRabiesPatient to onUpdatePatient
   onUpdatePatient,

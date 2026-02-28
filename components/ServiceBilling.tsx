@@ -18,14 +18,14 @@ interface ServiceBillingProps {
 }
 
 export const ServiceBilling: React.FC<ServiceBillingProps> = ({ 
-  serviceSeekerRecords, 
-  opdRecords, 
+  serviceSeekerRecords = [], 
+  opdRecords = [], 
   currentFiscalYear,
-  billingRecords,
+  billingRecords = [],
   onSaveRecord,
   onDeleteRecord,
   currentUser,
-  serviceItems
+  serviceItems = []
 }) => {
   const [searchId, setSearchId] = useState('');
   const [currentPatient, setCurrentPatient] = useState<ServiceSeekerRecord | null>(null);
