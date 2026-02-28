@@ -1,19 +1,21 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Search, Save, Printer, Plus, Trash2, FileText, User, Calendar, Stethoscope, Activity, Pill, FlaskConical, History, X } from 'lucide-react';
 import { ServiceSeekerRecord, OPDRecord, PrescriptionItem, ServiceItem } from '../types/coreTypes';
+import { InventoryItem } from '../types/inventoryTypes';
 import { Input } from './Input';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 import { useReactToPrint } from 'react-to-print';
 
 interface OPDSewaProps {
-  serviceSeekerRecords: ServiceSeekerRecord[];
-  opdRecords: OPDRecord[];
+  serviceSeekerRecords?: ServiceSeekerRecord[];
+  opdRecords?: OPDRecord[];
   onSaveRecord: (record: OPDRecord) => void;
   onDeleteRecord: (recordId: string) => void;
   currentFiscalYear: string;
   currentUser: any;
-  serviceItems: ServiceItem[];
+  serviceItems?: ServiceItem[];
+  inventoryItems?: InventoryItem[];
 }
 
 const initialPrescriptionItem: PrescriptionItem = {
@@ -26,13 +28,14 @@ const initialPrescriptionItem: PrescriptionItem = {
 };
 
 export const OPDSewa: React.FC<OPDSewaProps> = ({ 
-  serviceSeekerRecords, 
-  opdRecords, 
+  serviceSeekerRecords = [], 
+  opdRecords = [], 
   onSaveRecord, 
   onDeleteRecord, 
   currentFiscalYear,
   currentUser,
-  serviceItems
+  serviceItems = [],
+  inventoryItems = []
 }) => {
   const [searchId, setSearchId] = useState('');
   const [currentPatient, setCurrentPatient] = useState<ServiceSeekerRecord | null>(null);
@@ -50,6 +53,12 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
   const [searchResults, setSearchResults] = useState<ServiceSeekerRecord[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+
+  const medicineSuggestions = useMemo(() => {
+    const fromInventory = inventoryItems.map(i => i.itemName);
+    const fromRecords = opdRecords.flatMap(r => r.prescriptions?.map(p => p.medicineName) || []);
+    return Array.from(new Set([...fromInventory, ...fromRecords])).filter(Boolean).sort();
+  }, [inventoryItems, opdRecords]);
   
   // Investigation Search State
   const [investigationSearch, setInvestigationSearch] = useState('');
@@ -375,13 +384,21 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
                   {showPrescriptionForm && (
                     <div className="bg-white p-4 rounded-lg border border-primary-100 mb-4 shadow-sm animate-in zoom-in-95">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <Input 
-                          label="औषधिको नाम" 
-                          value={currentPrescription.medicineName} 
-                          onChange={e => setCurrentPrescription({...currentPrescription, medicineName: e.target.value})}
-                          placeholder="Ex: Paracetamol"
-                          autoFocus
-                        />
+                        <div className="relative">
+                          <Input 
+                            label="औषधिको नाम" 
+                            value={currentPrescription.medicineName} 
+                            onChange={e => setCurrentPrescription({...currentPrescription, medicineName: e.target.value})}
+                            placeholder="Ex: Paracetamol"
+                            autoFocus
+                            list="medicine-list"
+                          />
+                          <datalist id="medicine-list">
+                            {medicineSuggestions.map((med, idx) => (
+                              <option key={idx} value={med} />
+                            ))}
+                          </datalist>
+                        </div>
                         <Input 
                           label="मात्रा (Dosage)" 
                           value={currentPrescription.dosage} 

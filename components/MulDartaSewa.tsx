@@ -34,7 +34,7 @@ const initialFormData: Omit<ServiceSeekerRecord, 'id' | 'fiscalYear'> = {
   remarks: '',
 };
 
-export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecord, onDeleteRecord, currentFiscalYear, currentUser }) => {
+export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSaveRecord, onDeleteRecord, currentFiscalYear, currentUser }) => {
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [formData, setFormData] = useState(initialFormData);

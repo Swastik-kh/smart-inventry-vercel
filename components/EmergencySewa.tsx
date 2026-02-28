@@ -1,19 +1,21 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Search, Save, Printer, Plus, Trash2, User, Stethoscope, Pill, History, Siren, AlertTriangle, Activity } from 'lucide-react';
 import { ServiceSeekerRecord, EmergencyRecord, PrescriptionItem, ServiceItem } from '../types/coreTypes';
+import { InventoryItem } from '../types/inventoryTypes';
 import { Input } from './Input';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 import { useReactToPrint } from 'react-to-print';
 
 interface EmergencySewaProps {
-  serviceSeekerRecords: ServiceSeekerRecord[];
-  emergencyRecords: EmergencyRecord[];
+  serviceSeekerRecords?: ServiceSeekerRecord[];
+  emergencyRecords?: EmergencyRecord[];
   onSaveRecord: (record: EmergencyRecord) => void;
   onDeleteRecord: (recordId: string) => void;
   currentFiscalYear: string;
   currentUser: any;
-  serviceItems: ServiceItem[];
+  serviceItems?: ServiceItem[];
+  inventoryItems?: InventoryItem[];
 }
 
 const initialPrescriptionItem: PrescriptionItem = {
@@ -26,13 +28,14 @@ const initialPrescriptionItem: PrescriptionItem = {
 };
 
 export const EmergencySewa: React.FC<EmergencySewaProps> = ({ 
-  serviceSeekerRecords, 
-  emergencyRecords, 
+  serviceSeekerRecords = [], 
+  emergencyRecords = [], 
   onSaveRecord, 
   onDeleteRecord, 
   currentFiscalYear,
   currentUser,
-  serviceItems
+  serviceItems = [],
+  inventoryItems = []
 }) => {
   const [searchId, setSearchId] = useState('');
   const [currentPatient, setCurrentPatient] = useState<ServiceSeekerRecord | null>(null);
@@ -60,6 +63,15 @@ export const EmergencySewa: React.FC<EmergencySewaProps> = ({
   const [searchResults, setSearchResults] = useState<ServiceSeekerRecord[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+
+  const medicineSuggestions = useMemo(() => {
+    const fromInventory = inventoryItems.map(i => i.itemName);
+    const fromEmergency = emergencyRecords.flatMap(r => [
+      ...(r.emergencyPrescriptions?.map(p => p.medicineName) || []),
+      ...(r.dischargePrescriptions?.map(p => p.medicineName) || [])
+    ]);
+    return Array.from(new Set([...fromInventory, ...fromEmergency])).filter(Boolean).sort();
+  }, [inventoryItems, emergencyRecords]);
   
   const [investigationSearch, setInvestigationSearch] = useState('');
   const [showInvestigationResults, setShowInvestigationResults] = useState(false);
@@ -441,7 +453,19 @@ export const EmergencySewa: React.FC<EmergencySewaProps> = ({
                   {showPrescriptionForm === 'emergency' && (
                     <div className="bg-white p-4 rounded-lg border border-red-100 mb-4 shadow-sm">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <Input label="औषधिको नाम" value={currentPrescription.medicineName} onChange={e => setCurrentPrescription({...currentPrescription, medicineName: e.target.value})} />
+                        <div className="relative">
+                          <Input 
+                            label="औषधिको नाम" 
+                            value={currentPrescription.medicineName} 
+                            onChange={e => setCurrentPrescription({...currentPrescription, medicineName: e.target.value})} 
+                            list="medicine-list"
+                          />
+                          <datalist id="medicine-list">
+                            {medicineSuggestions.map((med, idx) => (
+                              <option key={idx} value={med} />
+                            ))}
+                          </datalist>
+                        </div>
                         <Input label="मात्रा (Dosage)" value={currentPrescription.dosage} onChange={e => setCurrentPrescription({...currentPrescription, dosage: e.target.value})} />
                         <Input label="पटक (Frequency)" value={currentPrescription.frequency} onChange={e => setCurrentPrescription({...currentPrescription, frequency: e.target.value})} />
                         <Input label="अवधि (Duration)" value={currentPrescription.duration} onChange={e => setCurrentPrescription({...currentPrescription, duration: e.target.value})} />
@@ -501,7 +525,19 @@ export const EmergencySewa: React.FC<EmergencySewaProps> = ({
                   {showPrescriptionForm === 'discharge' && (
                     <div className="bg-white p-4 rounded-lg border border-green-100 mb-4 shadow-sm">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <Input label="औषधिको नाम" value={currentPrescription.medicineName} onChange={e => setCurrentPrescription({...currentPrescription, medicineName: e.target.value})} />
+                        <div className="relative">
+                          <Input 
+                            label="औषधिको नाम" 
+                            value={currentPrescription.medicineName} 
+                            onChange={e => setCurrentPrescription({...currentPrescription, medicineName: e.target.value})} 
+                            list="medicine-list"
+                          />
+                          <datalist id="medicine-list">
+                            {medicineSuggestions.map((med, idx) => (
+                              <option key={idx} value={med} />
+                            ))}
+                          </datalist>
+                        </div>
                         <Input label="मात्रा (Dosage)" value={currentPrescription.dosage} onChange={e => setCurrentPrescription({...currentPrescription, dosage: e.target.value})} />
                         <Input label="पटक (Frequency)" value={currentPrescription.frequency} onChange={e => setCurrentPrescription({...currentPrescription, frequency: e.target.value})} />
                         <Input label="अवधि (Duration)" value={currentPrescription.duration} onChange={e => setCurrentPrescription({...currentPrescription, duration: e.target.value})} />

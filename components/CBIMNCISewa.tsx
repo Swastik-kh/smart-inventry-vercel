@@ -1,19 +1,21 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Search, Save, Printer, Plus, Trash2, User, Stethoscope, Pill, History, Baby } from 'lucide-react';
 import { ServiceSeekerRecord, CBIMNCIRecord, PrescriptionItem, ServiceItem } from '../types/coreTypes';
+import { InventoryItem } from '../types/inventoryTypes';
 import { Input } from './Input';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 import { useReactToPrint } from 'react-to-print';
 
 interface CBIMNCISewaProps {
-  serviceSeekerRecords: ServiceSeekerRecord[];
-  cbimnciRecords: CBIMNCIRecord[];
+  serviceSeekerRecords?: ServiceSeekerRecord[];
+  cbimnciRecords?: CBIMNCIRecord[];
   onSaveRecord: (record: CBIMNCIRecord) => void;
   onDeleteRecord: (recordId: string) => void;
   currentFiscalYear: string;
   currentUser: any;
-  serviceItems: ServiceItem[];
+  serviceItems?: ServiceItem[];
+  inventoryItems?: InventoryItem[];
 }
 
 const initialPrescriptionItem: PrescriptionItem = {
@@ -26,13 +28,14 @@ const initialPrescriptionItem: PrescriptionItem = {
 };
 
 export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({ 
-  serviceSeekerRecords, 
-  cbimnciRecords, 
+  serviceSeekerRecords = [], 
+  cbimnciRecords = [], 
   onSaveRecord, 
   onDeleteRecord, 
   currentFiscalYear,
   currentUser,
-  serviceItems
+  serviceItems = [],
+  inventoryItems = []
 }) => {
   const [searchId, setSearchId] = useState('');
   const [currentPatient, setCurrentPatient] = useState<ServiceSeekerRecord | null>(null);
@@ -79,6 +82,12 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
   const [searchResults, setSearchResults] = useState<ServiceSeekerRecord[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+
+  const medicineSuggestions = useMemo(() => {
+    const fromInventory = inventoryItems.map(i => i.itemName);
+    const fromRecords = cbimnciRecords.flatMap(r => r.prescriptions?.map(p => p.medicineName) || []);
+    return Array.from(new Set([...fromInventory, ...fromRecords])).filter(Boolean).sort();
+  }, [inventoryItems, cbimnciRecords]);
   
   const [investigationSearch, setInvestigationSearch] = useState('');
   const [showInvestigationResults, setShowInvestigationResults] = useState(false);
@@ -1105,6 +1114,22 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         treatments.push('Advise mother on feeding');
         treatments.push('Follow-up in 14 days');
       }
+
+      // Dehydration Plans
+      if (classifications.includes('Severe Dehydration')) {
+        treatments.push('Plan C: Start IV fluids immediately (Ringer\'s Lactate)');
+        treatments.push('If child can drink, give ORS by mouth while drip is set up');
+        treatments.push('Refer URGENTLY to hospital');
+      } else if (classifications.includes('Some Dehydration')) {
+        treatments.push('Plan B: Give ORS in clinic (75ml/kg over 4 hours)');
+        treatments.push('Show mother how to give ORS');
+        treatments.push('Give Zinc (10-14 days)');
+        treatments.push('Reassess after 4 hours');
+      } else if (classifications.includes('No Dehydration')) {
+        treatments.push('Plan A: Give extra fluid, continue feeding');
+        treatments.push('Give Zinc (10-14 days)');
+        treatments.push('Advise mother when to return immediately');
+      }
     }
     return treatments;
   };
@@ -1385,7 +1410,19 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                   {showPrescriptionForm && (
                     <div className="bg-white p-4 rounded-lg border border-primary-100 mb-4 shadow-sm">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <Input label="औषधिको नाम" value={currentPrescription.medicineName} onChange={e => setCurrentPrescription({...currentPrescription, medicineName: e.target.value})} />
+                        <div className="relative">
+                          <Input 
+                            label="औषधिको नाम" 
+                            value={currentPrescription.medicineName} 
+                            onChange={e => setCurrentPrescription({...currentPrescription, medicineName: e.target.value})} 
+                            list="medicine-list"
+                          />
+                          <datalist id="medicine-list">
+                            {medicineSuggestions.map((med, idx) => (
+                              <option key={idx} value={med} />
+                            ))}
+                          </datalist>
+                        </div>
                         <Input label="मात्रा (Dosage)" value={currentPrescription.dosage} onChange={e => setCurrentPrescription({...currentPrescription, dosage: e.target.value})} />
                         <Input label="पटक (Frequency)" value={currentPrescription.frequency} onChange={e => setCurrentPrescription({...currentPrescription, frequency: e.target.value})} />
                         <Input label="अवधि (Duration)" value={currentPrescription.duration} onChange={e => setCurrentPrescription({...currentPrescription, duration: e.target.value})} />

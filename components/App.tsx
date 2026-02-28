@@ -8,7 +8,9 @@ import {
   User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, 
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
-  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord 
+  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord,
+  ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord,
+  DispensaryRecord, ServiceItem, LabReport, GarbhawotiRecord, PrasutiRecord
 } from '../types';
 import { db } from '../firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe, off } from "firebase/database";
@@ -68,6 +70,16 @@ const App: React.FC = () => {
   const [marmatEntries, setMarmatEntries] = useState<MarmatEntry[]>([]);
   const [dhuliyaunaEntries, setDhuliyaunaEntries] = useState<DhuliyaunaEntry[]>([]);
   const [logBookEntries, setLogBookEntries] = useState<LogBookEntry[]>([]);
+  const [serviceSeekerRecords, setServiceSeekerRecords] = useState<ServiceSeekerRecord[]>([]);
+  const [opdRecords, setOpdRecords] = useState<OPDRecord[]>([]);
+  const [emergencyRecords, setEmergencyRecords] = useState<EmergencyRecord[]>([]);
+  const [cbimnciRecords, setCbimnciRecords] = useState<CBIMNCIRecord[]>([]);
+  const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
+  const [dispensaryRecords, setDispensaryRecords] = useState<DispensaryRecord[]>([]);
+  const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
+  const [labReports, setLabReports] = useState<LabReport[]>([]);
+  const [garbhawotiRecords, setGarbhawotiRecords] = useState<GarbhawotiRecord[]>([]);
+  const [prasutiRecords, setPrasutiRecords] = useState<PrasutiRecord[]>([]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -150,6 +162,16 @@ const App: React.FC = () => {
     setupOrgListener('marmatEntries', setMarmatEntries);
     setupOrgListener('disposalEntries', setDhuliyaunaEntries);
     setupOrgListener('logBook', setLogBookEntries);
+    setupOrgListener('serviceSeekers', setServiceSeekerRecords);
+    setupOrgListener('opdRecords', setOpdRecords);
+    setupOrgListener('emergencyRecords', setEmergencyRecords);
+    setupOrgListener('cbimnciRecords', setCbimnciRecords);
+    setupOrgListener('billingRecords', setBillingRecords);
+    setupOrgListener('dispensaryRecords', setDispensaryRecords);
+    setupOrgListener('serviceItems', setServiceItems);
+    setupOrgListener('labReports', setLabReports);
+    setupOrgListener('garbhawotiRecords', setGarbhawotiRecords);
+    setupOrgListener('prasutiRecords', setPrasutiRecords);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser]);
@@ -511,6 +533,16 @@ const App: React.FC = () => {
           dakhilaReports={dakhilaReports} onSaveDakhilaReport={(r) => set(getOrgRef(`dakhilaReports/${r.id}`), r)} returnEntries={returnEntries} onSaveReturnEntry={handleSaveReturnEntry}
           marmatEntries={marmatEntries} onSaveMarmatEntry={(e) => set(getOrgRef(`marmatEntries/${e.id}`), e)} dhuliyaunaEntries={dhuliyaunaEntries} onSaveDhuliyaunaEntry={(e) => set(getOrgRef(`disposalEntries/${e.id}`), e)}
           logBookEntries={logBookEntries} onSaveLogBookEntry={(e) => set(getOrgRef(`logBook/${e.id}`), e)} onClearData={(p) => remove(getOrgRef(p))} onUploadData={handleUploadDatabase}
+          serviceSeekerRecords={serviceSeekerRecords} onSaveServiceSeekerRecord={(r) => set(getOrgRef(`serviceSeekers/${r.id}`), r)} onDeleteServiceSeekerRecord={(id) => remove(getOrgRef(`serviceSeekers/${id}`))}
+          opdRecords={opdRecords} onSaveOPDRecord={(r) => set(getOrgRef(`opdRecords/${r.id}`), r)} onDeleteOPDRecord={(id) => remove(getOrgRef(`opdRecords/${id}`))}
+          emergencyRecords={emergencyRecords} onSaveEmergencyRecord={(r) => set(getOrgRef(`emergencyRecords/${r.id}`), r)} onDeleteEmergencyRecord={(id) => remove(getOrgRef(`emergencyRecords/${id}`))}
+          cbimnciRecords={cbimnciRecords} onSaveCBIMNCIRecord={(r) => set(getOrgRef(`cbimnciRecords/${r.id}`), r)} onDeleteCBIMNCIRecord={(id) => remove(getOrgRef(`cbimnciRecords/${id}`))}
+          billingRecords={billingRecords} onSaveBillingRecord={(r) => set(getOrgRef(`billingRecords/${r.id}`), r)} onDeleteBillingRecord={(id) => remove(getOrgRef(`billingRecords/${id}`))}
+          dispensaryRecords={dispensaryRecords} onSaveDispensaryRecord={(r) => set(getOrgRef(`dispensaryRecords/${r.id}`), r)} onDeleteDispensaryRecord={(id) => remove(getOrgRef(`dispensaryRecords/${id}`))}
+          serviceItems={serviceItems} onSaveServiceItem={(i) => set(getOrgRef(`serviceItems/${i.id}`), i)} onDeleteServiceItem={(id) => remove(getOrgRef(`serviceItems/${id}`))}
+          labReports={labReports} onSaveLabReport={(r) => set(getOrgRef(`labReports/${r.id}`), r)} onDeleteLabReport={(id) => remove(getOrgRef(`labReports/${id}`))}
+          garbhawotiRecords={garbhawotiRecords} onSaveGarbhawotiRecord={(r) => set(getOrgRef(`garbhawotiRecords/${r.id}`), r)} onDeleteGarbhawotiRecord={(id) => remove(getOrgRef(`garbhawotiRecords/${id}`))}
+          prasutiRecords={prasutiRecords} onSavePrasutiRecord={(r) => set(getOrgRef(`prasutiRecords/${r.id}`), r)} onDeletePrasutiRecord={(id) => remove(getOrgRef(`prasutiRecords/${id}`))}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">

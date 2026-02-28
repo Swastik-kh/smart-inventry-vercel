@@ -261,6 +261,24 @@ export interface CBIMNCIRecord {
   nextVisitDate?: string;
 }
 
+export interface DispensaryRecord {
+  id: string;
+  fiscalYear: string;
+  serviceSeekerId: string;
+  uniquePatientId: string;
+  patientName: string;
+  dispenseDate: string;
+  storeId: string;
+  items: {
+    medicineName: string;
+    quantity: number;
+    dosage: string;
+    instructions?: string;
+  }[];
+  remarks?: string;
+  createdBy?: string;
+}
+
 export interface BillingItem {
   id: string;
   serviceName: string;

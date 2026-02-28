@@ -12,7 +12,7 @@ import {
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
 import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest, DakhilaPratibedanEntry } from '../types/inventoryTypes';
-import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport } from '../types/coreTypes';
+import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport, DispensaryRecord } from '../types/coreTypes';
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -55,6 +55,7 @@ import { CBIMNCISewa } from './CBIMNCISewa';
 import { ServiceBilling } from './ServiceBilling';
 import { ServiceSettings } from './ServiceSettings';
 import { PrayogsalaSewa } from './PrayogsalaSewa';
+import { DispensarySewa } from './DispensarySewa';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -81,6 +82,9 @@ interface ExtendedDashboardProps extends DashboardProps {
   billingRecords: BillingRecord[];
   onSaveBillingRecord: (record: BillingRecord) => void;
   onDeleteBillingRecord: (recordId: string) => void;
+  dispensaryRecords: DispensaryRecord[];
+  onSaveDispensaryRecord: (record: DispensaryRecord) => void;
+  onDeleteDispensaryRecord: (recordId: string) => void;
   serviceItems: ServiceItem[];
   onSaveServiceItem: (item: ServiceItem) => void;
   onDeleteServiceItem: (id: string) => void;
@@ -126,6 +130,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   emergencyRecords, onSaveEmergencyRecord, onDeleteEmergencyRecord,
   cbimnciRecords, onSaveCBIMNCIRecord, onDeleteCBIMNCIRecord,
   billingRecords, onSaveBillingRecord, onDeleteBillingRecord,
+  dispensaryRecords, onSaveDispensaryRecord, onDeleteDispensaryRecord,
   serviceItems, onSaveServiceItem, onDeleteServiceItem,
   labReports, onSaveLabReport, onDeleteLabReport
 }) => {
@@ -955,6 +960,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         currentFiscalYear={currentFiscalYear}
         currentUser={currentUser}
         serviceItems={serviceItems}
+        inventoryItems={inventoryItems}
       />;
       case 'service_billing': return <ServiceBilling 
         serviceSeekerRecords={serviceSeekerRecords}
@@ -974,6 +980,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         currentFiscalYear={currentFiscalYear}
         currentUser={currentUser}
         serviceItems={serviceItems}
+        inventoryItems={inventoryItems}
       />;
       case 'cbimnci_sewa': return <CBIMNCISewa 
         serviceSeekerRecords={serviceSeekerRecords}
@@ -983,6 +990,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         currentFiscalYear={currentFiscalYear}
         currentUser={currentUser}
         serviceItems={serviceItems}
+        inventoryItems={inventoryItems}
       />;
       case 'prayogsala_sewa': return <PrayogsalaSewa 
         serviceSeekerRecords={serviceSeekerRecords}
@@ -994,7 +1002,21 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         currentFiscalYear={currentFiscalYear}
         currentUser={currentUser}
       />;
-      case 'dispensory_sewa':
+      case 'dispensory_sewa': return <DispensarySewa 
+                                        currentFiscalYear={currentFiscalYear} 
+                                        currentUser={currentUser} 
+                                        generalSettings={generalSettings} 
+                                        serviceSeekerRecords={serviceSeekerRecords} 
+                                        opdRecords={opdRecords} 
+                                        emergencyRecords={emergencyRecords} 
+                                        cbimnciRecords={cbimnciRecords} 
+                                        dispensaryRecords={dispensaryRecords} 
+                                        onSaveDispensaryRecord={onSaveDispensaryRecord} 
+                                        onDeleteDispensaryRecord={onDeleteDispensaryRecord} 
+                                        inventoryItems={inventoryItems} 
+                                        stores={stores} 
+                                        onUpdateInventoryItem={onUpdateInventoryItem} 
+                                      />;
       case 'pariwar_niyojan':
       case 'xray_sewa':
       case 'ecg_sewa':
