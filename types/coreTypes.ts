@@ -184,7 +184,9 @@ export interface ServiceSeekerRecord {
   registrationNumber: string;
   date: string;
   name: string;
-  age: string;
+  age: string; // Keep for display/legacy
+  ageYears?: number;
+  ageMonths?: number;
   gender: 'Male' | 'Female' | 'Other';
   casteCode: string; // Caste/Ethnicity Code
   address: string;
@@ -247,6 +249,8 @@ export interface CBIMNCIRecord {
   serviceSeekerId: string;
   uniquePatientId: string;
   visitDate: string;
+  moduleType: 'Infant' | 'Child'; // Infant: up to 2 months, Child: 2 months to 5 years
+  assessmentData: any; // Flexible object for module-specific data
   chiefComplaints: string;
   diagnosis: string;
   investigation: string;

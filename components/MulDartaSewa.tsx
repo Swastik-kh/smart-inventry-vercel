@@ -21,6 +21,8 @@ const initialFormData: Omit<ServiceSeekerRecord, 'id' | 'fiscalYear'> = {
   date: '',
   name: '',
   age: '',
+  ageYears: 0,
+  ageMonths: 0,
   gender: 'Male',
   casteCode: '',
   address: '',
@@ -94,6 +96,8 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
             uniquePatientId: existingPatient.uniquePatientId,
             casteCode: existingPatient.casteCode || prev.casteCode,
             age: existingPatient.age || prev.age,
+            ageYears: existingPatient.ageYears || prev.ageYears,
+            ageMonths: existingPatient.ageMonths || prev.ageMonths,
             gender: existingPatient.gender || prev.gender,
             address: existingPatient.address || prev.address,
             phone: existingPatient.phone || prev.phone
@@ -103,7 +107,8 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
       }
     }
 
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const finalValue = (name === 'ageYears' || name === 'ageMonths') ? parseInt(value) || 0 : value;
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
   const handleDateChange = (value: string) => {
@@ -112,8 +117,10 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const ageString = `${formData.ageYears}Y ${formData.ageMonths}M`;
     const recordToSave: ServiceSeekerRecord = {
       ...formData,
+      age: ageString,
       id: isEditing || Date.now().toString(),
       fiscalYear: currentFiscalYear,
     };
@@ -275,13 +282,24 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records, onSaveRecor
                   onChange={handleChange} 
                   required 
                 />
-                <Input 
-                  label="उमेर *" 
-                  name="age" 
-                  value={formData.age} 
-                  onChange={handleChange} 
-                  required 
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input 
+                    label="उमेर (वर्ष) *" 
+                    name="ageYears" 
+                    type="number"
+                    value={formData.ageYears} 
+                    onChange={handleChange} 
+                    required 
+                  />
+                  <Input 
+                    label="उमेर (महिना) *" 
+                    name="ageMonths" 
+                    type="number"
+                    value={formData.ageMonths} 
+                    onChange={handleChange} 
+                    required 
+                  />
+                </div>
                 <div className="flex flex-col">
                   <label className="text-sm font-medium text-slate-600 mb-1 block">जातिगत कोड (Caste Code)</label>
                   <select 
