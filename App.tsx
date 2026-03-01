@@ -46,6 +46,7 @@ const DEFAULT_ADMIN: User = {
 const App: React.FC = () => {
   const [allUsers, setAllUsers] = useState<User[]>([DEFAULT_ADMIN]); 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [activeOrgName, setActiveOrgName] = useState<string>('');
   const [currentFiscalYear, setCurrentFiscalYear] = useState<string>('2082/083');
   const [generalSettings, setGeneralSettings] = useState<OrganizationSettings>(INITIAL_SETTINGS);
   const [isDbConnected, setIsDbConnected] = useState(false);
@@ -125,9 +126,17 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setActiveOrgName('');
+      return;
+    }
 
-    const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
+    if (!activeOrgName) {
+      setActiveOrgName(currentUser.organizationName);
+      return;
+    }
+
+    const safeOrgName = activeOrgName.trim().replace(/[.#$[\]]/g, "_");
     const orgPath = `orgData/${safeOrgName}`;
     const unsubscribes: Unsubscribe[] = [];
 
@@ -147,7 +156,7 @@ const App: React.FC = () => {
     onValue(ref(db, `${orgPath}/settings`), (snap) => {
         if (snap.exists()) setGeneralSettings(snap.val());
         else {
-            const firstSettings = { ...INITIAL_SETTINGS, orgNameNepali: currentUser.organizationName, orgNameEnglish: currentUser.organizationName };
+            const firstSettings = { ...INITIAL_SETTINGS, orgNameNepali: activeOrgName, orgNameEnglish: activeOrgName };
             set(ref(db, `${orgPath}/settings`), firstSettings).catch(() => {});
             setGeneralSettings(firstSettings);
         }
@@ -191,7 +200,7 @@ const App: React.FC = () => {
     setupOrgListener('physiotherapyRecords', setPhysiotherapyRecords);
 
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [currentUser]);
+  }, [currentUser, activeOrgName]);
 
   useEffect(() => {
     if (currentUser) {
@@ -212,11 +221,12 @@ const App: React.FC = () => {
 
   const handleLoginSuccess = (user: User, fiscalYear: string) => {
     setCurrentUser(user);
+    setActiveOrgName(user.organizationName);
     setCurrentFiscalYear(fiscalYear);
   };
 
   const getOrgRef = (subPath: string) => {
-      const safeOrgName = currentUser?.organizationName.trim().replace(/[.#$[\\]]/g, "_") || "unknown";
+      const safeOrgName = activeOrgName.trim().replace(/[.#$[\\]]/g, "_") || "unknown";
       return ref(db, `orgData/${safeOrgName}/${subPath}`);
   };
 
@@ -1050,6 +1060,9 @@ const App: React.FC = () => {
     onSavePhysiotherapyRecord={handleSavePhysiotherapyRecord}
     onDeletePhysiotherapyRecord={handleDeletePhysiotherapyRecord}
     onUpdateReadNotifications={handleUpdateReadNotifications}
+    activeOrgName={activeOrgName}
+    onSetActiveOrgName={setActiveOrgName}
+    allUsers={allUsers}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">

@@ -108,6 +108,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const allCreatableRoles: Option[] = [
+    { id: 'health_section', value: 'HEALTH_SECTION', label: 'स्वास्थ्य शाखा (Health Section)' },
     { id: 'admin', value: 'ADMIN', label: 'एडमिन (Admin)' },
     { id: 'staff', value: 'STAFF', label: 'कर्मचारी (Staff)' },
     { id: 'storekeeper', value: 'STOREKEEPER', label: 'जिन्सी शाखा (Storekeeper)' },
@@ -117,7 +118,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
 
   const rolesForDropdown = useMemo(() => {
     if (currentUser.role === 'SUPER_ADMIN') return allCreatableRoles;
-    if (currentUser.role === 'ADMIN') return allCreatableRoles.filter(opt => opt.value !== 'ADMIN');
+    if (currentUser.role === 'HEALTH_SECTION') return allCreatableRoles.filter(opt => opt.value === 'ADMIN');
+    if (currentUser.role === 'ADMIN') return allCreatableRoles.filter(opt => !['ADMIN', 'HEALTH_SECTION'].includes(opt.value));
     return [];
   }, [currentUser.role]);
 
@@ -132,6 +134,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     role: UserRole;
     allowedMenus: string[];
     serviceType: 'Permanent' | 'Temporary' | 'Contract';
+    parentId?: string;
   }>({
     id: '',
     username: '',
@@ -139,18 +142,23 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     fullName: '',
     designation: '',
     phoneNumber: '',
-    organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '',
+    organizationName: (currentUser.role === 'ADMIN' || currentUser.role === 'HEALTH_SECTION') ? currentUser.organizationName : '',
     role: (rolesForDropdown.length > 0 ? (rolesForDropdown[0].value as UserRole) : 'STAFF'),
     allowedMenus: ['dashboard'],
-    serviceType: 'Permanent'
+    serviceType: 'Permanent',
+    parentId: currentUser.id
   });
 
-  const canManageUsers = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN';
+  const canManageUsers = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN' || currentUser.role === 'HEALTH_SECTION';
 
   // FIXED: Visibility logic for managed users
   const managedUsers = useMemo(() => {
       return users.filter(u => {
           if (currentUser.role === 'SUPER_ADMIN') return true; // Super admin sees everyone
+          if (currentUser.role === 'HEALTH_SECTION') {
+              // Health section sees users they created (their admins)
+              return u.parentId === currentUser.id;
+          }
           if (currentUser.role === 'ADMIN') {
               // Admin sees users in their organization
               return u.organizationName === currentUser.organizationName;
@@ -175,10 +183,11 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       setFormData({ 
         id: generateUniqueId(), 
         username: '', password: '', fullName: '', designation: '', phoneNumber: '',
-        organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '',
+        organizationName: (currentUser.role === 'ADMIN' || currentUser.role === 'HEALTH_SECTION') ? currentUser.organizationName : '',
         role: (rolesForDropdown.length > 0 ? (rolesForDropdown[0].value as UserRole) : 'STAFF'),
         allowedMenus: ['dashboard'],
-        serviceType: 'Permanent'
+        serviceType: 'Permanent',
+        parentId: currentUser.id
       });
       setEditingId(null);
       setLocalError(null);
@@ -193,7 +202,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
           organizationName: user.organizationName,
           role: user.role,
           allowedMenus: user.allowedMenus || ['dashboard'],
-          serviceType: user.serviceType || 'Permanent'
+          serviceType: user.serviceType || 'Permanent',
+          parentId: user.parentId
       });
       setShowForm(true);
   };
@@ -293,7 +303,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
         phoneNumber: formData.phoneNumber.trim(), 
         organizationName: formData.organizationName.trim(),
         allowedMenus: finalMenus,
-        serviceType: formData.serviceType
+        serviceType: formData.serviceType,
+        parentId: formData.parentId || currentUser.id
     };
 
     try {
@@ -397,8 +408,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 value={formData.organizationName} 
                 onChange={e => setFormData({...formData, organizationName: e.target.value})} 
                 required 
-                readOnly={currentUser.role === 'ADMIN'} 
-                className={currentUser.role === 'ADMIN' ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''} 
+                readOnly={currentUser.role === 'ADMIN' || currentUser.role === 'HEALTH_SECTION'} 
+                className={(currentUser.role === 'ADMIN' || currentUser.role === 'HEALTH_SECTION') ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''} 
                 icon={<Building2 size={16} />} 
                 disabled={isSaving}
             />

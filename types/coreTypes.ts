@@ -21,7 +21,7 @@ export interface LoginFormData {
   password: string;
 }
 
-export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'STAFF' | 'STOREKEEPER' | 'ACCOUNT' | 'APPROVAL';
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'STAFF' | 'STOREKEEPER' | 'ACCOUNT' | 'APPROVAL' | 'HEALTH_SECTION';
 
 export interface User {
   id: string;
@@ -35,6 +35,7 @@ export interface User {
   allowedMenus?: string[]; 
   serviceType?: 'Permanent' | 'Temporary' | 'Contract';
   readNotifications?: string[];
+  parentId?: string; // ID of the user who created this user
 }
 
 export interface OrganizationSettings {

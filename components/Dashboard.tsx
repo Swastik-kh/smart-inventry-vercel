@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { 
   LogOut, Menu, Calendar, Stethoscope, Package, FileText, Settings, LayoutDashboard, 
-  ChevronDown, ChevronRight, Syringe, Activity, Info,
+  ChevronDown, ChevronRight, Syringe, Activity, Info, Building2,
   ClipboardList, FileSpreadsheet, FilePlus, ShoppingCart, FileOutput, 
   BookOpen, Book, Archive, RotateCcw, Wrench, Scroll, BarChart3,
   Sliders, Store, ShieldCheck, Users, Database, KeyRound, UserCog, Lock, Warehouse, ClipboardCheck, Bell, X, CheckCircle2, AlertTriangle, Calculator, Trash2, TrendingUp, AlertOctagon, Timer, Printer, Baby, Flame, CalendarClock, List,
@@ -12,7 +12,7 @@ import {
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
 import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest, DakhilaPratibedanEntry } from '../types/inventoryTypes';
-import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport, DispensaryRecord, PariwarSewaRecord, XRayRecord, ECGRecord, USGRecord, PhysiotherapyRecord } from '../types';
+import { User, LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport, DispensaryRecord, PariwarSewaRecord, XRayRecord, ECGRecord, USGRecord, PhysiotherapyRecord } from '../types';
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -114,6 +114,9 @@ interface ExtendedDashboardProps extends DashboardProps {
   onSavePhysiotherapyRecord: (record: PhysiotherapyRecord) => void;
   onDeletePhysiotherapyRecord: (id: string) => void;
   onUpdateReadNotifications: (userId: string, readIds: string[]) => void;
+  activeOrgName: string;
+  onSetActiveOrgName: (orgName: string) => void;
+  allUsers: User[];
 }
 
 interface AppNotification {
@@ -161,7 +164,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   ecgRecords = [], onSaveECGRecord, onDeleteECGRecord,
   usgRecords = [], onSaveUSGRecord, onDeleteUSGRecord,
   physiotherapyRecords = [], onSavePhysiotherapyRecord, onDeletePhysiotherapyRecord,
-  onUpdateReadNotifications
+  onUpdateReadNotifications,
+  activeOrgName, onSetActiveOrgName, allUsers = []
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
@@ -318,6 +322,14 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
           setActiveItem(n.targetMenu);
       }
   };
+
+  const managedOrgs = useMemo(() => {
+    if (currentUser?.role !== 'HEALTH_SECTION') return [];
+    const orgs = allUsers
+      .filter(u => u.parentId === currentUser.id && u.role === 'ADMIN')
+      .map(u => u.organizationName);
+    return Array.from(new Set([currentUser.organizationName, ...orgs]));
+  }, [allUsers, currentUser]);
 
   const handleOpenFullDakhila = () => {
       if (previewDakhila && canViewFullReport) {
@@ -1273,6 +1285,21 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
               <Calendar size={14} className="text-slate-400" />
               <span className="text-[11px] font-bold text-slate-600 font-nepali">आ.व. {currentFiscalYear}</span>
             </div>
+
+            {currentUser?.role === 'HEALTH_SECTION' && managedOrgs.length > 1 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 rounded-full border border-indigo-200">
+                <Building2 size={14} className="text-indigo-400" />
+                <select 
+                  value={activeOrgName}
+                  onChange={(e) => onSetActiveOrgName(e.target.value)}
+                  className="bg-transparent text-[11px] font-bold text-indigo-700 focus:outline-none cursor-pointer font-nepali"
+                >
+                  {managedOrgs.map(org => (
+                    <option key={org} value={org}>{org}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
