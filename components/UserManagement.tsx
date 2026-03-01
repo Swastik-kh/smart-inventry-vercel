@@ -142,7 +142,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     fullName: '',
     designation: '',
     phoneNumber: '',
-    organizationName: (currentUser.role === 'ADMIN' || currentUser.role === 'HEALTH_SECTION') ? currentUser.organizationName : '',
+    organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '',
     role: (rolesForDropdown.length > 0 ? (rolesForDropdown[0].value as UserRole) : 'STAFF'),
     allowedMenus: ['dashboard'],
     serviceType: 'Permanent',
@@ -183,7 +183,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       setFormData({ 
         id: generateUniqueId(), 
         username: '', password: '', fullName: '', designation: '', phoneNumber: '',
-        organizationName: (currentUser.role === 'ADMIN' || currentUser.role === 'HEALTH_SECTION') ? currentUser.organizationName : '',
+        organizationName: currentUser.role === 'ADMIN' ? currentUser.organizationName : '',
         role: (rolesForDropdown.length > 0 ? (rolesForDropdown[0].value as UserRole) : 'STAFF'),
         allowedMenus: ['dashboard'],
         serviceType: 'Permanent',
@@ -404,14 +404,15 @@ export const UserManagement: React.FC<UserManagementProps> = ({
             <Input label="पद" value={formData.designation} onChange={e => setFormData({...formData, designation: e.target.value})} required icon={<Briefcase size={16} />} disabled={isSaving} />
             <Input label="फोन नं." value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} required icon={<Phone size={16} />} disabled={isSaving} />
             <Input 
-                label="संस्था" 
+                label="संस्था (कार्यालयको नाम)" 
                 value={formData.organizationName} 
                 onChange={e => setFormData({...formData, organizationName: e.target.value})} 
                 required 
-                readOnly={currentUser.role === 'ADMIN' || currentUser.role === 'HEALTH_SECTION'} 
-                className={(currentUser.role === 'ADMIN' || currentUser.role === 'HEALTH_SECTION') ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''} 
+                readOnly={currentUser.role === 'ADMIN'} 
+                className={currentUser.role === 'ADMIN' ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''} 
                 icon={<Building2 size={16} />} 
                 disabled={isSaving}
+                placeholder="उदा: स्वास्थ्य चौकी, प्राथमिक स्वास्थ्य केन्द्र..."
             />
             {(canManageUsers) && (
               <Select 
