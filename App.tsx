@@ -9,7 +9,7 @@ import {
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
   DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani, BharmanAdeshEntry,
-  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport
+  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport, PariwarSewaRecord, XRayRecord, ECGRecord, USGRecord, PhysiotherapyRecord
 } from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe, off, push } from "firebase/database";
@@ -83,6 +83,11 @@ const App: React.FC = () => {
   const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
   const [labReports, setLabReports] = useState<LabReport[]>([]);
+  const [pariwarSewaRecords, setPariwarSewaRecords] = useState<PariwarSewaRecord[]>([]);
+  const [xrayRecords, setXrayRecords] = useState<XRayRecord[]>([]);
+  const [ecgRecords, setEcgRecords] = useState<ECGRecord[]>([]);
+  const [usgRecords, setUsgRecords] = useState<USGRecord[]>([]);
+  const [physiotherapyRecords, setPhysiotherapyRecords] = useState<PhysiotherapyRecord[]>([]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -179,6 +184,11 @@ const App: React.FC = () => {
     setupOrgListener('billingRecords', setBillingRecords);
     setupOrgListener('serviceItems', setServiceItems);
     setupOrgListener('labReports', setLabReports);
+    setupOrgListener('pariwarSewaRecords', setPariwarSewaRecords);
+    setupOrgListener('xrayRecords', setXrayRecords);
+    setupOrgListener('ecgRecords', setEcgRecords);
+    setupOrgListener('usgRecords', setUsgRecords);
+    setupOrgListener('physiotherapyRecords', setPhysiotherapyRecords);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser]);
@@ -427,6 +437,96 @@ const App: React.FC = () => {
       await remove(getOrgRef(`labReports/${id}`));
     } catch (error) {
       alert("ल्याब रिपोर्ट हटाउन सकिएन।");
+    }
+  };
+
+  const handleSavePariwarSewaRecord = async (record: PariwarSewaRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`pariwarSewaRecords/${record.id}`), record);
+    } catch (error) {
+      alert("परिवार नियोजन रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeletePariwarSewaRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`pariwarSewaRecords/${id}`));
+    } catch (error) {
+      alert("परिवार नियोजन रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveXRayRecord = async (record: XRayRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`xrayRecords/${record.id}`), record);
+    } catch (error) {
+      alert("एक्स-रे रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteXRayRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`xrayRecords/${id}`));
+    } catch (error) {
+      alert("एक्स-रे रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveECGRecord = async (record: ECGRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`ecgRecords/${record.id}`), record);
+    } catch (error) {
+      alert("ई.सी.जी. रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteECGRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`ecgRecords/${id}`));
+    } catch (error) {
+      alert("ई.सी.जी. रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveUSGRecord = async (record: USGRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`usgRecords/${record.id}`), record);
+    } catch (error) {
+      alert("यु.एस.जी. रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteUSGRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`usgRecords/${id}`));
+    } catch (error) {
+      alert("यु.एस.जी. रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSavePhysiotherapyRecord = async (record: PhysiotherapyRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`physiotherapyRecords/${record.id}`), record);
+    } catch (error) {
+      alert("फिजियोथेरापी रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeletePhysiotherapyRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`physiotherapyRecords/${id}`));
+    } catch (error) {
+      alert("फिजियोथेरापी रेकर्ड हटाउन सकिएन।");
     }
   };
 
@@ -917,6 +1017,21 @@ const App: React.FC = () => {
     labReports={labReports}
     onSaveLabReport={handleSaveLabReport}
     onDeleteLabReport={handleDeleteLabReport}
+    pariwarSewaRecords={pariwarSewaRecords}
+    onSavePariwarSewaRecord={handleSavePariwarSewaRecord}
+    onDeletePariwarSewaRecord={handleDeletePariwarSewaRecord}
+    xrayRecords={xrayRecords}
+    onSaveXRayRecord={handleSaveXRayRecord}
+    onDeleteXRayRecord={handleDeleteXRayRecord}
+    ecgRecords={ecgRecords}
+    onSaveECGRecord={handleSaveECGRecord}
+    onDeleteECGRecord={handleDeleteECGRecord}
+    usgRecords={usgRecords}
+    onSaveUSGRecord={handleSaveUSGRecord}
+    onDeleteUSGRecord={handleDeleteUSGRecord}
+    physiotherapyRecords={physiotherapyRecords}
+    onSavePhysiotherapyRecord={handleSavePhysiotherapyRecord}
+    onDeletePhysiotherapyRecord={handleDeletePhysiotherapyRecord}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">

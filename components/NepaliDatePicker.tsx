@@ -63,12 +63,16 @@ export const NepaliDatePicker: React.FC<NepaliDatePickerProps> = ({
         };
       }
     }
-    const now = new NepaliDate();
-    return {
-      year: now.getYear(),
-      month: now.getMonth(), // 0-indexed month
-      day: now.getDate()
-    };
+    try {
+      const now = new NepaliDate();
+      return {
+        year: now.getYear(),
+        month: now.getMonth(), // 0-indexed month
+        day: now.getDate()
+      };
+    } catch (e) {
+      return { year: 2080, month: 0, day: 1 };
+    }
   };
 
   const initial = parseDate(value);
@@ -283,8 +287,12 @@ export const NepaliDatePicker: React.FC<NepaliDatePickerProps> = ({
 
                 const isSelected = value && day === selectedDay && viewMonth === selectedMonth && viewYear === selectedYear;
                 const isToday = (() => {
-                    const now = new NepaliDate();
-                    return day === now.getDate() && viewMonth === now.getMonth() && viewYear === now.getYear();
+                    try {
+                      const now = new NepaliDate();
+                      return day === now.getDate() && viewMonth === now.getMonth() && viewYear === now.getYear();
+                    } catch (e) {
+                      return false;
+                    }
                 })();
 
                 return (

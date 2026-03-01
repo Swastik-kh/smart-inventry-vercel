@@ -30,7 +30,9 @@ interface AnimalStats {
 }
 
 export const RabiesReport: React.FC<RabiesReportProps> = ({ currentFiscalYear, currentUser, patients }) => {
-  const [selectedMonth, setSelectedMonth] = useState(new NepaliDate().format('MM'));
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    try { return new NepaliDate().format('MM'); } catch(e) { return '01'; }
+  });
   const [selectedFiscalYear, setSelectedFiscalYear] = useState(currentFiscalYear);
   const [viewMode, setViewMode] = useState<'summary' | 'detailed'>('summary');
 

@@ -75,6 +75,7 @@ const PERMISSION_STRUCTURE = [
             { id: 'report_rabies', label: 'रेबिज़ रिपोर्ट (Rabies Report)' },
             { id: 'report_khop', label: 'खोप रिपोर्ट (Immunization Report)' }, 
             { id: 'report_cbimnci', label: 'CBIMNCI रिपोर्ट (CBIMNCI Report)' },
+            { id: 'report_reporting_status', label: 'रिपोर्टिङ स्थिति (Reporting Status)' },
             { id: 'report_inventory_monthly', label: 'जिन्सी मासिक प्रतिवेदन (Monthly Report)' }
         ]
     },

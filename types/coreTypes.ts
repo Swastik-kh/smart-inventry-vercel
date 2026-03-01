@@ -261,6 +261,31 @@ export interface CBIMNCIRecord {
   nextVisitDate?: string;
 }
 
+export interface FamilyPlanningRecord {
+  id: string;
+  serviceSeekerId: string;
+  uniquePatientId: string;
+  fiscalYear: string;
+  visitDate: string;
+  
+  methodType: 'Temporary' | 'Permanent';
+  methodName: string; 
+  
+  // Temporary Methods
+  userType?: 'New' | 'Current' | 'Discontinued';
+  quantityDistributed?: number;
+  
+  // Permanent Methods
+  institutionType?: 'Government' | 'Non-Government';
+  locationType?: 'Health Facility' | 'Camp';
+  
+  // Post-partum Family Planning
+  isPostPartum?: boolean;
+  postPartumTiming?: 'Within 48 hours' | '48 hours to 1 year';
+  
+  remarks?: string;
+}
+
 export interface DispensaryRecord {
   id: string;
   fiscalYear: string;

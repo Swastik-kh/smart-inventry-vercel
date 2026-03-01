@@ -12,7 +12,7 @@ import {
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
 import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest, DakhilaPratibedanEntry } from '../types/inventoryTypes';
-import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport, DispensaryRecord } from '../types/coreTypes';
+import { LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport, DispensaryRecord, PariwarSewaRecord, XRayRecord, ECGRecord, USGRecord, PhysiotherapyRecord } from '../types';
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -26,6 +26,7 @@ import { Quotation } from './Quotation';
 import { JinshiMaujdat } from './JinshiMaujdat'; 
 import { StoreSetup } from './StoreSetup'; 
 import { CBIMNCIReport } from './CBIMNCIReport';
+import { ReportingStatusReport } from './ReportingStatusReport';
 import { InventoryMonthlyReport } from './InventoryMonthlyReport'; 
 import { StockEntryApproval } from './StockEntryApproval'; 
 import { DakhilaPratibedan } from './DakhilaPratibedan'; 
@@ -57,6 +58,11 @@ import { ServiceBilling } from './ServiceBilling';
 import { ServiceSettings } from './ServiceSettings';
 import { PrayogsalaSewa } from './PrayogsalaSewa';
 import { DispensarySewa } from './DispensarySewa';
+import { PariwarSewa } from './PariwarSewa';
+import { XRaySewa } from './XRaySewa';
+import { ECGSewa } from './ECGSewa';
+import { USGSewa } from './USGSewa';
+import { PhysiotherapySewa } from './PhysiotherapySewa';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -92,6 +98,21 @@ interface ExtendedDashboardProps extends DashboardProps {
   labReports: LabReport[];
   onSaveLabReport: (record: LabReport) => void;
   onDeleteLabReport: (id: string) => void;
+  pariwarSewaRecords: PariwarSewaRecord[];
+  onSavePariwarSewaRecord: (record: PariwarSewaRecord) => void;
+  onDeletePariwarSewaRecord: (id: string) => void;
+  xrayRecords: XRayRecord[];
+  onSaveXRayRecord: (record: XRayRecord) => void;
+  onDeleteXRayRecord: (id: string) => void;
+  ecgRecords: ECGRecord[];
+  onSaveECGRecord: (record: ECGRecord) => void;
+  onDeleteECGRecord: (id: string) => void;
+  usgRecords: USGRecord[];
+  onSaveUSGRecord: (record: USGRecord) => void;
+  onDeleteUSGRecord: (id: string) => void;
+  physiotherapyRecords: PhysiotherapyRecord[];
+  onSavePhysiotherapyRecord: (record: PhysiotherapyRecord) => void;
+  onDeletePhysiotherapyRecord: (id: string) => void;
 }
 
 interface AppNotification {
@@ -133,7 +154,12 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   billingRecords = [], onSaveBillingRecord, onDeleteBillingRecord,
   dispensaryRecords = [], onSaveDispensaryRecord, onDeleteDispensaryRecord,
   serviceItems = [], onSaveServiceItem, onDeleteServiceItem,
-  labReports = [], onSaveLabReport, onDeleteLabReport
+  labReports = [], onSaveLabReport, onDeleteLabReport,
+  pariwarSewaRecords = [], onSavePariwarSewaRecord, onDeletePariwarSewaRecord,
+  xrayRecords = [], onSaveXRayRecord, onDeleteXRayRecord,
+  ecgRecords = [], onSaveECGRecord, onDeleteECGRecord,
+  usgRecords = [], onSaveUSGRecord, onDeleteUSGRecord,
+  physiotherapyRecords = [], onSavePhysiotherapyRecord, onDeletePhysiotherapyRecord
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
@@ -456,6 +482,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         { id: 'report_khop', label: 'खोप रिपोर्ट', icon: <Baby size={16} /> },
         { id: 'report_rabies', label: 'रेबिज़ रिपोर्ट', icon: <Syringe size={16} /> },
         { id: 'report_cbimnci', label: 'CBIMNCI रिपोर्ट', icon: <FileText size={16} /> },
+        { id: 'report_reporting_status', label: 'रिपोर्टिङ स्थिति', icon: <FileText size={16} /> },
         { id: 'report_inventory_monthly', label: 'जिन्सी मासिक रिपोर्ट', icon: <FileText size={16} /> },
       ]
     },
@@ -662,6 +689,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'rabies': return <RabiesRegistration currentFiscalYear={currentFiscalYear} patients={rabiesPatients} onAddPatient={onAddRabiesPatient} onUpdatePatient={onUpdatePatient} onDeletePatient={onDeletePatient} currentUser={currentUser} />;
       case 'report_rabies': return <RabiesReport currentFiscalYear={currentFiscalYear} currentUser={currentUser} patients={rabiesPatients} />;
       case 'report_cbimnci': return <CBIMNCIReport cbimnciRecords={cbimnciRecords} serviceSeekerRecords={serviceSeekerRecords} currentFiscalYear={currentFiscalYear} />;
+      case 'report_reporting_status': return <ReportingStatusReport serviceSeekerRecords={serviceSeekerRecords} currentFiscalYear={currentFiscalYear} />;
       case 'mag_faram': return <MagFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} existingForms={magForms} onSave={onSaveMagForm} onDelete={onDeleteMagForm} inventoryItems={inventoryItems} stores={stores} generalSettings={generalSettings} />;
       case 'kharid_adesh': return <KharidAdesh orders={purchaseOrders} currentFiscalYear={currentFiscalYear} onSave={onUpdatePurchaseOrder} currentUser={currentUser} firms={firms} quotations={quotations} onDakhilaClick={(po) => { setActiveItem('jinshi_maujdat'); setPendingPoDakhila(po); }} generalSettings={generalSettings} inventoryItems={inventoryItems} />;
       case 'nikasha_pratibedan': return <NikashaPratibedan reports={issueReports} onSave={onUpdateIssueReport} currentUser={currentUser} currentFiscalYear={currentFiscalYear} generalSettings={generalSettings} />;
@@ -1020,20 +1048,53 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                                         stores={stores} 
                                         onUpdateInventoryItem={onUpdateInventoryItem} 
                                       />;
-      case 'pariwar_niyojan':
-      case 'xray_sewa':
-      case 'ecg_sewa':
-      case 'usg_sewa':
-      case 'phisiotherapy':
-        return (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400">
-            <div className="bg-slate-100 p-6 rounded-full mb-4">
-              <Stethoscope size={48} className="opacity-20" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-600 mb-2">यो सेवा हाल निर्माणाधीन छ।</h3>
-            <p className="text-sm">चाँडै नै यो सेवा उपलब्ध हुनेछ।</p>
-          </div>
-        );
+      case 'pariwar_niyojan': return <PariwarSewa 
+                                        records={pariwarSewaRecords}
+                                        serviceSeekers={serviceSeekerRecords}
+                                        onSave={onSavePariwarSewaRecord}
+                                        onDelete={onDeletePariwarSewaRecord}
+                                        currentFiscalYear={currentFiscalYear}
+                                      />;
+      case 'xray_sewa': return <XRaySewa 
+                                  records={xrayRecords}
+                                  serviceSeekerRecords={serviceSeekerRecords}
+                                  opdRecords={opdRecords}
+                                  emergencyRecords={emergencyRecords}
+                                  cbimnciRecords={cbimnciRecords}
+                                  onSave={onSaveXRayRecord}
+                                  onDelete={onDeleteXRayRecord}
+                                  currentFiscalYear={currentFiscalYear}
+                                />;
+      case 'ecg_sewa': return <ECGSewa 
+                                  records={ecgRecords}
+                                  serviceSeekerRecords={serviceSeekerRecords}
+                                  opdRecords={opdRecords}
+                                  emergencyRecords={emergencyRecords}
+                                  cbimnciRecords={cbimnciRecords}
+                                  onSave={onSaveECGRecord}
+                                  onDelete={onDeleteECGRecord}
+                                  currentFiscalYear={currentFiscalYear}
+                                />;
+      case 'usg_sewa': return <USGSewa 
+                                  records={usgRecords}
+                                  serviceSeekerRecords={serviceSeekerRecords}
+                                  opdRecords={opdRecords}
+                                  emergencyRecords={emergencyRecords}
+                                  cbimnciRecords={cbimnciRecords}
+                                  onSave={onSaveUSGRecord}
+                                  onDelete={onDeleteUSGRecord}
+                                  currentFiscalYear={currentFiscalYear}
+                                />;
+      case 'phisiotherapy': return <PhysiotherapySewa 
+                                      records={physiotherapyRecords}
+                                      serviceSeekerRecords={serviceSeekerRecords}
+                                      opdRecords={opdRecords}
+                                      emergencyRecords={emergencyRecords}
+                                      cbimnciRecords={cbimnciRecords}
+                                      onSave={onSavePhysiotherapyRecord}
+                                      onDelete={onDeletePhysiotherapyRecord}
+                                      currentFiscalYear={currentFiscalYear}
+                                    />;
       case 'log_book': return <LogBook currentUser={currentUser} currentFiscalYear={currentFiscalYear} inventoryItems={inventoryItems} logBookEntries={logBookEntries} onAddLogEntry={onSaveLogBookEntry} />;
       case 'report_inventory_monthly': return <InventoryMonthlyReport 
                                               currentFiscalYear={currentFiscalYear} 

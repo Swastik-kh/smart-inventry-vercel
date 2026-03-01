@@ -43,7 +43,9 @@ export const InventoryMonthlyReport: React.FC<InventoryMonthlyReportProps> = ({
   dakhilaReports, issueReports, stockEntryRequests, stores
 }) => {
   const [selectedFiscalYear, setSelectedFiscalYear] = useState(currentFiscalYear);
-  const [selectedMonth, setSelectedMonth] = useState(new NepaliDate().format('MM')); // Default to current month
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    try { return new NepaliDate().format('MM'); } catch(e) { return '01'; }
+  }); // Default to current month
   const [filterCenter, setFilterCenter] = useState(''); // New state for filter by store/center
   const [showPrintModal, setShowPrintModal] = useState(false);
 

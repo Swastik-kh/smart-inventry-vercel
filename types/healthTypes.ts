@@ -113,3 +113,97 @@ export interface ChildImmunizationRecord {
   remarks?: string;
   vaccinationCenter?: string; // Added for center tracking
 }
+
+export interface PariwarSewaRecord {
+  id: string;
+  fiscalYear: string;
+  dateBs: string;
+  serviceSeekerId: string;
+  patientName: string;
+  patientId?: string;
+  age: string;
+  address: string;
+  phone: string;
+  
+  // Temporary Methods
+  tempMethod?: 'Condom' | 'Pills' | 'Depo' | 'IUCD' | 'Implant 5 yrs' | 'Implant 3 yrs' | 'Sayana Press' | 'Emergency Contraceptive' | '';
+  userType?: 'New' | 'Current' | 'Discontinued' | '';
+  quantity?: number;
+
+  // Permanent Methods
+  permMethod?: 'Minilap - Female' | 'Vasectomy - Male' | '';
+  institutionType?: 'Government' | 'Non-Government' | '';
+  location?: 'Health Facility' | 'Camp' | '';
+
+  // Post-partum FP
+  postPartumFP?: 'Within 48 hrs' | '48 hrs to 1 yr' | '';
+  
+  remarks?: string;
+}
+
+export interface XRayRecord {
+  id: string;
+  fiscalYear: string;
+  dateBs: string;
+  serviceSeekerId: string;
+  patientName: string;
+  patientId?: string;
+  age: string;
+  address: string;
+  phone: string;
+  xrayType: string; // e.g., Chest, Limb, etc.
+  filmSize: string; // e.g., 8x10, 10x12, 12x15, 14x17
+  quantity: number;
+  result?: string;
+  referredBy?: string; // Doctor or Service (OPD/ER)
+  remarks?: string;
+}
+
+export interface ECGRecord {
+  id: string;
+  fiscalYear: string;
+  dateBs: string;
+  serviceSeekerId: string;
+  patientName: string;
+  patientId?: string;
+  age: string;
+  address: string;
+  phone: string;
+  ecgType?: string; // e.g., Resting, Stress, etc.
+  result?: string;
+  referredBy?: string; // Doctor or Service (OPD/ER)
+  remarks?: string;
+}
+
+export interface USGRecord {
+  id: string;
+  fiscalYear: string;
+  dateBs: string;
+  serviceSeekerId: string;
+  patientName: string;
+  patientId?: string;
+  age: string;
+  address: string;
+  phone: string;
+  usgType: string; // e.g., Abdomen, Pelvis, Obstetric, etc.
+  result?: string;
+  referredBy?: string;
+  remarks?: string;
+}
+
+export interface PhysiotherapyRecord {
+  id: string;
+  fiscalYear: string;
+  dateBs: string;
+  serviceSeekerId: string;
+  patientName: string;
+  patientId?: string;
+  age: string;
+  address: string;
+  phone: string;
+  diagnosis: string;
+  treatmentType: string; // e.g., Exercise, Modality, etc.
+  sessionNumber: number;
+  referredBy?: string;
+  remarks?: string;
+}

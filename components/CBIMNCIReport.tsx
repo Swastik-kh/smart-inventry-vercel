@@ -16,8 +16,12 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
   currentFiscalYear
 }) => {
   const [reportType, setReportType] = useState<'Daily' | 'Monthly' | 'FiscalYear'>('Monthly');
-  const [selectedDate, setSelectedDate] = useState(new NepaliDate().format('YYYY-MM-DD'));
-  const [selectedMonth, setSelectedMonth] = useState(new NepaliDate().format('MM'));
+  const [selectedDate, setSelectedDate] = useState(() => {
+    try { return new NepaliDate().format('YYYY-MM-DD'); } catch (e) { return ''; }
+  });
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    try { return new NepaliDate().format('MM'); } catch (e) { return '01'; }
+  });
 
   const filteredRecords = useMemo(() => {
     return cbimnciRecords.filter(record => {
