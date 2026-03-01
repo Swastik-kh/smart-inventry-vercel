@@ -193,6 +193,23 @@ const App: React.FC = () => {
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser]);
 
+  useEffect(() => {
+    if (currentUser) {
+      const updatedUser = allUsers.find(u => u.id === currentUser.id);
+      if (updatedUser && JSON.stringify(updatedUser) !== JSON.stringify(currentUser)) {
+        setCurrentUser(updatedUser);
+      }
+    }
+  }, [allUsers, currentUser]);
+
+  const handleUpdateReadNotifications = async (userId: string, readIds: string[]) => {
+    try {
+      await update(ref(db, `users/${userId}`), { readNotifications: readIds });
+    } catch (error) {
+      console.error("Error updating read notifications", error);
+    }
+  };
+
   const handleLoginSuccess = (user: User, fiscalYear: string) => {
     setCurrentUser(user);
     setCurrentFiscalYear(fiscalYear);
@@ -1032,6 +1049,7 @@ const App: React.FC = () => {
     physiotherapyRecords={physiotherapyRecords}
     onSavePhysiotherapyRecord={handleSavePhysiotherapyRecord}
     onDeletePhysiotherapyRecord={handleDeletePhysiotherapyRecord}
+    onUpdateReadNotifications={handleUpdateReadNotifications}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">

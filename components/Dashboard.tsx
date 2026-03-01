@@ -113,6 +113,7 @@ interface ExtendedDashboardProps extends DashboardProps {
   physiotherapyRecords: PhysiotherapyRecord[];
   onSavePhysiotherapyRecord: (record: PhysiotherapyRecord) => void;
   onDeletePhysiotherapyRecord: (id: string) => void;
+  onUpdateReadNotifications: (userId: string, readIds: string[]) => void;
 }
 
 interface AppNotification {
@@ -159,7 +160,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   xrayRecords = [], onSaveXRayRecord, onDeleteXRayRecord,
   ecgRecords = [], onSaveECGRecord, onDeleteECGRecord,
   usgRecords = [], onSaveUSGRecord, onDeleteUSGRecord,
-  physiotherapyRecords = [], onSavePhysiotherapyRecord, onDeletePhysiotherapyRecord
+  physiotherapyRecords = [], onSavePhysiotherapyRecord, onDeletePhysiotherapyRecord,
+  onUpdateReadNotifications
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
@@ -167,21 +169,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const [showNotifications, setShowNotifications] = useState(false);
   
-  // Use a user-specific key for storing read notifications to ensure persistence per user
-  const userNotifKey = useMemo(() => {
-      return currentUser ? `${READ_NOTIFS_KEY_PREFIX}${currentUser.id}` : '';
-  }, [currentUser]);
-
-  const [readNotifIds, setReadNotifIds] = useState<string[]>(() => {
-      if (!userNotifKey) return [];
-      try {
-          const saved = localStorage.getItem(userNotifKey);
-          return saved ? JSON.parse(saved) : [];
-      } catch (e) {
-          console.error("Error loading notification state", e);
-          return [];
-      }
-  });
+  const readNotifIds = useMemo(() => currentUser?.readNotifications || [], [currentUser]);
 
   const [pendingPoDakhila, setPendingPoDakhila] = useState<PurchaseOrderEntry | null>(null);
   const [showExpiryModal, setShowExpiryModal] = useState(false);
@@ -202,12 +190,6 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   const mainContentRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-      if (userNotifKey) {
-          localStorage.setItem(userNotifKey, JSON.stringify(readNotifIds));
-      }
-  }, [readNotifIds, userNotifKey]);
 
   const canViewFullReport = useMemo(() => {
     if (!currentUser) return false;
@@ -264,8 +246,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
           .sort((a, b) => b.id.localeCompare(a.id));
   }, [dakhilaReports, currentUser, readNotifIds, currentFiscalYear]);
 
-  // For the bell dropdown, we only show latest 10
-  const notifications = useMemo(() => allDakhilaNotifs.slice(0, 10), [allDakhilaNotifs]);
+  // For the bell dropdown, we only show latest 10 unread ones
+  const notifications = useMemo(() => allDakhilaNotifs.filter(n => n.isNew).slice(0, 10), [allDakhilaNotifs]);
 
   // For the badge, we count ALL unread dakhilas in current fiscal year
   const unreadCount = useMemo(() => allDakhilaNotifs.filter(n => n.isNew).length, [allDakhilaNotifs]);
@@ -315,10 +297,10 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   const handleMarkDakhilaRead = useCallback((id: string) => {
       const notifId = `dakhila-${id}`;
-      if (!readNotifIds.includes(notifId)) {
-          setReadNotifIds(prev => [...prev, notifId]);
+      if (currentUser && !readNotifIds.includes(notifId)) {
+          onUpdateReadNotifications(currentUser.id, [...readNotifIds, notifId]);
       }
-  }, [readNotifIds]);
+  }, [readNotifIds, currentUser, onUpdateReadNotifications]);
 
   const handleNotifClick = (n: AppNotification) => {
       setShowNotifications(false);
@@ -346,8 +328,10 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   };
 
   const clearAllNotifs = () => {
+      if (!currentUser) return;
       const allIds = allDakhilaNotifs.map(n => n.id);
-      setReadNotifIds(prev => Array.from(new Set([...prev, ...allIds])));
+      const newReadIds = Array.from(new Set([...readNotifIds, ...allIds]));
+      onUpdateReadNotifications(currentUser.id, newReadIds);
       setShowNotifications(false);
   };
 

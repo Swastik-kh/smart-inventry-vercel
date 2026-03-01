@@ -34,6 +34,7 @@ export interface User {
   phoneNumber: string;
   allowedMenus?: string[]; 
   serviceType?: 'Permanent' | 'Temporary' | 'Contract';
+  readNotifications?: string[];
 }
 
 export interface OrganizationSettings {
