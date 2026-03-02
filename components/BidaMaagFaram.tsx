@@ -192,25 +192,44 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
         </div>
 
         {leaveTypes.map((type, index) => {
-           let balance = 0;
+           let currentDbBalance = 0;
            if (type.key === 'casual_festival') {
-             balance = (accumulatedLeave.casual || 0) + (accumulatedLeave.festival || 0);
+             currentDbBalance = (accumulatedLeave.casual || 0) + (accumulatedLeave.festival || 0);
            } else {
              // @ts-ignore
-             balance = accumulatedLeave[type.key] || 0;
+             currentDbBalance = accumulatedLeave[type.key] || 0;
            }
+
            const selected = isSelected(type.label);
-           const requested = selected ? duration : 0;
-           const remaining = balance - (typeof requested === 'number' ? requested : 0);
+           const requestedDays = (selected && typeof duration === 'number') ? duration : 0;
+           
+           let previousBalance = currentDbBalance;
+           let remainingBalance = currentDbBalance;
+
+           if (selected) {
+               if (application.status === 'Approved') {
+                   // DB balance is already deducted
+                   previousBalance = currentDbBalance + requestedDays;
+                   remainingBalance = currentDbBalance;
+               } else if (application.status === 'Rejected') {
+                   // DB balance is NOT deducted
+                   previousBalance = currentDbBalance;
+                   remainingBalance = currentDbBalance; // Should not decrease
+               } else {
+                   // Pending
+                   previousBalance = currentDbBalance;
+                   remainingBalance = currentDbBalance - requestedDays;
+               }
+           }
 
            return (
             <div key={type.id} className="grid grid-cols-4 border-b border-black text-center text-xs">
               <div className="p-1 border-r border-black text-left pl-2">
                 {index + 1}. {type.label}
               </div>
-              <div className="p-1 border-r border-black">{balance}</div>
-              <div className="p-1 border-r border-black">{typeof requested === 'number' && requested > 0 ? requested : (selected ? requested : '')}</div>
-              <div className="p-1">{remaining}</div>
+              <div className="p-1 border-r border-black">{previousBalance}</div>
+              <div className="p-1 border-r border-black">{selected ? duration : ''}</div>
+              <div className="p-1">{remainingBalance}</div>
             </div>
            );
         })}
@@ -253,10 +272,12 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
              </label>
           </div>
           <div className="mb-8">
-            बिदा सकिने मिति: {application.endDate}
+            {application.status !== 'Rejected' && (
+              <>बिदा सकिने मिति: {application.endDate}</>
+            )}
           </div>
           <div className="border-t border-dotted border-black w-2/3 pt-1 text-center">
-            स्वीकृति दिने अधिकृत
+            {application.status === 'Rejected' ? 'अस्वीकृत गर्ने अधिकृत' : 'स्वीकृति दिने अधिकृत'}
           </div>
           <div className="mt-2 grid grid-cols-1 gap-1">
             <div className="font-bold">{application.approvedBy || ''}</div>
@@ -279,7 +300,7 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
         
         <div className="flex justify-between mb-2">
           <span>प.स.</span>
-          <span>मिति: {application.status === 'Approved' ? application.approvalDate : ''}</span>
+          <span>मिति: {application.approvalDate || new NepaliDate().format('YYYY-MM-DD')}</span>
         </div>
         <div className="mb-2">
           श्री {application.employeeName}

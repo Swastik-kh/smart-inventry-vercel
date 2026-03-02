@@ -118,8 +118,11 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
     };
 
     onAddLeaveApplication(newApplication);
-    alert('बिदा आवेदन पेश गरियो (Leave application submitted)');
     
+    if (window.confirm('बिदा आवेदन पेश गरियो। के तपाइँ यसलाई प्रिन्ट गर्न चाहनुहुन्छ? (Leave application submitted. Do you want to print it?)')) {
+      setPrintApplication(newApplication);
+    }
+
     setFormData({
       ...formData,
       startDate: '',
@@ -177,28 +180,11 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'APPROVAL';
 
-  // Calculate taken leaves for Casual and Festival
-  const takenCasual = leaveApplications
-    .filter(app => app.userId === currentUser?.id && app.leaveType === 'भैपरी' && app.status === 'Approved' && app.fiscalYear === currentFiscalYear)
-    .reduce((acc, app) => acc + app.days, 0);
-
-  const takenFestival = leaveApplications
-    .filter(app => app.userId === currentUser?.id && app.leaveType === 'पर्व' && app.status === 'Approved' && app.fiscalYear === currentFiscalYear)
-    .reduce((acc, app) => acc + app.days, 0);
-
-  // Standard entitlement for Casual and Festival is 6 days each
-  const casualBalance = 6 - takenCasual;
-  const festivalBalance = 6 - takenFestival;
-
   const adminBalance = leaveBalances.find(b => b.userId === currentUser?.id) || {
     casual: 0, sick: 0, festival: 0, home: 0, other: 0, maternity: 0, kiriya: 0, study: 0, extraordinary: 0
   };
 
-  const myBalance = {
-    ...adminBalance,
-    casual: casualBalance,
-    festival: festivalBalance
-  };
+  const myBalance = { ...adminBalance };
 
   const userOptions = users.map(u => ({ id: u.id, value: u.id, label: `${u.fullName} (${u.designation})` }));
 
@@ -215,18 +201,9 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
     const balance = leaveBalances.find(b => b.userId === userId);
     if (!balance) return undefined;
     
-    // Calculate taken leaves for Casual and Festival for this user
-    const takenCasual = leaveApplications
-      .filter(app => app.userId === userId && app.leaveType === 'भैपरी' && app.status === 'Approved' && app.fiscalYear === currentFiscalYear)
-      .reduce((acc, app) => acc + app.days, 0);
-
-    const takenFestival = leaveApplications
-      .filter(app => app.userId === userId && app.leaveType === 'पर्व' && app.status === 'Approved' && app.fiscalYear === currentFiscalYear)
-      .reduce((acc, app) => acc + app.days, 0);
-
     return {
-      casual: 6 - takenCasual,
-      festival: 6 - takenFestival,
+      casual: balance.casual,
+      festival: balance.festival,
       sick: balance.sick,
       home: balance.home,
       other: balance.other,
@@ -520,14 +497,23 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                 <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">हालैका आवेदनहरू</h3>
                 <div className="space-y-3">
                   {leaveApplications.filter(app => app.userId === currentUser?.id).slice(0, 5).map(app => (
-                    <div key={app.id} className="p-3 border border-slate-100 rounded-xl bg-slate-50">
+                    <div key={app.id} className="p-3 border border-slate-100 rounded-xl bg-slate-50 relative group">
                        <div className="flex justify-between items-start mb-1">
                           <span className="text-xs font-bold text-slate-700">{app.leaveType}</span>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                            app.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                            app.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                            'bg-amber-100 text-amber-700'
-                          }`}>{app.status}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                              app.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                              app.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                              'bg-amber-100 text-amber-700'
+                            }`}>{app.status}</span>
+                            <button 
+                              onClick={() => setPrintApplication(app)}
+                              className="text-slate-400 hover:text-blue-600 transition-colors"
+                              title="Print Form"
+                            >
+                              <Printer size={14} />
+                            </button>
+                          </div>
                        </div>
                        <p className="text-[10px] text-slate-500">{app.startDate} देखि {app.endDate}</p>
                     </div>
