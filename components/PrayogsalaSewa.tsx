@@ -158,7 +158,14 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
       };
 
       onSaveRecord(reportToSave);
-      // We don't alert here to keep the flow smooth, but the data is sent to Firebase
+      alert('नमुना सफलतापूर्वक संकलन गरियो (Sample collected successfully)');
+
+      // Check if all samples for this invoice are collected, if so, switch to result tab
+      const allInvoiceTests = updatedTests.filter(t => t.invoiceNumber === invoiceNumber);
+      const allCollected = allInvoiceTests.every(t => t.sampleCollected);
+      if (allCollected) {
+        setActiveTab('result');
+      }
     }
   };
 
@@ -205,7 +212,9 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
     if (!currentPatient) return;
 
     const invoiceTests = pendingTests.filter(t => t.invoiceNumber === invoiceNumber && t.sampleCollected);
-    const testsWithResults = invoiceTests.filter(t => t.result.trim() !== '');
+    
+    // A test has a result if the result string is not empty
+    const testsWithResults = invoiceTests.filter(t => t.result && t.result.trim() !== '');
 
     if (testsWithResults.length === 0) {
       alert("कृपया कम्तिमा एउटा टेस्टको नतिजा भर्नुहोस् (Please enter at least one result)");
@@ -233,8 +242,7 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
 
     onSaveRecord(newReport);
     setCurrentReport(newReport);
-    alert('रिपोर्ट सुरक्षित गरियो।');
-    loadPendingTests(currentPatient.id);
+    alert('रिपोर्ट सुरक्षित गरियो (Report saved successfully)।');
   };
 
   const handlePrint = useReactToPrint({

@@ -529,7 +529,16 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                             'bg-amber-100 text-amber-700'
                           }`}>{app.status}</span>
                        </div>
-                       <p className="text-[10px] text-slate-500">{app.startDate} देखि {app.endDate}</p>
+                       <div className="flex justify-between items-center mt-1">
+                         <p className="text-[10px] text-slate-500">{app.startDate} देखि {app.endDate}</p>
+                         <button 
+                            onClick={() => setPrintApplication(app)}
+                            className="text-slate-400 hover:text-blue-600 p-1"
+                            title="Print Form"
+                         >
+                            <Printer size={14} />
+                         </button>
+                       </div>
                     </div>
                   ))}
                   {leaveApplications.filter(app => app.userId === currentUser?.id).length === 0 && (

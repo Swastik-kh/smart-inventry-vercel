@@ -200,16 +200,35 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
              balance = accumulatedLeave[type.key] || 0;
            }
            const selected = isSelected(type.label);
-           const requested = selected ? duration : 0;
-           const remaining = balance - (typeof requested === 'number' ? requested : 0);
+           const durationNum = typeof duration === 'number' ? duration : 0;
+           const requested = selected ? durationNum : 0;
+           
+           let previous = balance;
+           let remaining = balance;
+
+           if (application.status === 'Approved') {
+             // If approved, 'balance' is the Remaining Balance (from DB/Calculation)
+             // So Previous = Remaining + Requested
+             remaining = balance;
+             previous = balance + requested;
+           } else if (application.status === 'Rejected') {
+             // If rejected, no deduction happened
+             previous = balance;
+             remaining = balance;
+           } else {
+             // If pending, 'balance' is the Previous Balance (DB hasn't been deducted yet)
+             // So Remaining = Previous - Requested
+             previous = balance;
+             remaining = balance - requested;
+           }
 
            return (
             <div key={type.id} className="grid grid-cols-4 border-b border-black text-center text-xs">
               <div className="p-1 border-r border-black text-left pl-2">
                 {index + 1}. {type.label}
               </div>
-              <div className="p-1 border-r border-black">{balance}</div>
-              <div className="p-1 border-r border-black">{typeof requested === 'number' && requested > 0 ? requested : (selected ? requested : '')}</div>
+              <div className="p-1 border-r border-black">{previous}</div>
+              <div className="p-1 border-r border-black">{requested > 0 ? requested : ''}</div>
               <div className="p-1">{remaining}</div>
             </div>
            );
@@ -253,10 +272,10 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
              </label>
           </div>
           <div className="mb-8">
-            बिदा सकिने मिति: {application.endDate}
+            {application.status !== 'Rejected' && `बिदा सकिने मिति: ${application.endDate}`}
           </div>
           <div className="border-t border-dotted border-black w-2/3 pt-1 text-center">
-            स्वीकृति दिने अधिकृत
+            {application.status === 'Rejected' ? 'अस्वीकृत गर्ने अधिकृत' : 'स्वीकृति दिने अधिकृत'}
           </div>
           <div className="mt-2 grid grid-cols-1 gap-1">
             <div className="font-bold">{application.approvedBy || ''}</div>
@@ -279,7 +298,7 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
         
         <div className="flex justify-between mb-2">
           <span>प.स.</span>
-          <span>मिति: {application.status === 'Approved' ? application.approvalDate : ''}</span>
+          <span>मिति: {application.status === 'Approved' ? application.approvalDate : (application.status === 'Rejected' ? new NepaliDate().format('YYYY-MM-DD') : '')}</span>
         </div>
         <div className="mb-2">
           श्री {application.employeeName}
@@ -293,10 +312,10 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
             <div className="p-1">कार्यालयमा हाजिर हुने मिति</div>
           </div>
           <div className="grid grid-cols-4 text-center text-xs">
-            <div className="p-1 border-r border-black">{getNepaliLeaveType(application.leaveType)}</div>
-            <div className="p-1 border-r border-black">{duration} दिन</div>
-            <div className="p-1 border-r border-black">{application.startDate}</div>
-            <div className="p-1">{reportingDate}</div>
+            <div className="p-1 border-r border-black">{application.status === 'Rejected' ? '' : getNepaliLeaveType(application.leaveType)}</div>
+            <div className="p-1 border-r border-black">{application.status === 'Rejected' ? '' : `${duration} दिन`}</div>
+            <div className="p-1 border-r border-black">{application.status === 'Rejected' ? '' : application.startDate}</div>
+            <div className="p-1">{application.status === 'Rejected' ? '' : reportingDate}</div>
           </div>
         </div>
 
