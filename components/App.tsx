@@ -10,7 +10,8 @@ import {
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
   DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord,
   ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord,
-  DispensaryRecord, ServiceItem, LabReport, GarbhawotiRecord, PrasutiRecord
+  DispensaryRecord, ServiceItem, LabReport, GarbhawotiRecord, PrasutiRecord,
+  LeaveApplication, LeaveBalance
 } from '../types';
 import { db } from '../firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe, off } from "firebase/database";
@@ -80,6 +81,8 @@ const App: React.FC = () => {
   const [labReports, setLabReports] = useState<LabReport[]>([]);
   const [garbhawotiRecords, setGarbhawotiRecords] = useState<GarbhawotiRecord[]>([]);
   const [prasutiRecords, setPrasutiRecords] = useState<PrasutiRecord[]>([]);
+  const [leaveApplications, setLeaveApplications] = useState<LeaveApplication[]>([]);
+  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -172,6 +175,8 @@ const App: React.FC = () => {
     setupOrgListener('labReports', setLabReports);
     setupOrgListener('garbhawotiRecords', setGarbhawotiRecords);
     setupOrgListener('prasutiRecords', setPrasutiRecords);
+    setupOrgListener('leaveApplications', setLeaveApplications);
+    setupOrgListener('leaveBalances', setLeaveBalances);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser]);
@@ -543,6 +548,59 @@ const App: React.FC = () => {
           labReports={labReports} onSaveLabReport={(r) => set(getOrgRef(`labReports/${r.id}`), r)} onDeleteLabReport={(id) => remove(getOrgRef(`labReports/${id}`))}
           garbhawotiRecords={garbhawotiRecords} onSaveGarbhawotiRecord={(r) => set(getOrgRef(`garbhawotiRecords/${r.id}`), r)} onDeleteGarbhawotiRecord={(id) => remove(getOrgRef(`garbhawotiRecords/${id}`))}
           prasutiRecords={prasutiRecords} onSavePrasutiRecord={(r) => set(getOrgRef(`prasutiRecords/${r.id}`), r)} onDeletePrasutiRecord={(id) => remove(getOrgRef(`prasutiRecords/${id}`))}
+          leaveApplications={leaveApplications} onAddLeaveApplication={(a) => set(getOrgRef(`leaveApplications/${a.id}`), a)}
+          onUpdateLeaveStatus={(id, status, rejectionReason) => {
+              if (!currentUser) return;
+              const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
+              const orgPath = `orgData/${safeOrgName}`;
+              const updates: Record<string, any> = {};
+              updates[`${orgPath}/leaveApplications/${id}/status`] = status;
+              if (rejectionReason) updates[`${orgPath}/leaveApplications/${id}/rejectionReason`] = rejectionReason;
+              if (status === 'Approved') {
+                  updates[`${orgPath}/leaveApplications/${id}/approvedBy`] = currentUser.fullName;
+                  updates[`${orgPath}/leaveApplications/${id}/approvalDate`] = new NepaliDate().format('YYYY-MM-DD');
+                  // Note: Balance deduction is handled by BidaAbedan logic calling onSaveLeaveBalance separately if needed,
+                  // OR we should handle it here. BidaAbedan calls onSaveLeaveBalance directly?
+                  // Let's check BidaAbedan. It calls onUpdateLeaveStatus AND onSaveLeaveBalance?
+                  // No, BidaAbedan calls onUpdateLeaveStatus ONLY.
+                  // So we MUST deduct balance here.
+                  // BUT we need the application details first.
+                  get(ref(db, `${orgPath}/leaveApplications/${id}`)).then(snap => {
+                      const app = snap.val();
+                      if (app) {
+                          get(ref(db, `${orgPath}/leaveBalances/${app.userId}`)).then(balSnap => {
+                              let balance = balSnap.val();
+                              if (!balance) balance = { id: app.userId, userId: app.userId, fiscalYear: currentFiscalYear, casual: 0, festival: 0, sick: 0, home: 0, other: 0, maternity: 0, kiriya: 0, study: 0, extraordinary: 0, serviceType: 'Permanent' };
+                              
+                              // Calculate days
+                              const d1 = new Date(new NepaliDate(app.startDate).toJsDate());
+                              const d2 = new Date(new NepaliDate(app.endDate).toJsDate());
+                              const diffTime = Math.abs(d2.getTime() - d1.getTime());
+                              const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+                              let field = '';
+                              if (app.leaveType === 'Casual & Festival') field = 'casual'; // Simplified mapping, ideally split
+                              else if (app.leaveType === 'Sick Leave') field = 'sick';
+                              else if (app.leaveType === 'Home Leave') field = 'home';
+                              else if (app.leaveType === 'Maternity Leave') field = 'maternity';
+                              else if (app.leaveType === 'Kiriya Leave') field = 'kiriya';
+                              else if (app.leaveType === 'Study Leave') field = 'study';
+                              else if (app.leaveType === 'Extraordinary Leave') field = 'extraordinary';
+                              else if (app.leaveType === 'Other Leave') field = 'other';
+                              
+                              if (field) {
+                                  // @ts-ignore
+                                  balance[field] = Math.max(0, (balance[field] || 0) - days);
+                                  update(ref(db), { [`${orgPath}/leaveBalances/${app.userId}`]: balance });
+                              }
+                          });
+                      }
+                  });
+              }
+              update(ref(db), updates);
+          }}
+          onDeleteLeaveApplication={(id) => remove(getOrgRef(`leaveApplications/${id}`))}
+          leaveBalances={leaveBalances} onSaveLeaveBalance={(b) => set(getOrgRef(`leaveBalances/${b.id}`), b)}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
