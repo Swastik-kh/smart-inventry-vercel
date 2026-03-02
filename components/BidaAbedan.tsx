@@ -215,18 +215,9 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
     const balance = leaveBalances.find(b => b.userId === userId);
     if (!balance) return undefined;
     
-    // Calculate taken leaves for Casual and Festival for this user
-    const takenCasual = leaveApplications
-      .filter(app => app.userId === userId && app.leaveType === 'भैपरी' && app.status === 'Approved' && app.fiscalYear === currentFiscalYear)
-      .reduce((acc, app) => acc + app.days, 0);
-
-    const takenFestival = leaveApplications
-      .filter(app => app.userId === userId && app.leaveType === 'पर्व' && app.status === 'Approved' && app.fiscalYear === currentFiscalYear)
-      .reduce((acc, app) => acc + app.days, 0);
-
     return {
-      casual: 6 - takenCasual,
-      festival: 6 - takenFestival,
+      casual: balance.casual,
+      festival: balance.festival,
       sick: balance.sick,
       home: balance.home,
       other: balance.other,
