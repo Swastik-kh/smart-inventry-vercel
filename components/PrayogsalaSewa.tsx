@@ -246,7 +246,10 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
 
     onSaveRecord(newReport);
     setCurrentReport(newReport);
-    alert('रिपोर्ट सुरक्षित गरियो (Report saved successfully)।');
+    
+    if (window.confirm('रिपोर्ट सुरक्षित गरियो। के तपाइँ यसलाई प्रिन्ट गर्न चाहनुहुन्छ? (Report saved. Do you want to print it?)')) {
+      setTimeout(handlePrint, 100);
+    }
   };
 
   const handlePrint = useReactToPrint({
@@ -360,12 +363,22 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
                   className={`flex-1 py-4 font-bold text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'sample' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' : 'text-slate-500 hover:bg-slate-50'}`}
                 >
                   <Beaker size={18} /> नमुना संकलन (Sample Collection)
+                  {pendingTests.filter(t => !t.sampleCollected).length > 0 && (
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+                      {pendingTests.filter(t => !t.sampleCollected).length}
+                    </span>
+                  )}
                 </button>
                 <button 
                   onClick={() => setActiveTab('result')}
                   className={`flex-1 py-4 font-bold text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'result' ? 'bg-green-50 text-green-700 border-b-2 border-green-600' : 'text-slate-500 hover:bg-slate-50'}`}
                 >
                   <Activity size={18} /> रिपोर्ट प्रविष्टि (Result Entry)
+                  {pendingTests.filter(t => t.sampleCollected && !t.result).length > 0 && (
+                    <span className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full">
+                      {pendingTests.filter(t => t.sampleCollected && !t.result).length}
+                    </span>
+                  )}
                 </button>
               </div>
 
@@ -384,14 +397,21 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
                               <Beaker size={14} /> {tests.filter(t => !t.sampleCollected).length} Pending Samples
                             </div>
                           ) : (
-                            tests.some(t => t.sampleCollected) && (
-                              <button 
-                                onClick={() => handleSaveReport(invoiceNumber)}
-                                className="bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 text-xs font-bold shadow-sm flex items-center gap-2"
-                              >
-                                <Save size={14} /> Save Report
-                              </button>
-                            )
+                            <div className="flex items-center gap-2">
+                              {tests.filter(t => t.sampleCollected && !t.result).length > 0 && (
+                                <div className="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+                                  {tests.filter(t => t.sampleCollected && !t.result).length} Pending Results
+                                </div>
+                              )}
+                              {tests.some(t => t.sampleCollected) && (
+                                <button 
+                                  onClick={() => handleSaveReport(invoiceNumber)}
+                                  className="bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 text-xs font-bold shadow-sm flex items-center gap-2"
+                                >
+                                  <Save size={14} /> Save & Print
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
 
@@ -538,7 +558,9 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
               </tr>
             </thead>
             <tbody>
-              {currentReport?.tests.map((test, idx) => (
+              {currentReport?.tests
+                .filter(test => (test.result && test.result.trim() !== '') || (test.remarks && test.remarks.trim() !== ''))
+                .map((test, idx) => (
                 <tr key={idx} className="border-b border-slate-200">
                   <td className="py-2 px-4 font-medium">{test.testName}</td>
                   <td className="py-2 px-4 font-bold">{test.result}</td>
