@@ -205,6 +205,7 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
            
            let previous = balance;
            let remaining = balance;
+           let displayRequested: string | number = requested > 0 ? requested : '';
 
            if (application.status === 'Approved') {
              // If approved, 'balance' is the Remaining Balance (from DB/Calculation)
@@ -215,6 +216,15 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
              // If rejected, no deduction happened
              previous = balance;
              remaining = balance;
+             // Visually show 0 or dash for requested to make the math (Prev - Req = Rem) look consistent?
+             // Or keep showing requested amount but balance doesn't change?
+             // User said "aswikrit bhaye aswikrit hunu purba ko sanchit bada barabar hos" -> Remaining = Previous.
+             // If we show Requested = 2, then 12 - 2 != 12.
+             // Let's show the requested amount but maybe add a note or just keep it. 
+             // Actually, if it's rejected, effectively 0 days are "taken" from the balance.
+             // But "Mageko" means "Asked". 
+             // Let's stick to the logic: Previous = 12, Remaining = 12.
+             // If the user insists on "barabar hos", they probably care about the Balance columns.
            } else {
              // If pending, 'balance' is the Previous Balance (DB hasn't been deducted yet)
              // So Remaining = Previous - Requested
