@@ -89,8 +89,14 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
     // 4. Check existing reports
     const existingReports = labReports.filter(r => r.serviceSeekerId === patientId);
 
+    // Filter out items that belong to completed reports
+    const activeItems = labItems.filter(item => {
+      const report = existingReports.find(r => r.invoiceNumber === item.invoiceNumber);
+      return !report || report.status !== 'Completed';
+    });
+
     // 5. Prepare tests for the UI
-    const tests: PendingTest[] = labItems.map((item, index) => {
+    const tests: PendingTest[] = activeItems.map((item, index) => {
       const itemName = item.serviceName.trim().toLowerCase();
       const serviceDef = serviceItems.find(s => s.serviceName.trim().toLowerCase() === itemName);
       
