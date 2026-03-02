@@ -70,7 +70,7 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
     
     // 2. Extract all items from bills with their invoice numbers
     const allBilledItems = patientBills.flatMap(b => 
-      b.items.map(item => ({ ...item, invoiceNumber: b.billNumber }))
+      b.items.map(item => ({ ...item, invoiceNumber: b.invoiceNumber }))
     );
 
     // 3. Filter items that are Lab Investigations
@@ -97,9 +97,9 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
       // Find if this specific test from this specific invoice is already in an existing report
       const existingReport = existingReports.find(r => 
         r.invoiceNumber === item.invoiceNumber && 
-        r.tests.some(t => t.testName.trim().toLowerCase() === itemName)
+        r.tests?.some(t => t.testName.trim().toLowerCase() === itemName)
       );
-      const existingTest = existingReport?.tests.find(t => t.testName.trim().toLowerCase() === itemName);
+      const existingTest = existingReport?.tests?.find(t => t.testName.trim().toLowerCase() === itemName);
 
       return {
         id: existingTest?.id || `TEST-${item.invoiceNumber}-${index}`,
@@ -325,7 +325,7 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
                     <div key={report.id} className="flex justify-between items-center p-2 hover:bg-slate-50 border-b border-slate-100 text-sm">
                       <div>
                          <p className="font-medium">{report.reportDate}</p>
-                         <p className="text-xs text-slate-500">{report.tests.length} Tests {report.invoiceNumber && `(Inv: ${report.invoiceNumber})`}</p>
+                         <p className="text-xs text-slate-500">{report.tests?.length || 0} Tests {report.invoiceNumber && `(Inv: ${report.invoiceNumber})`}</p>
                       </div>
                       <div className="text-right space-x-2">
                         <button 
@@ -559,7 +559,7 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
             </thead>
             <tbody>
               {currentReport?.tests
-                .filter(test => (test.result && test.result.trim() !== '') || (test.remarks && test.remarks.trim() !== ''))
+                ?.filter(test => (test.result && test.result.trim() !== '') || (test.remarks && test.remarks.trim() !== ''))
                 .map((test, idx) => (
                 <tr key={idx} className="border-b border-slate-200">
                   <td className="py-2 px-4 font-medium">{test.testName}</td>
