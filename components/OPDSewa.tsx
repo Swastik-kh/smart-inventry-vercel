@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Search, Save, Printer, Plus, Trash2, FileText, User, Calendar, Stethoscope, Activity, Pill, FlaskConical, History, X } from 'lucide-react';
-import { ServiceSeekerRecord, OPDRecord, PrescriptionItem, ServiceItem } from '../types/coreTypes';
+import { ServiceSeekerRecord, OPDRecord, PrescriptionItem, ServiceItem, LabReport } from '../types/coreTypes';
+import { XRayRecord, ECGRecord, USGRecord, PhysiotherapyRecord } from '../types';
 import { InventoryItem } from '../types/inventoryTypes';
 import { Input } from './Input';
 // @ts-ignore
@@ -16,6 +17,11 @@ interface OPDSewaProps {
   currentUser: any;
   serviceItems?: ServiceItem[];
   inventoryItems?: InventoryItem[];
+  labReports?: LabReport[];
+  xrayRecords?: XRayRecord[];
+  ecgRecords?: ECGRecord[];
+  usgRecords?: USGRecord[];
+  physiotherapyRecords?: PhysiotherapyRecord[];
 }
 
 const initialPrescriptionItem: PrescriptionItem = {
@@ -35,10 +41,16 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
   currentFiscalYear,
   currentUser,
   serviceItems = [],
-  inventoryItems = []
+  inventoryItems = [],
+  labReports = [],
+  xrayRecords = [],
+  ecgRecords = [],
+  usgRecords = [],
+  physiotherapyRecords = []
 }) => {
   const [searchId, setSearchId] = useState('');
   const [currentPatient, setCurrentPatient] = useState<ServiceSeekerRecord | null>(null);
+  const [activeTab, setActiveTab] = useState<'form' | 'reports'>('form');
   const [opdData, setOpdData] = useState<Partial<OPDRecord>>({
     chiefComplaints: '',
     diagnosis: '',
@@ -64,7 +76,27 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
   const [investigationSearch, setInvestigationSearch] = useState('');
   const [showInvestigationResults, setShowInvestigationResults] = useState(false);
   
+  // Patient Reports
+  const patientReports = useMemo(() => {
+    if (!currentPatient) return [];
+    
+    const labs = labReports.filter(r => r.serviceSeekerId === currentPatient.id).map(r => ({ ...r, type: 'Lab' as const, date: r.reportDate }));
+    const xrays = xrayRecords.filter(r => r.serviceSeekerId === currentPatient.id).map(r => ({ ...r, type: 'X-Ray' as const, date: r.dateBs }));
+    const ecgs = ecgRecords.filter(r => r.serviceSeekerId === currentPatient.id).map(r => ({ ...r, type: 'ECG' as const, date: r.dateBs }));
+    const usgs = usgRecords.filter(r => r.serviceSeekerId === currentPatient.id).map(r => ({ ...r, type: 'USG' as const, date: r.dateBs }));
+    const physios = physiotherapyRecords.filter(r => r.serviceSeekerId === currentPatient.id).map(r => ({ ...r, type: 'Physio' as const, date: r.dateBs }));
+
+    return [...labs, ...xrays, ...ecgs, ...usgs, ...physios].sort((a, b) => b.date.localeCompare(a.date));
+  }, [currentPatient, labReports, xrayRecords, ecgRecords, usgRecords, physiotherapyRecords]);
+
   const printRef = useRef<HTMLDivElement>(null);
+  const reportPrintRef = useRef<HTMLDivElement>(null);
+  const [selectedReport, setSelectedReport] = useState<any | null>(null);
+
+  const handlePrintReport = useReactToPrint({
+    contentRef: reportPrintRef,
+    documentTitle: `Report-${selectedReport?.patientName}`,
+  });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +127,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
     setSearchResults([]);
     setShowSearchResults(false);
     setSearchId('');
+    setActiveTab('form');
     // Reset form for new visit
     setOpdData({
       chiefComplaints: '',
@@ -293,14 +326,30 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
           {/* Right Column: OPD Form */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-              <div className="flex justify-between items-center mb-6 border-b pb-4">
-                <h3 className="font-bold text-slate-800 text-lg">OPD परीक्षण फारम</h3>
-                <span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-                  {new NepaliDate().format('YYYY-MM-DD')}
-                </span>
+              <div className="flex items-center gap-6 mb-6 border-b border-slate-200">
+                <button 
+                  onClick={() => setActiveTab('form')}
+                  className={`pb-3 px-1 font-bold text-sm transition-all relative ${activeTab === 'form' ? 'text-primary-600 border-b-2 border-primary-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  OPD परीक्षण फारम
+                </button>
+                <button 
+                  onClick={() => setActiveTab('reports')}
+                  className={`pb-3 px-1 font-bold text-sm transition-all relative flex items-center gap-2 ${activeTab === 'reports' ? 'text-primary-600 border-b-2 border-primary-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <FlaskConical size={16} />
+                  रिपोर्टहरू (Reports)
+                  {patientReports.length > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full">{patientReports.length}</span>
+                  )}
+                </button>
+                <div className="ml-auto text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                   {new NepaliDate().format('YYYY-MM-DD')}
+                </div>
               </div>
 
-              <div className="space-y-6">
+              {activeTab === 'form' && (
+              <div className="space-y-6 animate-in fade-in">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">मुख्य समस्याहरू (Chief Complaints)</label>
                   <textarea
@@ -503,6 +552,77 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
                   </button>
                 </div>
               </div>
+              )}
+
+              {activeTab === 'reports' && (
+                <div className="space-y-4 animate-in fade-in">
+                  {patientReports.length > 0 ? (
+                    <div className="grid gap-4">
+                      {patientReports.map((report: any) => (
+                        <div key={report.id} className="border border-slate-200 rounded-xl p-4 hover:bg-slate-50 transition-colors">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-bold text-slate-800">{report.date}</span>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${report.type === 'Lab' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                                  {report.type}
+                                </span>
+                                {report.type === 'Lab' && (
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${report.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                    {report.status}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500">
+                                {report.type === 'Lab' ? `Invoice: #${report.invoiceNumber}` : `Type: ${report.xrayType || report.ecgType || report.usgType || report.treatmentType}`}
+                              </p>
+                            </div>
+                            <button 
+                              onClick={() => {
+                                setSelectedReport(report);
+                                setTimeout(() => handlePrintReport(), 100);
+                              }}
+                              className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg flex items-center gap-1 text-xs font-bold"
+                            >
+                              <Printer size={14} /> Print / View
+                            </button>
+                          </div>
+                          
+                          <div className="bg-slate-50 rounded-lg p-3 text-sm">
+                            {report.type === 'Lab' ? (
+                              <>
+                                <p className="text-xs font-bold text-slate-500 mb-2 uppercase">Test Results</p>
+                                <div className="space-y-1">
+                                  {report.tests?.slice(0, 3).map((test: any, idx: number) => (
+                                    <div key={idx} className="flex justify-between text-xs">
+                                      <span>{test.testName}</span>
+                                      <span className="font-mono font-bold">{test.result} {test.unit}</span>
+                                    </div>
+                                  ))}
+                                  {(report.tests?.length || 0) > 3 && (
+                                    <p className="text-[10px] text-slate-400 italic mt-1">+ {(report.tests?.length || 0) - 3} more tests</p>
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-xs font-bold text-slate-500 mb-1 uppercase">Result / Findings</p>
+                                <p className="text-xs text-slate-700 line-clamp-3">{report.result || report.diagnosis || 'No result recorded'}</p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                      <FlaskConical size={32} className="mx-auto text-slate-300 mb-3" />
+                      <p className="text-slate-500 font-medium">कुनै रिपोर्ट भेटिएन (No Reports Found)</p>
+                      <p className="text-xs text-slate-400 mt-1">यो बिरामीको लागि कुनै ल्याब रिपोर्ट उपलब्ध छैन।</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -510,6 +630,64 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
 
       {/* Hidden Print Template */}
       <div style={{ display: "none" }}>
+        {/* Report Print Template */}
+        <div ref={reportPrintRef} className="p-8 bg-white text-slate-900 print:block">
+            {selectedReport && (
+                <div>
+                    <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">
+                        <h1 className="text-2xl font-bold">{currentUser?.organizationName}</h1>
+                        <h2 className="text-lg font-bold mt-1">{selectedReport.type} Report</h2>
+                        <p className="text-sm text-slate-600">Date: {selectedReport.date}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+                        <div><strong>Patient:</strong> {selectedReport.patientName}</div>
+                        <div><strong>Age/Sex:</strong> {selectedReport.age}/{selectedReport.gender || selectedReport.sex}</div>
+                        <div><strong>ID:</strong> {selectedReport.uniquePatientId || selectedReport.serviceSeekerId}</div>
+                        <div><strong>Referred By:</strong> {selectedReport.referredBy || 'Self'}</div>
+                    </div>
+
+                    {selectedReport.type === 'Lab' ? (
+                      <table className="w-full text-sm border-collapse border border-slate-300">
+                          <thead className="bg-slate-100">
+                              <tr>
+                                  <th className="border border-slate-300 p-2 text-left">Test Name</th>
+                                  <th className="border border-slate-300 p-2 text-center">Result</th>
+                                  <th className="border border-slate-300 p-2 text-center">Unit</th>
+                                  <th className="border border-slate-300 p-2 text-center">Reference Range</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {selectedReport.tests?.map((test: any, i: number) => (
+                                  <tr key={i}>
+                                      <td className="border border-slate-300 p-2">{test.testName}</td>
+                                      <td className="border border-slate-300 p-2 text-center font-bold">{test.result}</td>
+                                      <td className="border border-slate-300 p-2 text-center">{test.unit}</td>
+                                      <td className="border border-slate-300 p-2 text-center">{test.range || test.normalRange}</td>
+                                  </tr>
+                              ))}
+                          </tbody>
+                      </table>
+                    ) : (
+                      <div className="border border-slate-300 rounded p-4 min-h-[200px]">
+                        <h3 className="font-bold border-b pb-2 mb-2">
+                          {selectedReport.xrayType || selectedReport.ecgType || selectedReport.usgType || selectedReport.treatmentType} Findings
+                        </h3>
+                        <p className="whitespace-pre-wrap">{selectedReport.result || selectedReport.diagnosis}</p>
+                        {selectedReport.remarks && (
+                          <div className="mt-4 pt-4 border-t border-dashed">
+                            <strong>Remarks:</strong> {selectedReport.remarks}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mt-12 pt-4 border-t border-slate-300 flex justify-between text-xs text-slate-500">
+                        <div>Printed: {new Date().toLocaleString()}</div>
+                        <div>Authorized Signature</div>
+                    </div>
+                </div>
+            )}
+        </div>
         <div ref={printRef} className="p-8 bg-white text-slate-900 print:block">
           {/* Header */}
           <div className="flex justify-between items-start border-b-2 border-slate-800 pb-6 mb-6">

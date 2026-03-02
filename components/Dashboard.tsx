@@ -991,6 +991,11 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         currentUser={currentUser}
         serviceItems={serviceItems}
         inventoryItems={inventoryItems}
+        labReports={labReports}
+        xrayRecords={xrayRecords}
+        ecgRecords={ecgRecords}
+        usgRecords={usgRecords}
+        physiotherapyRecords={physiotherapyRecords}
       />;
       case 'service_billing': return <ServiceBilling 
         serviceSeekerRecords={serviceSeekerRecords}
