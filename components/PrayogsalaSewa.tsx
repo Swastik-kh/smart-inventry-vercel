@@ -213,12 +213,16 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
 
     const invoiceTests = pendingTests.filter(t => t.invoiceNumber === invoiceNumber && t.sampleCollected);
     
-    // A test has a result if the result string is not empty
-    const testsWithResults = invoiceTests.filter(t => t.result && t.result.trim() !== '');
+    // Check if any result or remark is entered
+    const hasAnyData = invoiceTests.some(t => 
+      (t.result && t.result.trim() !== '') || 
+      (t.remarks && t.remarks.trim() !== '')
+    );
 
-    if (testsWithResults.length === 0) {
-      alert("कृपया कम्तिमा एउटा टेस्टको नतिजा भर्नुहोस् (Please enter at least one result)");
-      return;
+    if (!hasAnyData) {
+      if (!window.confirm("तपाईंले कुनै पनि नतिजा वा कैफियत भर्नुभएको छैन। के तपाईं खाली रिपोर्ट सुरक्षित गर्न चाहनुहुन्छ? (You haven't entered any results or remarks. Do you want to save an empty report?)")) {
+        return;
+      }
     }
 
     const existingReport = labReports.find(r => 
