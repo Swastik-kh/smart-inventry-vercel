@@ -22,6 +22,11 @@ interface OPDSewaProps {
   ecgRecords?: ECGRecord[];
   usgRecords?: USGRecord[];
   physiotherapyRecords?: PhysiotherapyRecord[];
+  onSaveLabReport?: (record: LabReport) => void;
+  onSaveXRayRecord?: (record: XRayRecord) => void;
+  onSaveECGRecord?: (record: ECGRecord) => void;
+  onSaveUSGRecord?: (record: USGRecord) => void;
+  onSavePhysiotherapyRecord?: (record: PhysiotherapyRecord) => void;
 }
 
 const initialPrescriptionItem: PrescriptionItem = {
@@ -46,7 +51,12 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
   xrayRecords = [],
   ecgRecords = [],
   usgRecords = [],
-  physiotherapyRecords = []
+  physiotherapyRecords = [],
+  onSaveLabReport,
+  onSaveXRayRecord,
+  onSaveECGRecord,
+  onSaveUSGRecord,
+  onSavePhysiotherapyRecord
 }) => {
   const [searchId, setSearchId] = useState('');
   const [currentPatient, setCurrentPatient] = useState<ServiceSeekerRecord | null>(null);
@@ -89,6 +99,10 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
     return [...labs, ...xrays, ...ecgs, ...usgs, ...physios].sort((a, b) => b.date.localeCompare(a.date));
   }, [currentPatient, labReports, xrayRecords, ecgRecords, usgRecords, physiotherapyRecords]);
 
+  const unviewedCount = useMemo(() => {
+    return patientReports.filter((r: any) => !r.isViewedByDoctor).length;
+  }, [patientReports]);
+
   const printRef = useRef<HTMLDivElement>(null);
   const reportPrintRef = useRef<HTMLDivElement>(null);
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
@@ -97,6 +111,32 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
     contentRef: reportPrintRef,
     documentTitle: `Report-${selectedReport?.patientName}`,
   });
+
+  const markAsViewed = (report: any) => {
+    if (report.isViewedByDoctor) return;
+
+    const updatedReport = { ...report, isViewedByDoctor: true };
+    // Remove the 'type' and 'date' helper properties before saving
+    const { type, date, ...cleanReport } = updatedReport;
+
+    switch (report.type) {
+      case 'Lab':
+        onSaveLabReport?.(cleanReport as LabReport);
+        break;
+      case 'X-Ray':
+        onSaveXRayRecord?.(cleanReport as XRayRecord);
+        break;
+      case 'ECG':
+        onSaveECGRecord?.(cleanReport as ECGRecord);
+        break;
+      case 'USG':
+        onSaveUSGRecord?.(cleanReport as USGRecord);
+        break;
+      case 'Physio':
+        onSavePhysiotherapyRecord?.(cleanReport as PhysiotherapyRecord);
+        break;
+    }
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -339,8 +379,8 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
                 >
                   <FlaskConical size={16} />
                   रिपोर्टहरू (Reports)
-                  {patientReports.length > 0 && (
-                    <span className="bg-red-500 text-white text-[10px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full">{patientReports.length}</span>
+                  {unviewedCount > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full">{unviewedCount}</span>
                   )}
                 </button>
                 <div className="ml-auto text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
@@ -580,6 +620,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
                             <button 
                               onClick={() => {
                                 setSelectedReport(report);
+                                markAsViewed(report);
                                 setTimeout(() => handlePrintReport(), 100);
                               }}
                               className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg flex items-center gap-1 text-xs font-bold"

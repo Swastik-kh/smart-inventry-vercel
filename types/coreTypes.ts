@@ -367,6 +367,34 @@ export interface LabReport {
   invoiceNumber?: string;
   tests: LabTestResult[];
   status: 'Sample Pending' | 'Sample Collected' | 'Completed';
+  isViewedByDoctor?: boolean;
+  createdBy?: string;
+}
+
+export interface IPDRecord {
+  id: string;
+  fiscalYear: string;
+  serviceSeekerId: string;
+  uniquePatientId: string;
+  patientName: string;
+  age: string;
+  gender: string;
+  admissionDate: string;
+  admissionTime: string;
+  dischargeDate?: string;
+  dischargeTime?: string;
+  bedNumber: string;
+  wardName: string;
+  provisionalDiagnosis: string;
+  finalDiagnosis?: string;
+  chiefComplaints: string;
+  historyOfPresentIllness: string;
+  pastHistory?: string;
+  physicalExamination?: string;
+  investigations?: string;
+  treatmentGiven?: string;
+  dischargeAdvice?: string;
+  status: 'Admitted' | 'Discharged' | 'Referred' | 'LAMA' | 'Death';
   createdBy?: string;
 }
 

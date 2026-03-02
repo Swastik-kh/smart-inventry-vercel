@@ -9,7 +9,7 @@ import {
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
   DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani, BharmanAdeshEntry,
-  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport, PariwarSewaRecord, XRayRecord, ECGRecord, USGRecord, PhysiotherapyRecord
+  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport, PariwarSewaRecord, XRayRecord, ECGRecord, USGRecord, PhysiotherapyRecord, IPDRecord
 } from './types';
 import { db } from './firebase';
 import { ref, onValue, set, remove, update, get, Unsubscribe, off, push } from "firebase/database";
@@ -89,6 +89,7 @@ const App: React.FC = () => {
   const [ecgRecords, setEcgRecords] = useState<ECGRecord[]>([]);
   const [usgRecords, setUsgRecords] = useState<USGRecord[]>([]);
   const [physiotherapyRecords, setPhysiotherapyRecords] = useState<PhysiotherapyRecord[]>([]);
+  const [ipdRecords, setIpdRecords] = useState<IPDRecord[]>([]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -198,6 +199,7 @@ const App: React.FC = () => {
     setupOrgListener('ecgRecords', setEcgRecords);
     setupOrgListener('usgRecords', setUsgRecords);
     setupOrgListener('physiotherapyRecords', setPhysiotherapyRecords);
+    setupOrgListener('ipdRecords', setIpdRecords);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [currentUser, activeOrgName]);
@@ -554,6 +556,24 @@ const App: React.FC = () => {
       await remove(getOrgRef(`physiotherapyRecords/${id}`));
     } catch (error) {
       alert("फिजियोथेरापी रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveIPDRecord = async (record: IPDRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`ipdRecords/${record.id}`), record);
+    } catch (error) {
+      alert("IPD रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteIPDRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`ipdRecords/${id}`));
+    } catch (error) {
+      alert("IPD रेकर्ड हटाउन सकिएन।");
     }
   };
 
@@ -1059,6 +1079,9 @@ const App: React.FC = () => {
     physiotherapyRecords={physiotherapyRecords}
     onSavePhysiotherapyRecord={handleSavePhysiotherapyRecord}
     onDeletePhysiotherapyRecord={handleDeletePhysiotherapyRecord}
+    ipdRecords={ipdRecords}
+    onSaveIPDRecord={handleSaveIPDRecord}
+    onDeleteIPDRecord={handleDeleteIPDRecord}
     onUpdateReadNotifications={handleUpdateReadNotifications}
     activeOrgName={activeOrgName}
     onSetActiveOrgName={setActiveOrgName}

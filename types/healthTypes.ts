@@ -156,6 +156,7 @@ export interface XRayRecord {
   quantity: number;
   result?: string;
   referredBy?: string; // Doctor or Service (OPD/ER)
+  isViewedByDoctor?: boolean;
   remarks?: string;
 }
 
@@ -172,6 +173,7 @@ export interface ECGRecord {
   ecgType?: string; // e.g., Resting, Stress, etc.
   result?: string;
   referredBy?: string; // Doctor or Service (OPD/ER)
+  isViewedByDoctor?: boolean;
   remarks?: string;
 }
 
@@ -188,6 +190,7 @@ export interface USGRecord {
   usgType: string; // e.g., Abdomen, Pelvis, Obstetric, etc.
   result?: string;
   referredBy?: string;
+  isViewedByDoctor?: boolean;
   remarks?: string;
 }
 
@@ -205,5 +208,6 @@ export interface PhysiotherapyRecord {
   treatmentType: string; // e.g., Exercise, Modality, etc.
   sessionNumber: number;
   referredBy?: string;
+  isViewedByDoctor?: boolean;
   remarks?: string;
 }

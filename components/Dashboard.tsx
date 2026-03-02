@@ -12,7 +12,7 @@ import {
 import { APP_NAME, FISCAL_YEARS } from '../constants';
 import { DashboardProps } from '../types/dashboardTypes'; 
 import { PurchaseOrderEntry, InventoryItem, MagFormEntry, StockEntryRequest, DakhilaPratibedanEntry } from '../types/inventoryTypes';
-import { User, LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport, DispensaryRecord, PariwarSewaRecord, XRayRecord, ECGRecord, USGRecord, PhysiotherapyRecord } from '../types';
+import { User, LeaveApplication, LeaveStatus, Darta, Chalani, BharmanAdeshEntry, GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport, DispensaryRecord, PariwarSewaRecord, XRayRecord, ECGRecord, USGRecord, PhysiotherapyRecord, IPDRecord } from '../types';
 import { UserManagement } from './UserManagement';
 import { ChangePassword } from './ChangePassword';
 import { TBPatientRegistration } from './TBPatientRegistration';
@@ -48,6 +48,7 @@ import { BharmanAdesh } from './BharmanAdesh';
 import { PrintOptionsModal } from './PrintOptionsModal';
 import { OnLeaveToday } from './OnLeaveToday';
 import { SafeMotherhoodService } from './SafeMotherhoodService';
+import { IPDSewa } from './IPDSewa';
 import { GarbhawotiSewa } from './GarbhawotiSewa';
 import { PrasutiSewa } from './PrasutiSewa';
 import { MulDartaSewa } from './MulDartaSewa';
@@ -114,6 +115,9 @@ interface ExtendedDashboardProps extends DashboardProps {
   physiotherapyRecords: PhysiotherapyRecord[];
   onSavePhysiotherapyRecord: (record: PhysiotherapyRecord) => void;
   onDeletePhysiotherapyRecord: (id: string) => void;
+  ipdRecords: IPDRecord[];
+  onSaveIPDRecord: (record: IPDRecord) => void;
+  onDeleteIPDRecord: (id: string) => void;
   onUpdateReadNotifications: (userId: string, readIds: string[]) => void;
   activeOrgName: string;
   onSetActiveOrgName: (orgName: string) => void;
@@ -165,6 +169,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
   ecgRecords = [], onSaveECGRecord, onDeleteECGRecord,
   usgRecords = [], onSaveUSGRecord, onDeleteUSGRecord,
   physiotherapyRecords = [], onSavePhysiotherapyRecord, onDeletePhysiotherapyRecord,
+  ipdRecords = [], onSaveIPDRecord, onDeleteIPDRecord,
   onUpdateReadNotifications,
   activeOrgName, onSetActiveOrgName, allUsers = []
 }) => {
@@ -414,6 +419,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       subItems: [ 
         { id: 'mul_darta', label: 'मूल दर्ता सेवा', icon: <ClipboardList size={16} /> },
         { id: 'opd_sewa', label: 'ओ.पी.डी. सेवा', icon: <UserPlus size={16} /> },
+        { id: 'ipd_sewa', label: 'आई.पी.डी. सेवा (IPD)', icon: <Building2 size={16} /> },
         { id: 'emergency_sewa', label: 'आकस्मिक सेवा (Emergency)', icon: <Siren size={16} /> },
         { id: 'cbimnci_sewa', label: 'CBIMNCI सेवा', icon: <Baby size={16} /> },
         { id: 'service_billing', label: 'सेवा बिलिङ (Service Billing)', icon: <FileText size={16} /> },
@@ -996,6 +1002,19 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         ecgRecords={ecgRecords}
         usgRecords={usgRecords}
         physiotherapyRecords={physiotherapyRecords}
+        onSaveLabReport={onSaveLabReport}
+        onSaveXRayRecord={onSaveXRayRecord}
+        onSaveECGRecord={onSaveECGRecord}
+        onSaveUSGRecord={onSaveUSGRecord}
+        onSavePhysiotherapyRecord={onSavePhysiotherapyRecord}
+      />;
+      case 'ipd_sewa': return <IPDSewa 
+        serviceSeekerRecords={serviceSeekerRecords}
+        ipdRecords={ipdRecords}
+        onSaveRecord={onSaveIPDRecord}
+        onDeleteRecord={onDeleteIPDRecord}
+        currentFiscalYear={currentFiscalYear}
+        currentUser={currentUser}
       />;
       case 'service_billing': return <ServiceBilling 
         serviceSeekerRecords={serviceSeekerRecords}
