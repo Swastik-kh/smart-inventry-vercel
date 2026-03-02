@@ -121,12 +121,45 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
   };
 
   const handleCollectSample = (id: string) => {
-    setPendingTests(prev => prev.map(t => t.id === id ? { 
+    if (!currentPatient) return;
+
+    const updatedTests = pendingTests.map(t => t.id === id ? { 
       ...t, 
       sampleCollected: true, 
       sampleCollectedDate: new NepaliDate().format('YYYY-MM-DD HH:mm'),
       sampleCollectedBy: currentUser?.username || 'System'
-    } : t));
+    } : t);
+    
+    setPendingTests(updatedTests);
+
+    // Auto-save to database immediately
+    const test = updatedTests.find(t => t.id === id);
+    if (test) {
+      const invoiceNumber = test.invoiceNumber;
+      const invoiceTests = updatedTests.filter(t => t.invoiceNumber === invoiceNumber && t.sampleCollected);
+      
+      const existingReport = labReports.find(r => 
+        r.serviceSeekerId === currentPatient.id && 
+        r.invoiceNumber === invoiceNumber
+      );
+
+      const reportToSave: LabReport = {
+        id: existingReport?.id || Date.now().toString(),
+        fiscalYear: currentFiscalYear,
+        reportDate: existingReport?.reportDate || new NepaliDate().format('YYYY-MM-DD'),
+        serviceSeekerId: currentPatient.id,
+        patientName: currentPatient.name,
+        age: currentPatient.age,
+        gender: currentPatient.gender,
+        invoiceNumber: invoiceNumber,
+        tests: invoiceTests.map(({ invoiceNumber, ...rest }) => rest),
+        status: existingReport?.status === 'Completed' ? 'Completed' : 'Sample Collected',
+        createdBy: existingReport?.createdBy || currentUser?.username || 'Unknown'
+      };
+
+      onSaveRecord(reportToSave);
+      // We don't alert here to keep the flow smooth, but the data is sent to Firebase
+    }
   };
 
   const handleSaveCollection = (invoiceNumber: string) => {
@@ -335,12 +368,9 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
                             Invoice: {invoiceNumber}
                           </h4>
                           {activeTab === 'sample' ? (
-                            <button 
-                              onClick={() => handleSaveCollection(invoiceNumber)}
-                              className="bg-primary-600 text-white px-4 py-1.5 rounded-lg hover:bg-primary-700 text-xs font-bold shadow-sm flex items-center gap-2"
-                            >
-                              <Save size={14} /> Save Collection
-                            </button>
+                            <div className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                              <Beaker size={14} /> {tests.filter(t => !t.sampleCollected).length} Pending Samples
+                            </div>
                           ) : (
                             tests.some(t => t.sampleCollected) && (
                               <button 
@@ -359,8 +389,7 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
                               {activeTab === 'sample' ? (
                                 <tr>
                                   <th className="p-3">Test Name</th>
-                                  <th className="p-3">Status</th>
-                                  <th className="p-3">Collection Date</th>
+                                  <th className="p-3">Invoice</th>
                                   <th className="p-3 text-center">Action</th>
                                 </tr>
                               ) : (
@@ -375,30 +404,19 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                               {activeTab === 'sample' ? (
-                                tests.map((test) => (
+                                tests.filter(t => !t.sampleCollected).map((test) => (
                                   <tr key={test.id} className="hover:bg-slate-50">
                                     <td className="p-3 font-medium">{test.testName}</td>
-                                    <td className="p-3">
-                                      {test.sampleCollected ? (
-                                        <span className="inline-flex items-center gap-1 text-green-600 font-bold bg-green-50 px-2 py-1 rounded-full text-xs">
-                                          <CheckCircle2 size={12} /> Collected
-                                        </span>
-                                      ) : (
-                                        <span className="text-slate-400 text-xs italic">Pending</span>
-                                      )}
-                                    </td>
                                     <td className="p-3 text-xs text-slate-500">
-                                      {test.sampleCollectedDate || '-'}
+                                      {test.invoiceNumber}
                                     </td>
                                     <td className="p-3 text-center">
-                                      {!test.sampleCollected && (
-                                        <button 
-                                          onClick={() => handleCollectSample(test.id)}
-                                          className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs font-bold shadow-sm"
-                                        >
-                                          Collect Sample
-                                        </button>
-                                      )}
+                                      <button 
+                                        onClick={() => handleCollectSample(test.id)}
+                                        className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs font-bold shadow-sm"
+                                      >
+                                        Collect Sample
+                                      </button>
                                     </td>
                                   </tr>
                                 ))
@@ -438,6 +456,13 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
                                     </td>
                                   </tr>
                                 ))
+                              )}
+                              {activeTab === 'sample' && tests.filter(t => !t.sampleCollected).length === 0 && (
+                                <tr>
+                                  <td colSpan={3} className="p-8 text-center text-green-600 font-medium bg-green-50/30 italic">
+                                    सबै नमुना संकलन भइसकेको छ (All samples collected for this invoice)
+                                  </td>
+                                </tr>
                               )}
                               {activeTab === 'result' && tests.filter(t => t.sampleCollected).length === 0 && (
                                 <tr>
