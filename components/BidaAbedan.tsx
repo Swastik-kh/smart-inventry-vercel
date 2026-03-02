@@ -215,9 +215,18 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
     const balance = leaveBalances.find(b => b.userId === userId);
     if (!balance) return undefined;
     
+    // Calculate taken leaves for Casual and Festival for this user
+    const takenCasual = leaveApplications
+      .filter(app => app.userId === userId && app.leaveType === 'भैपरी' && app.status === 'Approved' && app.fiscalYear === currentFiscalYear)
+      .reduce((acc, app) => acc + app.days, 0);
+
+    const takenFestival = leaveApplications
+      .filter(app => app.userId === userId && app.leaveType === 'पर्व' && app.status === 'Approved' && app.fiscalYear === currentFiscalYear)
+      .reduce((acc, app) => acc + app.days, 0);
+
     return {
-      casual: balance.casual,
-      festival: balance.festival,
+      casual: 6 - takenCasual,
+      festival: 6 - takenFestival,
       sick: balance.sick,
       home: balance.home,
       other: balance.other,
@@ -520,16 +529,7 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                             'bg-amber-100 text-amber-700'
                           }`}>{app.status}</span>
                        </div>
-                       <div className="flex justify-between items-center mt-1">
-                         <p className="text-[10px] text-slate-500">{app.startDate} देखि {app.endDate}</p>
-                         <button 
-                            onClick={() => setPrintApplication(app)}
-                            className="text-slate-400 hover:text-blue-600 p-1"
-                            title="Print Form"
-                         >
-                            <Printer size={14} />
-                         </button>
-                       </div>
+                       <p className="text-[10px] text-slate-500">{app.startDate} देखि {app.endDate}</p>
                     </div>
                   ))}
                   {leaveApplications.filter(app => app.userId === currentUser?.id).length === 0 && (
