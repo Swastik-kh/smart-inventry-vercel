@@ -647,7 +647,7 @@ const App: React.FC = () => {
               let updated = false;
               const newBalance = { ...balance };
 
-              // Monthly Accrual for Permanent Employees
+              // Monthly Accrual for Permanent Employees ONLY
               if (balance.serviceType === 'Permanent' && balance.lastAccrualMonth !== currentMonth) {
                   newBalance.home = (newBalance.home || 0) + 2.5;
                   newBalance.sick = (newBalance.sick || 0) + 1;
@@ -655,8 +655,8 @@ const App: React.FC = () => {
                   updated = true;
               }
 
-              // Fiscal Year Reset
-              if (balance.lastFiscalYearReset !== currentYear) {
+              // Fiscal Year Reset for Permanent Employees ONLY
+              if (balance.serviceType === 'Permanent' && balance.lastFiscalYearReset !== currentYear) {
                   newBalance.casual = 6;
                   newBalance.festival = 6;
                   newBalance.lastFiscalYearReset = currentYear;

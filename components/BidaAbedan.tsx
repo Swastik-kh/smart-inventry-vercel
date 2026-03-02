@@ -291,7 +291,8 @@ export const BidaAbedan: React.FC<BidaAbedanProps> = ({
                   onChange={e => setAccumulatedData({...accumulatedData, serviceType: e.target.value as ServiceType})}
                   options={[
                     { id: 'Permanent', value: 'Permanent', label: 'स्थायी (Permanent)' },
-                    { id: 'Temporary', value: 'Temporary', label: 'अस्थायी/करार (Temporary/Contract)' }
+                    { id: 'Temporary', value: 'Temporary', label: 'अस्थायी (Temporary)' },
+                    { id: 'Contract', value: 'Contract', label: 'करार (Contract)' }
                   ]}
                   required
                   icon={<ShieldCheck size={16} />}

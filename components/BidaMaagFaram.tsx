@@ -314,10 +314,10 @@ export const BidaMaagFaram: React.FC<BidaMaagFaramProps> = ({
             <div className="p-1">कार्यालयमा हाजिर हुने मिति</div>
           </div>
           <div className="grid grid-cols-4 text-center text-xs">
-            <div className="p-1 border-r border-black">{getNepaliLeaveType(application.leaveType)}</div>
-            <div className="p-1 border-r border-black">{duration} दिन</div>
-            <div className="p-1 border-r border-black">{application.startDate}</div>
-            <div className="p-1">{reportingDate}</div>
+            <div className="p-1 border-r border-black">{application.status === 'Rejected' ? '' : getNepaliLeaveType(application.leaveType)}</div>
+            <div className="p-1 border-r border-black">{application.status === 'Rejected' ? '' : `${duration} दिन`}</div>
+            <div className="p-1 border-r border-black">{application.status === 'Rejected' ? '' : application.startDate}</div>
+            <div className="p-1">{application.status === 'Rejected' ? '' : reportingDate}</div>
           </div>
         </div>
 
