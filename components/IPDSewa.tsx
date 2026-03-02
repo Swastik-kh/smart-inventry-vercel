@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Save, Plus, Trash2, User, Calendar, Building2, Clock, FileText, History, X } from 'lucide-react';
-import { ServiceSeekerRecord, IPDRecord } from '../types/coreTypes';
+import { Search, Save, Plus, Trash2, User, Calendar, Building2, Clock, FileText, History, X, Settings, Bed, Info, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ServiceSeekerRecord, IPDRecord, OrganizationSettings, WardConfig } from '../types/coreTypes';
 import { Input } from './Input';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
@@ -12,6 +12,8 @@ interface IPDSewaProps {
   onDeleteRecord: (recordId: string) => void;
   currentFiscalYear: string;
   currentUser: any;
+  generalSettings: OrganizationSettings;
+  onUpdateSettings: (settings: OrganizationSettings) => void;
 }
 
 export const IPDSewa: React.FC<IPDSewaProps> = ({ 
@@ -20,11 +22,16 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
   onSaveRecord, 
   onDeleteRecord, 
   currentFiscalYear,
-  currentUser
+  currentUser,
+  generalSettings,
+  onUpdateSettings
 }) => {
   const [searchId, setSearchId] = useState('');
   const [currentPatient, setCurrentPatient] = useState<ServiceSeekerRecord | null>(null);
-  const [activeTab, setActiveTab] = useState<'admission' | 'history'>('admission');
+  const [activeTab, setActiveTab] = useState<'admission' | 'history' | 'status'>('status');
+  const [showSettings, setShowSettings] = useState(false);
+  const [showPatientDetails, setShowPatientDetails] = useState<IPDRecord | null>(null);
+  
   const [ipdData, setIpdData] = useState<Partial<IPDRecord>>({
     admissionDate: new NepaliDate().format('YYYY-MM-DD'),
     admissionTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -39,6 +46,8 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
 
+  const wards = useMemo(() => generalSettings.ipdWards || [], [generalSettings.ipdWards]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const query = searchId.trim().toLowerCase();
@@ -46,6 +55,7 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
 
     const results = serviceSeekerRecords.filter(r => 
       r.uniquePatientId.toLowerCase().includes(query) || 
+      r.registrationNumber?.toLowerCase().includes(query) ||
       r.name.toLowerCase().includes(query) ||
       r.phone?.includes(query)
     );
@@ -76,6 +86,7 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
       });
       setEditingRecordId(null);
     }
+    setActiveTab('admission');
   };
 
   const handleSave = () => {
@@ -84,12 +95,29 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
       return;
     }
 
+    if (!ipdData.wardName || !ipdData.bedNumber) {
+      alert('कृपया वार्ड र बेड नम्बर छान्नुहोस्');
+      return;
+    }
+
+    // Check if bed is already occupied by another patient
+    const isBedOccupied = activeAdmissions.some(r => 
+      r.wardName === ipdData.wardName && 
+      r.bedNumber === ipdData.bedNumber && 
+      r.id !== editingRecordId
+    );
+
+    if (isBedOccupied && ipdData.status === 'Admitted') {
+      alert('यो बेड पहिले नै अर्को बिरामीले ओगटेको छ। कृपया अर्को बेड छान्नुहोस्।');
+      return;
+    }
+
     const record: IPDRecord = {
       ...ipdData as IPDRecord,
       id: editingRecordId || Math.random().toString(36).substr(2, 9),
       fiscalYear: currentFiscalYear,
       serviceSeekerId: currentPatient.id,
-      uniquePatientId: currentPatient.uniqueId,
+      uniquePatientId: currentPatient.uniquePatientId,
       patientName: currentPatient.name,
       age: currentPatient.age,
       gender: currentPatient.gender,
@@ -101,8 +129,53 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
     if (record.status !== 'Admitted') {
         setCurrentPatient(null);
         setSearchId('');
-        setIpdData({});
+        setIpdData({
+          admissionDate: new NepaliDate().format('YYYY-MM-DD'),
+          admissionTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          bedNumber: '',
+          wardName: '',
+          provisionalDiagnosis: '',
+          chiefComplaints: '',
+          historyOfPresentIllness: '',
+          status: 'Admitted'
+        });
     }
+    setActiveTab('status');
+  };
+
+  const activeAdmissions = useMemo(() => {
+    return ipdRecords.filter(r => r.status === 'Admitted');
+  }, [ipdRecords]);
+
+  const getBedStatus = (wardName: string, bedNo: string) => {
+    return activeAdmissions.find(r => r.wardName === wardName && r.bedNumber === bedNo);
+  };
+
+  const handleBedClick = (ward: WardConfig, bedIndex: number) => {
+    const bedNo = (bedIndex + 1).toString();
+    const admission = getBedStatus(ward.name, bedNo);
+    
+    if (admission) {
+      setShowPatientDetails(admission);
+    } else {
+      setIpdData({
+        ...ipdData,
+        wardName: ward.name,
+        bedNumber: bedNo,
+        admissionDate: new NepaliDate().format('YYYY-MM-DD'),
+        admissionTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'Admitted'
+      });
+      setActiveTab('admission');
+    }
+  };
+
+  const handleSaveWards = (newWards: WardConfig[]) => {
+    onUpdateSettings({
+      ...generalSettings,
+      ipdWards: newWards
+    });
+    setShowSettings(false);
   };
 
   const patientHistory = useMemo(() => {
@@ -116,6 +189,13 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
         <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
           <Building2 className="text-primary-600" /> आई.पी.डी. सेवा (IPD Service)
         </h2>
+        <button 
+          onClick={() => setShowSettings(true)}
+          className="p-2 text-slate-500 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
+          title="Ward Settings"
+        >
+          <Settings size={24} />
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -146,7 +226,9 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                     className="w-full p-3 text-left hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors"
                   >
                     <p className="font-bold text-slate-800">{patient.name}</p>
-                    <p className="text-xs text-slate-500">{patient.uniqueId} • {patient.phone}</p>
+                    <p className="text-xs text-slate-500">
+                      {patient.uniquePatientId} {patient.registrationNumber ? `• Reg: ${patient.registrationNumber}` : ''} • {patient.phone}
+                    </p>
                   </button>
                 ))}
               </div>
@@ -161,7 +243,7 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900">{currentPatient.name}</h4>
-                  <p className="text-xs text-primary-700 font-medium">{currentPatient.uniqueId}</p>
+                  <p className="text-xs text-primary-700 font-medium">{currentPatient.uniquePatientId}</p>
                 </div>
               </div>
               <div className="space-y-2 text-sm">
@@ -187,48 +269,119 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="flex border-b border-slate-100 p-2 gap-2 bg-slate-50/50">
               <button 
+                onClick={() => setActiveTab('status')}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'status' ? 'bg-white text-primary-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:bg-white/50'}`}
+              >
+                <Bed size={16} /> बेड अवस्था (Bed Status)
+              </button>
+              <button 
                 onClick={() => setActiveTab('admission')}
                 className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'admission' ? 'bg-white text-primary-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:bg-white/50'}`}
               >
-                <Plus size={16} /> भर्ना / उपचार (Admission)
+                <Plus size={16} /> भर्ना (Admission)
               </button>
               <button 
                 onClick={() => setActiveTab('history')}
                 className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'history' ? 'bg-white text-primary-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:bg-white/50'}`}
               >
-                <History size={16} /> बिरामीको इतिहास (History)
+                <History size={16} /> इतिहास (History)
               </button>
             </div>
 
             <div className="p-6">
+              {activeTab === 'status' && (
+                <div className="space-y-8">
+                  {wards.length > 0 ? (
+                    wards.map(ward => (
+                      <div key={ward.id} className="space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                            <Building2 size={18} className="text-primary-500" /> {ward.name}
+                            <span className="text-xs font-normal text-slate-400">({ward.bedCount} Beds)</span>
+                          </h4>
+                          <div className="flex gap-4 text-[10px] font-bold uppercase tracking-wider">
+                            <span className="flex items-center gap-1 text-emerald-600"><CheckCircle2 size={12} /> Available</span>
+                            <span className="flex items-center gap-1 text-red-600"><AlertCircle size={12} /> Occupied</span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                          {Array.from({ length: ward.bedCount }).map((_, idx) => {
+                            const bedNo = (idx + 1).toString();
+                            const admission = getBedStatus(ward.name, bedNo);
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => handleBedClick(ward, idx)}
+                                className={`relative p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 group ${
+                                  admission 
+                                    ? 'border-red-200 bg-red-50 text-red-600 hover:border-red-400 shadow-sm' 
+                                    : 'border-emerald-100 bg-emerald-50 text-emerald-600 hover:border-emerald-300 hover:bg-emerald-100/50'
+                                }`}
+                              >
+                                <Bed size={24} className={admission ? 'text-red-500' : 'text-emerald-500'} />
+                                <span className="text-[10px] font-black">{bedNo}</span>
+                                {admission && (
+                                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
+                                )}
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
+                                  <Info size={14} className={admission ? 'text-red-400' : 'text-emerald-400'} />
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                      <Settings size={48} className="mx-auto text-slate-300 mb-3" />
+                      <p className="text-slate-500">वार्ड सेटअप गरिएको छैन। सेटिङमा गएर वार्ड थप्नुहोस्।</p>
+                      <button 
+                        onClick={() => setShowSettings(true)}
+                        className="mt-4 text-primary-600 font-bold hover:underline"
+                      >
+                        वार्ड सेटअप गर्नुहोस्
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {activeTab === 'admission' && (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input 
-                      label="भर्ना मिति (Admission Date)" 
-                      type="text" 
-                      value={ipdData.admissionDate}
-                      onChange={(e) => setIpdData({...ipdData, admissionDate: e.target.value})}
-                    />
-                    <Input 
-                      label="भर्ना समय (Time)" 
-                      type="time" 
-                      value={ipdData.admissionTime}
-                      onChange={(e) => setIpdData({...ipdData, admissionTime: e.target.value})}
-                    />
-                    <Input 
-                      label="वार्ड (Ward)" 
-                      value={ipdData.wardName}
-                      onChange={(e) => setIpdData({...ipdData, wardName: e.target.value})}
-                      placeholder="Ex: General Ward"
-                    />
-                    <Input 
-                      label="बेड नम्बर (Bed No.)" 
-                      value={ipdData.bedNumber}
-                      onChange={(e) => setIpdData({...ipdData, bedNumber: e.target.value})}
-                      placeholder="Ex: 101"
-                    />
-                  </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input 
+                        label="भर्ना मिति (Admission Date)" 
+                        type="text" 
+                        value={ipdData.admissionDate}
+                        onChange={(e) => setIpdData({...ipdData, admissionDate: e.target.value})}
+                      />
+                      <Input 
+                        label="भर्ना समय (Time)" 
+                        type="time" 
+                        value={ipdData.admissionTime}
+                        onChange={(e) => setIpdData({...ipdData, admissionTime: e.target.value})}
+                      />
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">वार्ड (Ward)</label>
+                        <select 
+                          value={ipdData.wardName}
+                          onChange={(e) => setIpdData({...ipdData, wardName: e.target.value})}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                        >
+                          <option value="">वार्ड छान्नुहोस्</option>
+                          {wards.map(w => (
+                            <option key={w.id} value={w.name}>{w.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <Input 
+                        label="बेड नम्बर (Bed No.)" 
+                        value={ipdData.bedNumber}
+                        onChange={(e) => setIpdData({...ipdData, bedNumber: e.target.value})}
+                        placeholder="Ex: 101"
+                      />
+                    </div>
 
                   <div className="space-y-4">
                     <div>
@@ -325,6 +478,154 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Ward Settings Modal */}
+      {showSettings && (
+        <WardSettingsModal 
+          initialWards={wards}
+          onSave={handleSaveWards}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {/* Patient Details Modal */}
+      {showPatientDetails && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="bg-primary-600 p-6 text-white flex justify-between items-start">
+              <div>
+                <h3 className="text-xl font-bold">{showPatientDetails.patientName}</h3>
+                <p className="text-primary-100 text-sm">{showPatientDetails.uniquePatientId}</p>
+              </div>
+              <button onClick={() => setShowPatientDetails(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 bg-slate-50 rounded-xl">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">Ward / Bed</p>
+                  <p className="font-bold text-slate-700">{showPatientDetails.wardName} - {showPatientDetails.bedNumber}</p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">Admission Date</p>
+                  <p className="font-bold text-slate-700">{showPatientDetails.admissionDate}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Provisional Diagnosis</p>
+                <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  {showPatientDetails.provisionalDiagnosis || 'N/A'}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => {
+                    const patient = serviceSeekerRecords.find(r => r.id === showPatientDetails.serviceSeekerId);
+                    if (patient) selectPatient(patient);
+                    setShowPatientDetails(null);
+                    setActiveTab('admission');
+                  }}
+                  className="flex-1 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition-all shadow-lg shadow-primary-100"
+                >
+                  View / Edit
+                </button>
+                <button 
+                  onClick={() => setShowPatientDetails(null)}
+                  className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface WardSettingsModalProps {
+  initialWards: WardConfig[];
+  onSave: (wards: WardConfig[]) => void;
+  onClose: () => void;
+}
+
+const WardSettingsModal: React.FC<WardSettingsModalProps> = ({ initialWards, onSave, onClose }) => {
+  const [wards, setWards] = useState<WardConfig[]>(initialWards);
+
+  const addWard = () => {
+    const newWard: WardConfig = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: '',
+      bedCount: 0
+    };
+    setWards([...wards, newWard]);
+  };
+
+  const removeWard = (id: string) => {
+    setWards(wards.filter(w => w.id !== id));
+  };
+
+  const updateWard = (id: string, field: keyof WardConfig, value: any) => {
+    setWards(wards.map(w => w.id === id ? { ...w, [field]: value } : w));
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <Settings className="text-primary-600" /> Ward & Bed Configuration
+          </h3>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+            <X size={24} />
+          </button>
+        </div>
+        <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
+          {wards.map((ward, index) => (
+            <div key={ward.id} className="flex gap-4 items-end p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="flex-1">
+                <Input 
+                  label={`Ward Name #${index + 1}`}
+                  value={ward.name}
+                  onChange={(e) => updateWard(ward.id, 'name', e.target.value)}
+                  placeholder="Ex: General Ward"
+                />
+              </div>
+              <div className="w-32">
+                <Input 
+                  label="Bed Count"
+                  type="number"
+                  value={ward.bedCount.toString()}
+                  onChange={(e) => updateWard(ward.id, 'bedCount', parseInt(e.target.value) || 0)}
+                />
+              </div>
+              <button 
+                onClick={() => removeWard(ward.id)}
+                className="p-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-all mb-1"
+              >
+                <Trash2 size={20} />
+              </button>
+            </div>
+          ))}
+          <button 
+            onClick={addWard}
+            className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50 transition-all flex items-center justify-center gap-2 font-bold"
+          >
+            <Plus size={20} /> Add New Ward
+          </button>
+        </div>
+        <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+          <button onClick={onClose} className="px-6 py-2.5 text-slate-600 font-bold hover:bg-slate-200 rounded-xl transition-all">Cancel</button>
+          <button 
+            onClick={() => onSave(wards)}
+            className="px-8 py-2.5 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-100 transition-all"
+          >
+            Save Configuration
+          </button>
         </div>
       </div>
     </div>

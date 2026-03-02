@@ -1015,6 +1015,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         onDeleteRecord={onDeleteIPDRecord}
         currentFiscalYear={currentFiscalYear}
         currentUser={currentUser}
+        generalSettings={generalSettings}
+        onUpdateSettings={onUpdateGeneralSettings}
       />;
       case 'service_billing': return <ServiceBilling 
         serviceSeekerRecords={serviceSeekerRecords}

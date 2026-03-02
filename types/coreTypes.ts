@@ -38,6 +38,12 @@ export interface User {
   parentId?: string; // ID of the user who created this user
 }
 
+export interface WardConfig {
+  id: string;
+  name: string;
+  bedCount: number;
+}
+
 export interface OrganizationSettings {
   orgNameNepali: string;
   orgNameEnglish: string;
@@ -55,6 +61,7 @@ export interface OrganizationSettings {
   logoUrl: string;
   vaccinationSessions?: number[]; 
   vaccinationCenters?: string[]; // Added for managing centers
+  ipdWards?: WardConfig[]; 
 }
 
 export interface Signature {
