@@ -75,10 +75,12 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
       setEditingRecordId(activeAdmission.id);
     } else {
       setIpdData({
+        ...ipdData,
         admissionDate: new NepaliDate().format('YYYY-MM-DD'),
         admissionTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        bedNumber: '',
-        wardName: '',
+        // Preserve ward and bed if they were already selected via bed click
+        wardName: ipdData.wardName || '',
+        bedNumber: ipdData.bedNumber || '',
         provisionalDiagnosis: '',
         chiefComplaints: '',
         historyOfPresentIllness: '',
@@ -121,25 +123,26 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
       patientName: currentPatient.name,
       age: currentPatient.age,
       gender: currentPatient.gender,
-      createdBy: currentUser?.uid
+      createdBy: currentUser?.id
     };
 
     onSaveRecord(record);
     alert('IPD रेकर्ड सुरक्षित गरियो');
-    if (record.status !== 'Admitted') {
-        setCurrentPatient(null);
-        setSearchId('');
-        setIpdData({
-          admissionDate: new NepaliDate().format('YYYY-MM-DD'),
-          admissionTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          bedNumber: '',
-          wardName: '',
-          provisionalDiagnosis: '',
-          chiefComplaints: '',
-          historyOfPresentIllness: '',
-          status: 'Admitted'
-        });
-    }
+    
+    // Reset form for next admission
+    setCurrentPatient(null);
+    setSearchId('');
+    setIpdData({
+      admissionDate: new NepaliDate().format('YYYY-MM-DD'),
+      admissionTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      bedNumber: '',
+      wardName: '',
+      provisionalDiagnosis: '',
+      chiefComplaints: '',
+      historyOfPresentIllness: '',
+      status: 'Admitted'
+    });
+    setEditingRecordId(null);
     setActiveTab('status');
   };
 
