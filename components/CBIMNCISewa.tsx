@@ -81,6 +81,9 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
   const [currentPrescription, setCurrentPrescription] = useState<PrescriptionItem>(initialPrescriptionItem);
   const [searchResults, setSearchResults] = useState<ServiceSeekerRecord[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [existingSearchId, setExistingSearchId] = useState('');
+  const [existingSearchResults, setExistingSearchResults] = useState<CBIMNCIRecord[]>([]);
+  const [showExistingResults, setShowExistingResults] = useState(false);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
 
   const medicineSuggestions = useMemo(() => {
@@ -104,17 +107,61 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                       r.uniquePatientId.replace(/[^0-9]/g, '').includes(query);
       const nameMatch = r.name.toLowerCase().includes(query);
       const regMatch = r.registrationNumber.includes(query);
-      return idMatch || nameMatch || regMatch;
+      
+      // Filter by age: 5 years or less
+      const ageInMonths = (r.ageYears || 0) * 12 + (r.ageMonths || 0);
+      const isAgeValid = ageInMonths <= 60; // 5 years = 60 months
+      
+      return (idMatch || nameMatch || regMatch) && isAgeValid;
     });
 
     if (results.length === 1) {
       selectPatient(results[0]);
+      setSearchId('');
+      setShowSearchResults(false);
     } else if (results.length > 1) {
       setSearchResults(results);
       setShowSearchResults(true);
+      setShowExistingResults(false);
     } else {
-      alert('बिरामी भेटिएन (Patient not found)');
+      alert('बिरामी भेटिएन वा उमेर ५ वर्षभन्दा बढी छ (Patient not found or age is over 5 years)');
       setCurrentPatient(null);
+    }
+  };
+
+  const handleExistingSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const query = existingSearchId.trim().toLowerCase();
+    if (!query) return;
+
+    const results = cbimnciRecords.filter(r => {
+      const patient = serviceSeekerRecords.find(p => p.uniquePatientId === r.uniquePatientId);
+      const idMatch = r.uniquePatientId.toLowerCase().includes(query);
+      const nameMatch = patient?.name.toLowerCase().includes(query);
+      return idMatch || nameMatch;
+    });
+
+    // Group by uniquePatientId to show unique patients who have records
+    const uniqueResults: CBIMNCIRecord[] = [];
+    const seenIds = new Set();
+    results.forEach(r => {
+      if (!seenIds.has(r.uniquePatientId)) {
+        seenIds.add(r.uniquePatientId);
+        uniqueResults.push(r);
+      }
+    });
+
+    if (uniqueResults.length === 1) {
+      const patient = serviceSeekerRecords.find(p => p.uniquePatientId === uniqueResults[0].uniquePatientId);
+      if (patient) selectPatient(patient);
+      setExistingSearchId('');
+      setShowExistingResults(false);
+    } else if (uniqueResults.length > 1) {
+      setExistingSearchResults(uniqueResults);
+      setShowExistingResults(true);
+      setShowSearchResults(false);
+    } else {
+      alert('रेकर्ड भएको बिरामी भेटिएन (No existing record found for this patient)');
     }
   };
 
@@ -1206,54 +1253,152 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
           <Baby className="text-primary-600" />
           CBIMNCI सेवा (CBIMNCI Service)
         </h2>
-        <form onSubmit={handleSearch} className="flex gap-4 relative">
-          <div className="flex-1 max-w-md relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-            <input
-              type="text"
-              value={searchId}
-              onChange={(e) => setSearchId(e.target.value)}
-              placeholder="बिरामी ID, नाम वा दर्ता नं. राख्नुहोस्"
-              className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              autoFocus
-            />
-          </div>
-          <button type="submit" className="bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 font-medium shadow-sm">
-            खोज्नुहोस्
-          </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase ml-1">नयाँ बिरामी खोज्नुहोस् (New Patient Search)</label>
+            <form onSubmit={handleSearch} className="flex gap-2 relative">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  type="text"
+                  value={searchId}
+                  onChange={(e) => setSearchId(e.target.value)}
+                  placeholder="ID, नाम वा दर्ता नं."
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                />
+              </div>
+              <button type="submit" className="bg-primary-600 text-white px-4 py-2.5 rounded-lg hover:bg-primary-700 font-medium shadow-sm text-sm">
+                खोज्नुहोस्
+              </button>
 
-          {showSearchResults && (
-            <div className="absolute top-full left-0 mt-2 w-full max-w-2xl bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95">
-              <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                <span className="font-medium text-slate-700">Search Results ({searchResults.length})</span>
-                <button onClick={() => setShowSearchResults(false)} className="text-slate-400 hover:text-slate-600"><Trash2 size={16} /></button>
-              </div>
-              <div className="max-h-64 overflow-y-auto">
-                {searchResults.map(patient => (
-                  <div 
-                    key={patient.id} 
-                    onClick={() => selectPatient(patient)}
-                    className="p-4 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-0 transition-colors"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-bold text-slate-800">{patient.name}</p>
-                        <p className="text-xs text-slate-500">{patient.age} / {patient.gender} | {patient.address}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded font-mono mb-1">
-                          {patient.uniquePatientId}
-                        </span>
-                        <p className="text-xs text-slate-500">Reg: {patient.registrationNumber}</p>
-                      </div>
-                    </div>
+              {showSearchResults && (
+                <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95">
+                  <div className="p-2 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-700">Results ({searchResults.length})</span>
+                    <button onClick={() => setShowSearchResults(false)} className="text-slate-400 hover:text-slate-600"><Trash2 size={14} /></button>
                   </div>
-                ))}
+                  <div className="max-h-48 overflow-y-auto">
+                    {searchResults.map(patient => (
+                      <div 
+                        key={patient.id} 
+                        onClick={() => {
+                          selectPatient(patient);
+                          setShowSearchResults(false);
+                        }}
+                        className="p-3 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-0 transition-colors"
+                      >
+                        <p className="font-bold text-slate-800 text-sm">{patient.name}</p>
+                        <p className="text-[10px] text-slate-500">{patient.uniquePatientId} | {patient.age}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </form>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase ml-1">रेकर्ड भएका बिरामी खोज्नुहोस् (Existing Record Search)</label>
+            <form onSubmit={handleExistingSearch} className="flex gap-2 relative">
+              <div className="flex-1 relative">
+                <History className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  type="text"
+                  value={existingSearchId}
+                  onChange={(e) => setExistingSearchId(e.target.value)}
+                  placeholder="रेकर्ड भएको नाम वा ID"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                />
               </div>
-            </div>
-          )}
-        </form>
+              <button type="submit" className="bg-indigo-600 text-white px-4 py-2.5 rounded-lg hover:bg-indigo-700 font-medium shadow-sm text-sm">
+                खोज्नुहोस्
+              </button>
+
+              {showExistingResults && (
+                <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95">
+                  <div className="p-2 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-700">Found ({existingSearchResults.length})</span>
+                    <button onClick={() => setShowExistingResults(false)} className="text-slate-400 hover:text-slate-600"><Trash2 size={14} /></button>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    {existingSearchResults.map(record => {
+                      const patient = serviceSeekerRecords.find(p => p.uniquePatientId === record.uniquePatientId);
+                      return (
+                        <div 
+                          key={record.id} 
+                          onClick={() => {
+                            if (patient) selectPatient(patient);
+                            setShowExistingResults(false);
+                          }}
+                          className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-100 last:border-0 transition-colors"
+                        >
+                          <p className="font-bold text-slate-800 text-sm">{patient?.name || 'Unknown'}</p>
+                          <p className="text-[10px] text-slate-500">{record.uniquePatientId} | Last Visit: {record.visitDate}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </form>
+          </div>
+        </div>
       </div>
+
+      {!currentPatient && (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2 border-b pb-2">
+            <History size={18} /> भर्खरैका रेकर्डहरू (Recent Records)
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="p-3">मिति</th>
+                  <th className="p-3">बिरामीको नाम</th>
+                  <th className="p-3">ID</th>
+                  <th className="p-3">वर्गीकरण</th>
+                  <th className="p-3 w-10"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {cbimnciRecords.length > 0 ? (
+                  cbimnciRecords
+                    .sort((a, b) => b.visitDate.localeCompare(a.visitDate))
+                    .slice(0, 10)
+                    .map(record => {
+                      const patient = serviceSeekerRecords.find(p => p.uniquePatientId === record.uniquePatientId);
+                      return (
+                        <tr key={record.id} className="hover:bg-slate-50 transition-colors group">
+                          <td className="p-3 font-medium text-primary-600">{record.visitDate}</td>
+                          <td className="p-3 font-bold text-slate-800">{patient?.name || 'Unknown'}</td>
+                          <td className="p-3 font-mono text-xs">{record.uniquePatientId}</td>
+                          <td className="p-3">{record.diagnosis || '-'}</td>
+                          <td className="p-3">
+                            <button 
+                              onClick={() => {
+                                if (window.confirm('के तपाईं यो रेकर्ड हटाउन चाहनुहुन्छ?')) {
+                                  onDeleteRecord(record.id);
+                                }
+                              }}
+                              className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-slate-400 italic">कुनै रेकर्ड भेटिएन</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {currentPatient && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1270,6 +1415,50 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                 <div className="flex justify-between"><span className="text-slate-500">फोन:</span> <span>{currentPatient.phone}</span></div>
               </div>
             </div>
+
+            {/* History Section */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+              <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2 border-b pb-2">
+                <History size={18} /> उपचार इतिहास (History)
+              </h3>
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {cbimnciRecords.filter(r => r.uniquePatientId === currentPatient.uniquePatientId).length > 0 ? (
+                  cbimnciRecords
+                    .filter(r => r.uniquePatientId === currentPatient.uniquePatientId)
+                    .sort((a, b) => b.visitDate.localeCompare(a.visitDate))
+                    .map(record => (
+                      <div key={record.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 hover:border-primary-300 transition-all group">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="text-xs font-bold text-primary-600">{record.visitDate}</p>
+                            <p className="text-sm font-bold text-slate-800">{record.diagnosis || 'No Classification'}</p>
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => {
+                                if (window.confirm('के तपाईं यो रेकर्ड हटाउन चाहनुहुन्छ?')) {
+                                  onDeleteRecord(record.id);
+                                }
+                              }}
+                              className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
+                              title="Delete Record"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-slate-500 line-clamp-2 italic">
+                          {record.chiefComplaints || 'No complaints recorded'}
+                        </p>
+                      </div>
+                    ))
+                ) : (
+                  <div className="text-center py-8 text-slate-400 italic text-sm">
+                    कुनै इतिहास भेटिएन
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="lg:col-span-2 space-y-6">
@@ -1277,18 +1466,15 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
               <div className="flex justify-between items-center mb-6 border-b pb-4">
                 <h3 className="font-bold text-slate-800 text-lg">CBIMNCI परीक्षण फारम</h3>
                 <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => setModuleType('Infant')}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${moduleType === 'Infant' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                  >
-                    Infant (up to 2m)
-                  </button>
-                  <button 
-                    onClick={() => setModuleType('Child')}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${moduleType === 'Child' ? 'bg-green-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                  >
-                    Child (2m - 5y)
-                  </button>
+                  {moduleType === 'Infant' ? (
+                    <div className="px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white shadow-md">
+                      Infant (up to 2m)
+                    </div>
+                  ) : (
+                    <div className="px-3 py-1 rounded-full text-xs font-bold bg-green-600 text-white shadow-md">
+                      Child (2m - 5y)
+                    </div>
+                  )}
                   <span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full ml-2">
                     {new NepaliDate().format('YYYY-MM-DD')}
                   </span>
