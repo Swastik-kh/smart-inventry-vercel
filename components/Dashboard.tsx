@@ -65,6 +65,7 @@ import { ECGSewa } from './ECGSewa';
 import { USGSewa } from './USGSewa';
 import { PhysiotherapySewa } from './PhysiotherapySewa';
 import { FamilyPlanningReport } from './FamilyPlanningReport';
+import { GESIReport } from './GESIReport';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -490,6 +491,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         { id: 'report_cbimnci', label: 'CBIMNCI रिपोर्ट', icon: <FileText size={16} /> },
         { id: 'report_reporting_status', label: 'रिपोर्टिङ स्थिति', icon: <FileText size={16} /> },
         { id: 'report_pariwar_niyojan', label: 'परिवार नियोजन रिपोर्ट', icon: <Users size={16} /> },
+        { id: 'report_gesi', label: 'Gender Equity and social inclusion', icon: <FileText size={16} /> },
         { id: 'report_inventory_monthly', label: 'जिन्सी मासिक रिपोर्ट', icon: <FileText size={16} /> },
       ]
     },
@@ -708,6 +710,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'report_cbimnci': return <CBIMNCIReport cbimnciRecords={cbimnciRecords} serviceSeekerRecords={serviceSeekerRecords} currentFiscalYear={currentFiscalYear} />;
       case 'report_reporting_status': return <ReportingStatusReport serviceSeekerRecords={serviceSeekerRecords} currentFiscalYear={currentFiscalYear} />;
       case 'report_pariwar_niyojan': return <FamilyPlanningReport records={pariwarSewaRecords} settings={generalSettings} fiscalYear={currentFiscalYear} />;
+      case 'report_gesi': return <GESIReport currentFiscalYear={currentFiscalYear} bachhaRecords={bachhaImmunizationRecords} cbimnciRecords={cbimnciRecords} serviceSeekerRecords={serviceSeekerRecords} prasutiRecords={prasutiRecords} tbPatients={tbPatients} opdRecords={opdRecords} ipdRecords={ipdRecords} />;
       case 'mag_faram': return <MagFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} existingForms={magForms} onSave={onSaveMagForm} onDelete={onDeleteMagForm} inventoryItems={inventoryItems} stores={stores} generalSettings={generalSettings} />;
       case 'kharid_adesh': return <KharidAdesh orders={purchaseOrders} currentFiscalYear={currentFiscalYear} onSave={onUpdatePurchaseOrder} currentUser={currentUser} firms={firms} quotations={quotations} onDakhilaClick={(po) => { setActiveItem('jinshi_maujdat'); setPendingPoDakhila(po); }} generalSettings={generalSettings} inventoryItems={inventoryItems} />;
       case 'nikasha_pratibedan': return <NikashaPratibedan reports={issueReports} onSave={onUpdateIssueReport} currentUser={currentUser} currentFiscalYear={currentFiscalYear} generalSettings={generalSettings} />;
