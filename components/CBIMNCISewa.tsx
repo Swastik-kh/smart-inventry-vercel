@@ -980,15 +980,25 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     } else {
       // Child
       // General Danger Signs
-      if (assessmentData.generalDangerSigns?.length > 0 || assessmentData.respiratorySigns?.includes('शान्त रहेको बच्चामा स्ट्राइडर (Stridor in calm child)')) {
+      if (assessmentData.generalDangerSigns?.length > 0) {
         classifications.push('Very Severe Disease');
       }
 
       // Pneumonia
       const rate = parseInt(assessmentData.breathingRate);
+      let isInfant = false;
+      if (currentPatient?.ageDays !== undefined && currentPatient?.ageDays > 0) {
+        isInfant = currentPatient.ageDays < 60;
+      } else {
+        const ageInMonths = (currentPatient?.ageYears || 0) * 12 + (currentPatient?.ageMonths || 0);
+        isInfant = ageInMonths < 2;
+      }
       const ageInMonths = (currentPatient?.ageYears || 0) * 12 + (currentPatient?.ageMonths || 0);
       const isFast = (ageInMonths < 12 && rate >= 50) || (ageInMonths >= 12 && rate >= 40);
-      if (isFast || assessmentData.respiratorySigns?.includes('कोखा हान्ने (Chest in-drawing)')) {
+      
+      if (assessmentData.respiratorySigns?.includes('शान्त रहेको बच्चामा स्ट्राइडर (Stridor in calm child)')) {
+        classifications.push('Severe Pneumonia or Very Severe Disease');
+      } else if (isFast || assessmentData.respiratorySigns?.includes('कोखा हान्ने (Chest in-drawing)')) {
         classifications.push('Pneumonia');
       } else if (assessmentData.coughDays) {
         classifications.push('No Pneumonia: Cough or Cold');
@@ -1155,7 +1165,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       }
     } else {
       const weight = parseFloat(assessmentData.weight) || 0;
-      if (classifications.includes('Very Severe Disease') || classifications.includes('Severe Acute Malnutrition') || classifications.includes('Severe Complicated Measles')) {
+      if (classifications.includes('Very Severe Disease') || classifications.includes('Severe Pneumonia or Very Severe Disease') || classifications.includes('Severe Acute Malnutrition') || classifications.includes('Severe Complicated Measles')) {
         let gentDose = '';
         let ampDose = '';
         if (weight > 0) {

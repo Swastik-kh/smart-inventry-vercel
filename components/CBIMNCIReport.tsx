@@ -226,8 +226,8 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
 
     // Respiratory
     if (diag.includes('No Pneumonia: Cough or Cold')) childStats.no_pneumonia++;
-    if (diag.includes('Pneumonia') && !diag.includes('No Pneumonia')) childStats.pneumonia++;
-    if (diag.includes('Very Severe Disease')) childStats.severe_pneumonia++;
+    if (diag.includes('Pneumonia') && !diag.includes('No Pneumonia') && !diag.includes('Severe Pneumonia')) childStats.pneumonia++;
+    if (diag.includes('Very Severe Disease') || diag.includes('Severe Pneumonia')) childStats.severe_pneumonia++;
 
     // Diarrhea
     if (diag.includes('No Dehydration')) childStats.no_dehydration++;
