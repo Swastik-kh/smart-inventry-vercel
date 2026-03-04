@@ -1585,6 +1585,25 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
               </div>
 
               <div className="space-y-6">
+                <div className="flex items-center gap-4 bg-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
+                  <div className="flex-1">
+                    <h4 className="font-bold text-indigo-800 text-sm mb-1 flex items-center gap-2">
+                      <Baby size={16} /> तौल (Weight in kg)
+                    </h4>
+                    <p className="text-xs text-indigo-600">औषधिको मात्रा (Dose) हिसाब गर्न तौल अनिवार्य छ।</p>
+                  </div>
+                  <div className="w-48">
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      placeholder="तौल (kg) राख्नुहोस्"
+                      value={assessmentData.weight || ''} 
+                      onChange={(e) => setAssessmentData({...assessmentData, weight: e.target.value})} 
+                      className="w-full px-4 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white font-bold text-indigo-900"
+                    />
+                  </div>
+                </div>
+
                 {renderAssessmentForm()}
 
                 {suggestedClassifications.length > 0 && (
