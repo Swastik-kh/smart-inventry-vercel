@@ -1871,8 +1871,8 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-4 pt-4 border-t">
-                  <button onClick={handleRestore} className="px-6 py-2.5 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 flex items-center gap-2 shadow-sm font-medium border border-amber-200">
+                <div className="flex flex-wrap justify-end gap-4 pt-4 border-t">
+                  <button onClick={handleRestore} className="px-6 py-2.5 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 flex items-center gap-2 shadow-sm font-medium border border-amber-200 w-full sm:w-auto justify-center">
                     <History size={18} /> Restore Previous
                   </button>
                   <button onClick={() => {
@@ -1917,13 +1917,13 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                       bloodInStool: false
                     });
                     setPrescriptionItems([]);
-                  }} className="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 flex items-center gap-2 shadow-sm font-medium border border-slate-200">
+                  }} className="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 flex items-center gap-2 shadow-sm font-medium border border-slate-200 w-full sm:w-auto justify-center">
                     <Trash2 size={18} /> Clear Form
                   </button>
-                  <button onClick={handlePrint} className="px-6 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 flex items-center gap-2 shadow-sm">
+                  <button onClick={handlePrint} className="px-6 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center">
                     <Printer size={18} /> प्रिन्ट (Print)
                   </button>
-                  <button onClick={handleSave} className="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2 shadow-sm font-medium">
+                  <button onClick={handleSave} className="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2 shadow-sm font-medium w-full sm:w-auto justify-center">
                     <Save size={18} /> {editingRecordId ? 'अपडेट गर्नुहोस्' : 'सुरक्षित गर्नुहोस्'}
                   </button>
                 </div>
