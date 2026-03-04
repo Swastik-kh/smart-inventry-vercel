@@ -225,6 +225,7 @@ const App: React.FC = () => {
     setCurrentUser(user);
     setActiveOrgName(user.organizationName);
     setCurrentFiscalYear(fiscalYear);
+    localStorage.removeItem('smart_inv_active_item');
   };
 
   const getOrgRef = (subPath: string) => {
@@ -1000,7 +1001,10 @@ const App: React.FC = () => {
     <>
       {currentUser ? (
         <Dashboard 
-          onLogout={() => setCurrentUser(null)} currentUser={currentUser} currentFiscalYear={currentFiscalYear} 
+          onLogout={() => {
+            setCurrentUser(null);
+            localStorage.removeItem('smart_inv_active_item');
+          }} currentUser={currentUser} currentFiscalYear={currentFiscalYear} 
           users={allUsers} onAddUser={handleSaveUser}
           onUpdateUser={handleSaveUser} onDeleteUser={handleDeleteUser}
           onChangePassword={(id, pass) => update(ref(db, `users/${id}`), { password: pass })}
