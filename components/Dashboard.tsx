@@ -1170,8 +1170,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
       <aside className={`
         fixed inset-y-0 left-0 w-72 bg-white border-r border-slate-200 z-40 transform transition-transform duration-300 ease-in-out no-print
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        lg:static lg:inset-auto lg:w-72
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex flex-col h-full">
           <div className="p-6 border-b border-slate-100 flex items-center justify-between">
@@ -1321,7 +1320,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       <div className="flex-1 flex flex-col min-w-0 relative">
         <header className="h-16 bg-white border-b border-slate-200 px-4 md:px-6 flex items-center justify-between z-20 shrink-0 no-print">
           <div className="flex items-center gap-2 md:gap-4">
-            <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg lg:hidden">
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg">
               <Menu size={20} />
             </button>
             <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-200">
