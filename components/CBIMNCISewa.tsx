@@ -351,6 +351,16 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
 
   const handleSave = () => {
     if (!currentPatient) return;
+
+    if (!cbimnciData.diagnosis) {
+      alert('कृपया वर्गीकरण (Classification) भर्नुहोस्।');
+      return;
+    }
+    if (prescriptionItems.length === 0) {
+      alert('कृपया कम्तिमा एउटा औषधि सिफारिस (Prescription) थप्नुहोस्।');
+      return;
+    }
+
     const recordId = editingRecordId || Date.now().toString();
     const visitDate = editingRecordId 
       ? (cbimnciRecords.find(r => r.id === editingRecordId)?.visitDate || new NepaliDate().format('YYYY-MM-DD'))
@@ -1585,12 +1595,30 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                         ))}
                       </div>
                     )}
-                    <button 
-                      onClick={() => setCbimnciData({...cbimnciData, diagnosis: suggestedClassifications.join(', ')})}
-                      className="mt-3 text-xs bg-white border border-slate-300 text-slate-700 px-2 py-1 rounded hover:bg-slate-50 transition-colors"
-                    >
-                      Apply to Classification
-                    </button>
+                    <div className="flex gap-2 mt-3">
+                      <button 
+                        onClick={() => setCbimnciData({...cbimnciData, diagnosis: suggestedClassifications.join(', ')})}
+                        className="text-xs bg-white border border-slate-300 text-slate-700 px-2 py-1 rounded hover:bg-slate-50 transition-colors"
+                      >
+                        Apply to Classification
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const newItems = suggestedTreatments.map((t, idx) => ({
+                            id: `suggested-${Date.now()}-${idx}`,
+                            medicineName: t,
+                            dosage: '',
+                            frequency: '',
+                            duration: '',
+                            instructions: ''
+                          }));
+                          setPrescriptionItems([...prescriptionItems, ...newItems]);
+                        }}
+                        className="text-xs bg-white border border-primary-300 text-primary-700 px-2 py-1 rounded hover:bg-primary-50 transition-colors"
+                      >
+                        Apply to Prescription
+                      </button>
+                    </div>
                   </div>
                 )}
                 
