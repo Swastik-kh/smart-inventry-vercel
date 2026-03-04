@@ -130,6 +130,12 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
       createdBy: currentUser?.id
     };
 
+    // If status is not Admitted (e.g., Discharged, Referred, LAMA, Death), clear the bed assignment
+    if (record.status !== 'Admitted') {
+      record.wardName = '';
+      record.bedNumber = '';
+    }
+
     onSaveRecord(record);
     alert('IPD रेकर्ड सुरक्षित गरियो');
     
@@ -397,7 +403,13 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                                     <button 
                                       onClick={() => {
                                         const patient = serviceSeekerRecords.find(p => p.id === admission.serviceSeekerId);
-                                        if (patient) selectPatient(patient);
+                                        if (patient) {
+                                          setCurrentPatient(patient);
+                                          setSearchId(patient.uniquePatientId);
+                                          setIpdData(admission);
+                                          setEditingRecordId(admission.id);
+                                          setActiveTab('admission');
+                                        }
                                       }}
                                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                       title="Edit / Discharge"
@@ -452,25 +464,34 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                       />
                     </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">मुख्य समस्याहरू (Chief Complaints)</label>
-                      <textarea
-                        value={ipdData.chiefComplaints}
-                        onChange={(e) => setIpdData({...ipdData, chiefComplaints: e.target.value})}
-                        className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 min-h-[80px]"
-                        placeholder="बिरामीको मुख्य समस्याहरू..."
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">प्रारम्भिक निदान (Provisional Diagnosis)</label>
-                      <textarea
-                        value={ipdData.provisionalDiagnosis}
-                        onChange={(e) => setIpdData({...ipdData, provisionalDiagnosis: e.target.value})}
-                        className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 min-h-[60px]"
-                        placeholder="निदान..."
-                      />
-                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">मुख्य समस्याहरू (Chief Complaints)</label>
+                        <textarea
+                          value={ipdData.chiefComplaints}
+                          onChange={(e) => setIpdData({...ipdData, chiefComplaints: e.target.value})}
+                          className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 min-h-[80px]"
+                          placeholder="बिरामीको मुख्य समस्याहरू..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">हालको रोगको इतिहास (History of Present Illness)</label>
+                        <textarea
+                          value={ipdData.historyOfPresentIllness}
+                          onChange={(e) => setIpdData({...ipdData, historyOfPresentIllness: e.target.value})}
+                          className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 min-h-[80px]"
+                          placeholder="रोगको विस्तृत इतिहास..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">प्रारम्भिक निदान (Provisional Diagnosis)</label>
+                        <textarea
+                          value={ipdData.provisionalDiagnosis}
+                          onChange={(e) => setIpdData({...ipdData, provisionalDiagnosis: e.target.value})}
+                          className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 min-h-[60px]"
+                          placeholder="निदान..."
+                        />
+                      </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -609,6 +630,18 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                 </div>
               </div>
               <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Chief Complaints</p>
+                <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  {showPatientDetails.chiefComplaints || 'N/A'}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">History of Present Illness</p>
+                <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  {showPatientDetails.historyOfPresentIllness || 'N/A'}
+                </p>
+              </div>
+              <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Provisional Diagnosis</p>
                 <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
                   {showPatientDetails.provisionalDiagnosis || 'N/A'}
@@ -663,9 +696,14 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                 <button 
                   onClick={() => {
                     const patient = serviceSeekerRecords.find(r => r.id === showPatientDetails.serviceSeekerId);
-                    if (patient) selectPatient(patient);
+                    if (patient) {
+                      setCurrentPatient(patient);
+                      setSearchId(patient.uniquePatientId);
+                      setIpdData(showPatientDetails);
+                      setEditingRecordId(showPatientDetails.id);
+                      setActiveTab('admission');
+                    }
                     setShowPatientDetails(null);
-                    setActiveTab('admission');
                   }}
                   className="flex-1 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition-all shadow-lg shadow-primary-100"
                 >
