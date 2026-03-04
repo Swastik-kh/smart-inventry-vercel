@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Save, Plus, Trash2, User, Calendar, Building2, Clock, FileText, History, X, Settings, Bed, Info, CheckCircle2, AlertCircle } from 'lucide-react';
-import { ServiceSeekerRecord, IPDRecord, OrganizationSettings, WardConfig } from '../types/coreTypes';
+import { Search, Save, Plus, Trash2, User, Calendar, Building2, Clock, FileText, History, X, Settings, Bed, Info, CheckCircle2, AlertCircle, Pill, PlusCircle } from 'lucide-react';
+import { ServiceSeekerRecord, IPDRecord, OrganizationSettings, WardConfig, Medication } from '../types/coreTypes';
 import { Input } from './Input';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
@@ -40,6 +40,8 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
     provisionalDiagnosis: '',
     chiefComplaints: '',
     historyOfPresentIllness: '',
+    medications: [],
+    dischargeMedications: [],
     status: 'Admitted'
   });
   const [searchResults, setSearchResults] = useState<ServiceSeekerRecord[]>([]);
@@ -84,6 +86,8 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
         provisionalDiagnosis: '',
         chiefComplaints: '',
         historyOfPresentIllness: '',
+        medications: [],
+        dischargeMedications: [],
         status: 'Admitted'
       });
       setEditingRecordId(null);
@@ -140,6 +144,8 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
       provisionalDiagnosis: '',
       chiefComplaints: '',
       historyOfPresentIllness: '',
+      medications: [],
+      dischargeMedications: [],
       status: 'Admitted'
     });
     setEditingRecordId(null);
@@ -347,6 +353,66 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                       </button>
                     </div>
                   )}
+
+                  {/* Current Admitted Patients List */}
+                  {activeAdmissions.length > 0 && (
+                    <div className="mt-12 space-y-4">
+                      <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2">
+                        <User size={18} className="text-primary-600" /> हाल भर्ना भएका बिरामीहरू (Currently Admitted Patients)
+                      </h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left responsive-table">
+                          <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                            <tr>
+                              <th className="p-3">ID / Name</th>
+                              <th className="p-3">वार्ड / बेड</th>
+                              <th className="p-3">भर्ना मिति</th>
+                              <th className="p-3">निदान (Diagnosis)</th>
+                              <th className="p-3 text-right">कार्य</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {activeAdmissions.map(admission => (
+                              <tr key={admission.id} className="hover:bg-slate-50 transition-colors group">
+                                <td className="p-3" data-label="Patient">
+                                  <div className="font-bold text-slate-800">{admission.patientName}</div>
+                                  <div className="text-[10px] text-slate-500 font-mono">{admission.uniquePatientId}</div>
+                                </td>
+                                <td className="p-3" data-label="Ward/Bed">
+                                  <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-lg font-bold text-xs border border-indigo-100">
+                                    {admission.wardName} - {admission.bedNumber}
+                                  </span>
+                                </td>
+                                <td className="p-3 text-slate-600" data-label="Date">{admission.admissionDate}</td>
+                                <td className="p-3 text-slate-600 italic" data-label="Diagnosis">{admission.provisionalDiagnosis || '-'}</td>
+                                <td className="p-3 text-right" data-label="Actions">
+                                  <div className="flex justify-end gap-2">
+                                    <button 
+                                      onClick={() => setShowPatientDetails(admission)}
+                                      className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                      title="View Details"
+                                    >
+                                      <Info size={16} />
+                                    </button>
+                                    <button 
+                                      onClick={() => {
+                                        const patient = serviceSeekerRecords.find(p => p.id === admission.serviceSeekerId);
+                                        if (patient) selectPatient(patient);
+                                      }}
+                                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                      title="Edit / Discharge"
+                                    >
+                                      <FileText size={16} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -430,6 +496,31 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                             />
                         )}
                     </div>
+
+                    {/* Medications Section */}
+                    <div className="space-y-4 pt-4 border-t">
+                      <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                        <Pill size={18} className="text-primary-600" /> औषधिहरू (Medications)
+                      </h4>
+                      <MedicationManager 
+                        medications={ipdData.medications || []}
+                        onChange={(meds) => setIpdData({...ipdData, medications: meds})}
+                        label="भर्ना हुँदाको औषधि (Admission Medication)"
+                      />
+                    </div>
+
+                    {ipdData.status !== 'Admitted' && (
+                      <div className="space-y-4 pt-4 border-t">
+                        <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                          <Pill size={18} className="text-orange-600" /> डिस्चार्ज औषधि (Discharge Medications)
+                        </h4>
+                        <MedicationManager 
+                          medications={ipdData.dischargeMedications || []}
+                          onChange={(meds) => setIpdData({...ipdData, dischargeMedications: meds})}
+                          label="डिस्चार्ज हुँदाको औषधि (Discharge Medication)"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex justify-end gap-4 pt-4 border-t">
@@ -506,7 +597,7 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                 <X size={24} />
               </button>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-slate-50 rounded-xl">
                   <p className="text-[10px] font-bold text-slate-400 uppercase">Ward / Bed</p>
@@ -523,7 +614,52 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                   {showPatientDetails.provisionalDiagnosis || 'N/A'}
                 </p>
               </div>
-              <div className="flex gap-3">
+
+              {showPatientDetails.medications && showPatientDetails.medications.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1">
+                    <Pill size={12} className="text-primary-600" /> Current Medications
+                  </p>
+                  <div className="space-y-2">
+                    {showPatientDetails.medications.map(m => (
+                      <div key={m.id} className="text-xs p-3 bg-primary-50 rounded-xl border border-primary-100 flex justify-between items-center">
+                        <div>
+                          <p className="font-bold text-slate-800">{m.name}</p>
+                          <p className="text-[10px] text-primary-600">{m.route}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-primary-700">{m.dosage}</p>
+                          <p className="text-[10px] text-primary-600">{m.frequency}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {showPatientDetails.dischargeMedications && showPatientDetails.dischargeMedications.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1">
+                    <Pill size={12} className="text-orange-600" /> Discharge Medications
+                  </p>
+                  <div className="space-y-2">
+                    {showPatientDetails.dischargeMedications.map(m => (
+                      <div key={m.id} className="text-xs p-3 bg-orange-50 rounded-xl border border-orange-100 flex justify-between items-center">
+                        <div>
+                          <p className="font-bold text-slate-800">{m.name}</p>
+                          <p className="text-[10px] text-orange-600">{m.route}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-orange-700">{m.dosage}</p>
+                          <p className="text-[10px] text-orange-600">{m.frequency}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 sticky bottom-0 bg-white pt-4">
                 <button 
                   onClick={() => {
                     const patient = serviceSeekerRecords.find(r => r.id === showPatientDetails.serviceSeekerId);
@@ -546,6 +682,102 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+interface MedicationManagerProps {
+  medications: Medication[];
+  onChange: (meds: Medication[]) => void;
+  label: string;
+}
+
+const MedicationManager: React.FC<MedicationManagerProps> = ({ medications, onChange, label }) => {
+  const addMedication = () => {
+    const newMed: Medication = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: '',
+      dosage: '',
+      frequency: '',
+      route: '',
+      startDate: new NepaliDate().format('YYYY-MM-DD')
+    };
+    onChange([...medications, newMed]);
+  };
+
+  const removeMedication = (id: string) => {
+    onChange(medications.filter(m => m.id !== id));
+  };
+
+  const updateMedication = (id: string, field: keyof Medication, value: string) => {
+    onChange(medications.map(m => m.id === id ? { ...m, [field]: value } : m));
+  };
+
+  return (
+    <div className="space-y-3">
+      {medications.length > 0 ? (
+        <div className="space-y-2">
+          {medications.map((med, index) => (
+            <div key={med.id} className="grid grid-cols-1 sm:grid-cols-12 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 relative group">
+              <div className="sm:col-span-4">
+                <input 
+                  placeholder="औषधिको नाम (Medicine Name)"
+                  value={med.name}
+                  onChange={(e) => updateMedication(med.id, 'name', e.target.value)}
+                  className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-primary-500"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <input 
+                  placeholder="मात्रा (Dosage)"
+                  value={med.dosage}
+                  onChange={(e) => updateMedication(med.id, 'dosage', e.target.value)}
+                  className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-primary-500"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <input 
+                  placeholder="पटक (Freq)"
+                  value={med.frequency}
+                  onChange={(e) => updateMedication(med.id, 'frequency', e.target.value)}
+                  className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-primary-500"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <input 
+                  placeholder="विधि (Route)"
+                  value={med.route}
+                  onChange={(e) => updateMedication(med.id, 'route', e.target.value)}
+                  className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-primary-500"
+                />
+              </div>
+              <div className="sm:col-span-2 flex items-center gap-1">
+                <input 
+                  type="text"
+                  placeholder="मिति"
+                  value={med.startDate}
+                  onChange={(e) => updateMedication(med.id, 'startDate', e.target.value)}
+                  className="w-full text-[10px] p-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-primary-500"
+                />
+                <button 
+                  onClick={() => removeMedication(med.id)}
+                  className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-slate-400 italic py-2">कुनै औषधि थपिएको छैन।</p>
+      )}
+      <button 
+        onClick={addMedication}
+        className="text-xs font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-primary-50 transition-all"
+      >
+        <PlusCircle size={14} /> औषधि थप्नुहोस् (Add Medication)
+      </button>
     </div>
   );
 };

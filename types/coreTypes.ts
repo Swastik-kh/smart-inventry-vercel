@@ -378,6 +378,17 @@ export interface LabReport {
   createdBy?: string;
 }
 
+export interface Medication {
+  id: string;
+  name: string;
+  dosage: string;
+  frequency: string;
+  route: string;
+  startDate: string;
+  endDate?: string;
+  remarks?: string;
+}
+
 export interface IPDRecord {
   id: string;
   fiscalYear: string;
@@ -400,6 +411,8 @@ export interface IPDRecord {
   physicalExamination?: string;
   investigations?: string;
   treatmentGiven?: string;
+  medications?: Medication[];
+  dischargeMedications?: Medication[];
   dischargeAdvice?: string;
   status: 'Admitted' | 'Discharged' | 'Referred' | 'LAMA' | 'Death';
   createdBy?: string;

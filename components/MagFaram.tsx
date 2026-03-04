@@ -503,8 +503,9 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
        {successMessage && <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-xl shadow-sm flex items-center gap-3 animate-in slide-in-from-top-2 no-print"><CheckCircle2 size={24} className="text-green-500" /><div className="flex-1 font-bold text-green-800">{successMessage}</div><button onClick={() => setSuccessMessage(null)}><X size={20}/></button></div>}
        {validationError && <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm flex items-center gap-3 animate-in slide-in-from-top-2 no-print"><AlertCircle size={24} className="text-red-500" /><div className="flex-1 font-bold text-red-800">{validationError}</div><button onClick={() => setValidationError(null)}><X size={20}/></button></div>}
 
-       <div className="bg-white p-10 md:p-14 max-w-[210mm] mx-auto min-h-[297mm] font-nepali text-slate-900 shadow-2xl rounded-xl relative">
-          {hoveredStock && (
+       <div className="overflow-x-auto pb-8">
+         <div className="bg-white p-10 md:p-14 w-[210mm] min-w-[210mm] mx-auto min-h-[297mm] font-nepali text-slate-900 shadow-2xl rounded-xl relative">
+            {hoveredStock && (
               <div 
                   className="fixed z-[9999] bg-slate-800 text-white p-2.5 rounded-lg shadow-xl pointer-events-none animate-in fade-in zoom-in-95 duration-150 no-print border border-slate-700/50 backdrop-blur-sm"
                   style={{ top: hoveredStock.y, left: hoveredStock.x }}
@@ -624,6 +625,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               </div>
           </div>
        </div>
+      </div>
     </div>
   );
 };

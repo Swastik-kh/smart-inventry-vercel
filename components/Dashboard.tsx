@@ -175,7 +175,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 }) => {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [expandedSubMenu, setExpandedSubMenu] = useState<string | null>(null);
-  const [activeItem, setActiveItem] = useState<string>('dashboard');
+  const [activeItem, setActiveItem] = useState<string>(() => {
+    return localStorage.getItem('smart_inv_active_item') || 'dashboard';
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const [showNotifications, setShowNotifications] = useState(false);
   
@@ -208,6 +210,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
   useEffect(() => {
     if (mainContentRef.current) mainContentRef.current.scrollTo(0, 0);
+    localStorage.setItem('smart_inv_active_item', activeItem);
   }, [activeItem]);
 
   useEffect(() => {
@@ -615,7 +618,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
               <h2 className="text-lg font-bold underline mt-2">प्रणाली ड्यासबोर्ड सारांश</h2>
               <p className="text-sm">मिति: {new NepaliDate().format('YYYY-MM-DD')}</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 print:grid-cols-2 print:gap-4 print:mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6 print:grid-cols-2 print:gap-4 print:mb-6">
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
                 <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
@@ -660,16 +663,26 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-amber-300 transition-all group" onClick={() => { setExpiryModalType('near-expiry'); setShowExpiryModal(true); }}><div className="absolute -right-2 -bottom-2 text-amber-50 opacity-10 group-hover:rotate-12 transition-transform"><CalendarClock size={80} /></div><div className="relative z-10"><div className="flex items-center justify-between mb-6"><div><p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Soon</p><h3 className="text-sm font-bold text-slate-700 font-nepali">सकिन लागेका</h3></div><div className="bg-amber-100 p-2.5 rounded-xl text-amber-600"><Timer size={20} /></div></div><div className="flex items-baseline gap-2"><span className="text-5xl font-black text-amber-600">{nearExpiryItems.length}</span><span className="text-[10px] text-slate-400 font-bold uppercase">90 Days</span></div></div></div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 print:grid-cols-1 print:gap-4 print:mt-6">
-               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
                   <h4 className="font-bold text-slate-800 font-nepali mb-4 flex items-center gap-2">
                       <Syringe size={18} className="text-indigo-600"/> 
                       {selectedStatsDate === new NepaliDate().format('YYYY-MM-DD') ? 'आजका एन्टीरेविज' : `${selectedStatsDate} का`} खोप सेवाग्राहीहरू (D0, D3, D7)
                   </h4>
-                  <table className="w-full text-xs text-left print-table">
+                  <table className="w-full text-xs text-left print-table responsive-table">
                       <thead className="bg-slate-50 font-bold"><tr><th className="p-2 border-b">बिरामीको नाम</th><th className="p-2 border-b text-center">डोज</th><th className="p-2 border-b text-right">सम्पर्क</th></tr></thead>
                       <tbody className="divide-y">
                           {(rabiesPatients || []).filter(p => (p.schedule || []).some(d => fixDate(d.dateBs || '') === fixDate(selectedStatsDate))).map(p => (
-                              <tr key={p.id} className="hover:bg-slate-50"><td className="p-2 font-bold">{p.name}</td><td className="p-2 text-center"><div className="flex justify-center gap-1">{(p.schedule || []).filter(d => fixDate(d.dateBs || '') === fixDate(selectedStatsDate)).map(d => ( <span key={d.day} className={`px-2 py-0.5 rounded-full font-black text-[10px] ${d.status === 'Given' ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'}`}>D{d.day}</span> ))}</div></td><td className="p-2 text-right font-mono">{p.phone}</td></tr>
+                              <tr key={p.id} className="hover:bg-slate-50">
+                                <td className="p-2 font-bold" data-label="Name">{p.name}</td>
+                                <td className="p-2 text-center" data-label="Dose">
+                                  <div className="flex justify-center md:justify-center gap-1">
+                                    {(p.schedule || []).filter(d => fixDate(d.dateBs || '') === fixDate(selectedStatsDate)).map(d => ( 
+                                      <span key={d.day} className={`px-2 py-0.5 rounded-full font-black text-[10px] ${d.status === 'Given' ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'}`}>D{d.day}</span> 
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="p-2 text-right font-mono" data-label="Phone">{p.phone}</td>
+                              </tr>
                           ))}
                           {(rabiesPatients || []).filter(p => (p.schedule || []).some(d => fixDate(d.dateBs || '') === fixDate(selectedStatsDate))).length === 0 && <tr><td colSpan={3} className="p-8 text-center text-slate-400 italic">छानिएको मितिमा कुनै सेवाग्राही छैनन्।</td></tr>}
                       </tbody>
@@ -761,9 +774,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                     </button>
                 </div>
             </div>
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <div className="bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
+                <table className="w-full text-sm text-left responsive-table">
                   <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
                     <tr>
                       <th className="p-3">चलानी नं.</th>
@@ -777,13 +790,13 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                   <tbody className="divide-y divide-slate-100">
                     {filteredChalaniEntries.map(c => (
                       <tr key={c.id}>
-                        <td className="p-3 font-bold">{c.dispatchNumber}</td>
-                        <td className="p-3">{c.date}</td>
-                        <td className="p-3">{c.recipient}</td>
-                        <td className="p-3">{c.subject}</td>
-                        <td className="p-3">{c.sender}</td>
+                        <td className="p-3 font-bold" data-label="चलानी नं.">{c.dispatchNumber}</td>
+                        <td className="p-3" data-label="मिति">{c.date}</td>
+                        <td className="p-3" data-label="पाउने">{c.recipient}</td>
+                        <td className="p-3" data-label="बिषय">{c.subject}</td>
+                        <td className="p-3" data-label="पठाउने">{c.sender}</td>
                         {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN') && (
-                          <td className="p-3 text-right">
+                          <td className="p-3 text-right" data-label="कार्य">
                             <button 
                               onClick={() => {
                                 if (window.confirm('के तपाईं यो चलानी हटाउन चाहनुहुन्छ?')) {
@@ -878,9 +891,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                     </button>
                 </div>
             </div>
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <div className="bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
+                <table className="w-full text-sm text-left responsive-table">
                   <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
                     <tr>
                       <th className="p-3">दर्ता नं.</th>
@@ -894,13 +907,13 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                   <tbody className="divide-y divide-slate-100">
                     {filteredDartaEntries.map(d => (
                       <tr key={d.id}>
-                        <td className="p-3 font-bold">{d.registrationNumber}</td>
-                        <td className="p-3">{d.date}</td>
-                        <td className="p-3">{d.sender}</td>
-                        <td className="p-3">{d.subject}</td>
-                        <td className="p-3">{d.recipient}</td>
+                        <td className="p-3 font-bold" data-label="दर्ता नं.">{d.registrationNumber}</td>
+                        <td className="p-3" data-label="मिति">{d.date}</td>
+                        <td className="p-3" data-label="पठाउने">{d.sender}</td>
+                        <td className="p-3" data-label="बिषय">{d.subject}</td>
+                        <td className="p-3" data-label="बुझ्ने">{d.recipient}</td>
                         {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN') && (
-                          <td className="p-3 text-right">
+                          <td className="p-3 text-right" data-label="कार्य">
                             <button 
                               onClick={() => {
                                 if (window.confirm('के तपाईं यो दर्ता हटाउन चाहनुहुन्छ?')) {
@@ -1157,7 +1170,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
 
       <aside className={`
         fixed inset-y-0 left-0 w-72 bg-white border-r border-slate-200 z-40 transform transition-transform duration-300 ease-in-out no-print
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        lg:static lg:inset-auto lg:w-72
       `}>
         <div className="flex flex-col h-full">
           <div className="p-6 border-b border-slate-100 flex items-center justify-between">
@@ -1305,9 +1319,9 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 relative">
-        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 shrink-0 no-print">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg">
+        <header className="h-16 bg-white border-b border-slate-200 px-4 md:px-6 flex items-center justify-between z-20 shrink-0 no-print">
+          <div className="flex items-center gap-2 md:gap-4">
+            <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg lg:hidden">
               <Menu size={20} />
             </button>
             <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-200">
@@ -1400,8 +1414,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
           </div>
         </header>
 
-        <main ref={mainContentRef} className="flex-1 overflow-y-auto p-6 md:p-8 scroll-smooth">
-          <div className="max-w-7xl mx-auto min-h-full">
+        <main ref={mainContentRef} className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
+          <div className="max-w-7xl mx-auto min-h-full pb-20 lg:pb-0">
             {renderContent()}
           </div>
         </main>

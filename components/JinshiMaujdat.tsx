@@ -1081,7 +1081,7 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
               <span className="text-xs font-medium bg-slate-200 text-slate-600 px-3 py-1 rounded-full">{filteredItems.length} Items with Stock</span>
           </div>
           <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
+              <table className="w-full text-xs text-left responsive-table">
                   <thead className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
                       <tr>
                           <th className="px-4 py-3 w-12 text-center">SN</th>
@@ -1105,33 +1105,33 @@ export const JinshiMaujdat: React.FC<JinshiMaujdatProps> = ({
                               const storeName = storeOptions.find(s => s.value === item.storeId)?.label || 'Unknown';
                               return (
                                   <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                                      <td className="px-4 py-3 text-center text-slate-500">{index + 1}</td>
-                                      <td className="px-4 py-3">
+                                      <td className="px-4 py-3 text-center text-slate-500" data-label="SN">{index + 1}</td>
+                                      <td className="px-4 py-3" data-label="Item Name">
                                           <div className="font-bold text-slate-800">{item.itemName}</div>
                                           <div className="text-[10px] text-slate-500 italic truncate max-w-[200px]">{item.specification || '-'}</div>
                                       </td>
-                                      <td className="px-4 py-3 font-mono font-bold text-indigo-700">{item.ledgerPageNo || '-'}</td>
-                                      <td className="px-4 py-3 text-[10px] text-slate-500 font-mono">
+                                      <td className="px-4 py-3 font-mono font-bold text-indigo-700" data-label="Ledger Page">{item.ledgerPageNo || '-'}</td>
+                                      <td className="px-4 py-3 text-[10px] text-slate-500 font-mono" data-label="Codes">
                                           <div>U: {item.uniqueCode || '-'}</div>
                                           <div>S: {item.sanketNo || '-'}</div>
                                       </td>
-                                      <td className="px-4 py-3 text-slate-600">{storeName}</td>
-                                      <td className="px-4 py-3">
+                                      <td className="px-4 py-3 text-slate-600" data-label="Store">{storeName}</td>
+                                      <td className="px-4 py-3" data-label="Classification">
                                           <span className={`inline-flex px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold border mb-1 ${item.itemType === 'Expendable' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
                                               {item.itemType === 'Expendable' ? 'EXP' : 'FIX'}
                                           </span>
                                           <div className="text-[10px] text-slate-500">{item.itemClassification}</div>
                                       </td>
-                                      <td className="px-4 py-3 text-center font-bold text-slate-800 bg-slate-50/50">
+                                      <td className="px-4 py-3 text-center font-bold text-slate-800 bg-slate-50/50" data-label="Quantity">
                                           {item.currentQuantity} <span className="text-[10px] font-normal text-slate-400">{item.unit}</span>
                                       </td>
-                                      <td className="px-4 py-3">
+                                      <td className="px-4 py-3" data-label="Batch/Expiry">
                                           <div className="text-[10px] font-bold text-orange-600">{item.batchNo || '-'}</div>
                                           <div className="text-[9px] text-slate-400">{item.expiryDateAd || '-'}</div>
                                       </td>
-                                      <td className="px-4 py-3 text-right text-slate-600">{item.rate?.toFixed(2) || '-'}</td>
-                                      <td className="px-4 py-3 text-right font-bold text-slate-800">{item.totalAmount?.toFixed(2) || '-'}</td>
-                                      <td className="px-4 py-3 text-center">
+                                      <td className="px-4 py-3 text-right text-slate-600" data-label="Rate">{item.rate?.toFixed(2) || '-'}</td>
+                                      <td className="px-4 py-3 text-right font-bold text-slate-800" data-label="Total">{item.totalAmount?.toFixed(2) || '-'}</td>
+                                      <td className="px-4 py-3 text-center" data-label="Actions">
                                           <div className="flex items-center justify-center gap-1">
                                               <button onClick={() => handleViewClick(item)} className="text-slate-400 hover:text-indigo-600 p-1.5 hover:bg-indigo-50 rounded-full transition-all" title="Full Details"><Info size={16}/></button>
                                               <button onClick={() => handleEditClick(item)} className="text-slate-400 hover:text-indigo-600 p-1.5 hover:bg-indigo-50 rounded-full transition-all" title="Edit"><Edit size={16} /></button>
