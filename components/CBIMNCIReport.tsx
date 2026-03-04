@@ -103,6 +103,11 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
       if (isOld) infantStats.severe_29_59++;
     }
 
+    if (diag.includes('Pneumonia')) {
+      if (isYoung) infantStats.pneumonia_0_28++;
+      if (isOld) infantStats.pneumonia_29_59++;
+    }
+
     if (diag.includes('Local Bacterial Infection')) {
       if (isYoung) infantStats.local_0_28++;
       if (isOld) infantStats.local_29_59++;
@@ -139,9 +144,18 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
       infantStats.other_antibiotic++;
     }
 
-    if (diag.includes('Severe') || (record.advice || '').toLowerCase().includes('refer')) {
+    if (record.isRefer) {
       if (isYoung) infantStats.refer_0_28++;
       if (isOld) infantStats.refer_29_59++;
+    }
+
+    if (record.isDeath) {
+      if (isYoung) infantStats.death_0_28++;
+      if (isOld) infantStats.death_29_59++;
+    }
+
+    if (record.followupDays && record.followupDays > 0) {
+      infantStats.followup++;
     }
   });
 
@@ -192,7 +206,8 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
 
     const diag = record.diagnosis || '';
     const meds = (record.prescriptions || []).map(p => p.medicineName.toLowerCase());
-    const isRefer = diag.includes('Severe') || (record.advice || '').toLowerCase().includes('refer');
+    const isRefer = record.isRefer || diag.includes('Severe') || (record.advice || '').toLowerCase().includes('refer');
+    const isDeath = record.isDeath || false;
 
     // Respiratory
     if (diag.includes('No Pneumonia: Cough or Cold')) childStats.no_pneumonia++;
@@ -232,6 +247,28 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
       if (diag.includes('Pneumonia') || diag.includes('Disease')) childStats.refer_resp++;
       else if (diag.includes('Dehydration') || diag.includes('Diarrhea')) childStats.refer_diarrhea++;
       else childStats.refer_other++;
+    }
+
+    // Other
+    const hasKnownDiag = diag.includes('Pneumonia') || diag.includes('Dehydration') || diag.includes('Diarrhea') || diag.includes('Malaria') || diag.includes('Fever') || diag.includes('Measles') || diag.includes('Ear') || diag.includes('Malnutrition') || diag.includes('Anemia');
+    if (!hasKnownDiag && diag) {
+      childStats.other++;
+    }
+
+    // Death
+    if (isDeath) {
+      if (diag.includes('Pneumonia') || diag.includes('Disease')) childStats.death_resp++;
+      else if (diag.includes('Dehydration') || diag.includes('Diarrhea')) childStats.death_diarrhea++;
+      else childStats.death_other++;
+
+      const ageInMonths = (patient?.ageYears || 0) * 12 + (patient?.ageMonths || 0);
+      if (ageInMonths <= 11) childStats.death_2_11m++;
+      else childStats.death_12_59m++;
+    }
+
+    // Follow-up
+    if (record.followupDays && record.followupDays > 0) {
+      childStats.followup++;
     }
   });
 
@@ -448,6 +485,64 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
                   <div>१२-५९ महिना: {childStats.death_12_59m}</div>
                 </td>
               </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Detailed Visit List */}
+        <div className="mt-12 no-print-break">
+          <h4 className="font-bold text-slate-700 mb-4 border-b pb-2">३. बिरामीको विस्तृत विवरण (Detailed Patient Visits)</h4>
+          <table className="w-full text-[10px] border-collapse border border-slate-300">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="border border-slate-300 p-2">मिति</th>
+                <th className="border border-slate-300 p-2">बिरामीको नाम (ID)</th>
+                <th className="border border-slate-300 p-2">उमेर/लिङ्ग</th>
+                <th className="border border-slate-300 p-2">मुख्य समस्या (Complaints)</th>
+                <th className="border border-slate-300 p-2">वर्गिकरण (Classification)</th>
+                <th className="border border-slate-300 p-2">उपचार (Treatment/Medicine)</th>
+                <th className="border border-slate-300 p-2">कैफियत</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRecords.length > 0 ? (
+                filteredRecords
+                  .sort((a, b) => b.visitDate.localeCompare(a.visitDate))
+                  .map(record => {
+                    const patient = getPatient(record.serviceSeekerId);
+                    const meds = (record.prescriptions || []).map(p => `${p.medicineName} (${p.dosage})`).join(', ');
+                    return (
+                      <tr key={record.id} className="hover:bg-slate-50">
+                        <td className="border border-slate-300 p-2 whitespace-nowrap">{record.visitDate}</td>
+                        <td className="border border-slate-300 p-2 font-bold">
+                          {patient?.name || 'Unknown'} ({record.uniquePatientId})
+                        </td>
+                        <td className="border border-slate-300 p-2 whitespace-nowrap">
+                          {patient?.age || '-'} / {patient?.gender || '-'}
+                        </td>
+                        <td className="border border-slate-300 p-2">{record.chiefComplaints || '-'}</td>
+                        <td className="border border-slate-300 p-2 font-bold text-primary-700">{record.diagnosis || '-'}</td>
+                        <td className="border border-slate-300 p-2">
+                          <div className="space-y-1">
+                            {meds && <p>{meds}</p>}
+                            {record.advice && <p className="text-[9px] italic text-slate-500">Advice: {record.advice}</p>}
+                          </div>
+                        </td>
+                        <td className="border border-slate-300 p-2">
+                          <div className="flex flex-wrap gap-1">
+                            {record.isRefer && <span className="bg-amber-100 text-amber-700 px-1 rounded">Refer</span>}
+                            {record.isDeath && <span className="bg-red-100 text-red-700 px-1 rounded">Death</span>}
+                            {record.followupDays && record.followupDays > 0 && <span className="bg-blue-100 text-blue-700 px-1 rounded">Followup: {record.followupDays}d</span>}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+              ) : (
+                <tr>
+                  <td colSpan={7} className="border border-slate-300 p-8 text-center text-slate-400 italic">कुनै रेकर्ड भेटिएन</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

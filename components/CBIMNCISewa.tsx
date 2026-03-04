@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { Search, Save, Printer, Plus, Trash2, User, Stethoscope, Pill, History, Baby } from 'lucide-react';
+import { Search, Save, Printer, Plus, Trash2, User, Stethoscope, Pill, History, Baby, Edit } from 'lucide-react';
 import { ServiceSeekerRecord, CBIMNCIRecord, PrescriptionItem, ServiceItem } from '../types/coreTypes';
 import { InventoryItem } from '../types/inventoryTypes';
 import { Input } from './Input';
@@ -74,7 +74,10 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     investigation: '',
     prescriptions: [],
     advice: '',
-    nextVisitDate: ''
+    nextVisitDate: '',
+    isRefer: false,
+    isDeath: false,
+    followupDays: 0
   });
   const [prescriptionItems, setPrescriptionItems] = useState<PrescriptionItem[]>([]);
   const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
@@ -210,10 +213,61 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       investigation: '',
       prescriptions: [],
       advice: '',
-      nextVisitDate: ''
+      nextVisitDate: '',
+      isRefer: false,
+      isDeath: false,
+      followupDays: 0
     });
     setPrescriptionItems([]);
     setEditingRecordId(null);
+  };
+
+  const selectRecordForEdit = (record: CBIMNCIRecord) => {
+    setModuleType(record.moduleType || 'Child');
+    setAssessmentData({
+      dangerSigns: [],
+      localInfection: [],
+      jaundiceSigns: [],
+      dehydrationSigns: [],
+      feedingProblems: [],
+      generalDangerSigns: [],
+      respiratorySigns: [],
+      feverSigns: [],
+      nutritionSigns: [],
+      immunization: [],
+      breathingRate: '',
+      temperature: '',
+      diarrheaDays: '',
+      weight: '',
+      muac: '',
+      coughDays: '',
+      feverDays: '',
+      earDischargeDays: '',
+      malariaRisk: 'None',
+      pallor: '',
+      attachment: '',
+      suckling: '',
+      earPain: false,
+      earDischarge: false,
+      mastoidSwelling: false,
+      bloodInStool: false,
+      ...(record.assessmentData || {})
+    });
+    setCbimnciData({
+      chiefComplaints: record.chiefComplaints,
+      diagnosis: record.diagnosis,
+      investigation: record.investigation,
+      prescriptions: record.prescriptions || [],
+      advice: record.advice,
+      nextVisitDate: record.nextVisitDate,
+      isRefer: record.isRefer || false,
+      isDeath: record.isDeath || false,
+      followupDays: record.followupDays || 0
+    });
+    setPrescriptionItems(record.prescriptions || []);
+    setEditingRecordId(record.id);
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleRestore = () => {
@@ -262,7 +316,10 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       investigation: latestRecord.investigation,
       prescriptions: latestRecord.prescriptions || [],
       advice: latestRecord.advice,
-      nextVisitDate: latestRecord.nextVisitDate
+      nextVisitDate: latestRecord.nextVisitDate,
+      isRefer: latestRecord.isRefer || false,
+      isDeath: latestRecord.isDeath || false,
+      followupDays: latestRecord.followupDays || 0
     });
     setPrescriptionItems(latestRecord.prescriptions || []);
     setEditingRecordId(latestRecord.id);
@@ -312,7 +369,10 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       investigation: cbimnciData.investigation || '',
       prescriptions: prescriptionItems,
       advice: cbimnciData.advice,
-      nextVisitDate: cbimnciData.nextVisitDate
+      nextVisitDate: cbimnciData.nextVisitDate,
+      isRefer: cbimnciData.isRefer,
+      isDeath: cbimnciData.isDeath,
+      followupDays: cbimnciData.followupDays
     };
 
     onSaveRecord(newRecord);
@@ -324,7 +384,10 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       investigation: '',
       prescriptions: [],
       advice: '',
-      nextVisitDate: ''
+      nextVisitDate: '',
+      isRefer: false,
+      isDeath: false,
+      followupDays: 0
     });
     setAssessmentData({
       dangerSigns: [],
@@ -1435,6 +1498,13 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                           </div>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button 
+                              onClick={() => selectRecordForEdit(record)}
+                              className="p-1.5 text-primary-500 hover:bg-primary-50 rounded-lg"
+                              title="Edit Record"
+                            >
+                              <Edit size={14} />
+                            </button>
+                            <button 
                               onClick={() => {
                                 if (window.confirm('के तपाईं यो रेकर्ड हटाउन चाहनुहुन्छ?')) {
                                   onDeleteRecord(record.id);
@@ -1661,9 +1731,90 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                   />
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      id="isRefer"
+                      checked={cbimnciData.isRefer}
+                      onChange={(e) => setCbimnciData({...cbimnciData, isRefer: e.target.checked})}
+                      className="w-5 h-5 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+                    />
+                    <label htmlFor="isRefer" className="text-sm font-bold text-slate-700 cursor-pointer">रेफर गरिएको (Referral)</label>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      id="isDeath"
+                      checked={cbimnciData.isDeath}
+                      onChange={(e) => setCbimnciData({...cbimnciData, isDeath: e.target.checked})}
+                      className="w-5 h-5 text-red-600 border-slate-300 rounded focus:ring-red-500"
+                    />
+                    <label htmlFor="isDeath" className="text-sm font-bold text-red-700 cursor-pointer">मृत्यु भएको (Death)</label>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">फलोअप (Follow-up Days)</label>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="number" 
+                        value={cbimnciData.followupDays || ''}
+                        onChange={(e) => setCbimnciData({...cbimnciData, followupDays: parseInt(e.target.value) || 0})}
+                        className="w-20 p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+                        placeholder="दिन"
+                      />
+                      <span className="text-xs text-slate-500 font-bold">दिन पछि</span>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex justify-end gap-4 pt-4 border-t">
                   <button onClick={handleRestore} className="px-6 py-2.5 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 flex items-center gap-2 shadow-sm font-medium border border-amber-200">
                     <History size={18} /> Restore Previous
+                  </button>
+                  <button onClick={() => {
+                    setEditingRecordId(null);
+                    setCbimnciData({
+                      chiefComplaints: '',
+                      diagnosis: '',
+                      investigation: '',
+                      prescriptions: [],
+                      advice: '',
+                      nextVisitDate: '',
+                      isRefer: false,
+                      isDeath: false,
+                      followupDays: 0
+                    });
+                    setAssessmentData({
+                      dangerSigns: [],
+                      localInfection: [],
+                      jaundiceSigns: [],
+                      dehydrationSigns: [],
+                      feedingProblems: [],
+                      generalDangerSigns: [],
+                      respiratorySigns: [],
+                      feverSigns: [],
+                      nutritionSigns: [],
+                      immunization: [],
+                      breathingRate: '',
+                      temperature: '',
+                      diarrheaDays: '',
+                      weight: '',
+                      muac: '',
+                      coughDays: '',
+                      feverDays: '',
+                      earDischargeDays: '',
+                      malariaRisk: 'None',
+                      pallor: '',
+                      attachment: '',
+                      suckling: '',
+                      earPain: false,
+                      earDischarge: false,
+                      mastoidSwelling: false,
+                      bloodInStool: false
+                    });
+                    setPrescriptionItems([]);
+                  }} className="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 flex items-center gap-2 shadow-sm font-medium border border-slate-200">
+                    <Trash2 size={18} /> Clear Form
                   </button>
                   <button onClick={handlePrint} className="px-6 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 flex items-center gap-2 shadow-sm">
                     <Printer size={18} /> प्रिन्ट (Print)

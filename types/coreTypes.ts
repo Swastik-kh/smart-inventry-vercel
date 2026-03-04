@@ -268,6 +268,9 @@ export interface CBIMNCIRecord {
   prescriptions: PrescriptionItem[];
   advice?: string;
   nextVisitDate?: string;
+  isRefer?: boolean;
+  isDeath?: boolean;
+  followupDays?: number;
 }
 
 export interface FamilyPlanningRecord {
