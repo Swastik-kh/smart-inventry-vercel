@@ -446,6 +446,12 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     item.serviceName.toLowerCase().includes(investigationSearch.toLowerCase())
   ) || [];
 
+  const [showCoughSection, setShowCoughSection] = useState(false);
+  const [showDiarrheaSection, setShowDiarrheaSection] = useState(false);
+  const [showFeverSection, setShowFeverSection] = useState(false);
+  const [showEarSection, setShowEarSection] = useState(false);
+  const [showNutritionSection, setShowNutritionSection] = useState(false);
+
   const renderAssessmentForm = () => {
     if (moduleType === 'Infant') {
       return (
@@ -704,212 +710,322 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
 
           {/* Cough / Breathing */}
           <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-            <h4 className="font-bold text-blue-800 border-b border-blue-200 pb-2 mb-4 flex justify-between items-center">
-              <span>२. खोकी वा सास फेर्न गाह्रो (Cough / Breathing)</span>
-              <span className="text-xs font-normal text-blue-600">Booklet Page 25</span>
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <Input label="खोकी लागेको दिन" type="number" value={assessmentData.coughDays || ''} onChange={(e) => setAssessmentData({...assessmentData, coughDays: e.target.value})} />
-                  <Input label="सासको दर (प्रति मिनेट)" type="number" value={assessmentData.breathingRate || ''} onChange={(e) => setAssessmentData({...assessmentData, breathingRate: e.target.value})} />
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="font-bold text-blue-800 flex items-center gap-2">
+                <span>२. खोकी वा सास फेर्न गाह्रो (Cough / Breathing)</span>
+                <span className="text-xs font-normal text-blue-600">Booklet Page 25</span>
+              </h4>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowCoughSection(true)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${showCoughSection ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border border-blue-200'}`}
+                >
+                  छ (Yes)
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowCoughSection(false);
+                    setAssessmentData({...assessmentData, coughDays: '', breathingRate: '', respiratorySigns: []});
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${!showCoughSection ? 'bg-slate-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
+                >
+                  छैन (No)
+                </button>
+              </div>
+            </div>
+            
+            {showCoughSection && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-blue-200 pt-4">
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Input label="खोकी लागेको दिन" type="number" value={assessmentData.coughDays || ''} onChange={(e) => setAssessmentData({...assessmentData, coughDays: e.target.value})} />
+                    <Input label="सासको दर (प्रति मिनेट)" type="number" value={assessmentData.breathingRate || ''} onChange={(e) => setAssessmentData({...assessmentData, breathingRate: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    {['कोखा हान्ने (Chest in-drawing)', 'शान्त रहेको बच्चामा स्ट्राइडर (Stridor in calm child)', 'Wheezing'].map(sign => (
+                      <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={assessmentData.respiratorySigns?.includes(sign)}
+                          onChange={(e) => {
+                            const current = assessmentData.respiratorySigns || [];
+                            const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
+                            setAssessmentData({...assessmentData, respiratorySigns: next});
+                          }}
+                          className="rounded text-blue-600 focus:ring-blue-500"
+                        />
+                        {sign}
+                      </label>
+                    ))}
+                  </div>
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Diarrhea */}
+          <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="font-bold text-emerald-800 flex items-center gap-2">
+                <span>३. पखाला (Diarrhea)</span>
+                <span className="text-xs font-normal text-emerald-600">Booklet Page 26</span>
+              </h4>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowDiarrheaSection(true)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${showDiarrheaSection ? 'bg-emerald-600 text-white' : 'bg-white text-emerald-600 border border-emerald-200'}`}
+                >
+                  छ (Yes)
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowDiarrheaSection(false);
+                    setAssessmentData({...assessmentData, diarrheaDays: '', bloodInStool: false, dehydrationSigns: []});
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${!showDiarrheaSection ? 'bg-slate-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
+                >
+                  छैन (No)
+                </button>
+              </div>
+            </div>
+
+            {showDiarrheaSection && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-emerald-200 pt-4">
                 <div className="space-y-2">
-                  {['कोखा हान्ने (Chest in-drawing)', 'शान्त रहेको बच्चामा स्ट्राइडर (Stridor in calm child)', 'Wheezing'].map(sign => (
+                  <label className="text-sm font-medium text-slate-700">जलवियोजनका संकेतहरू</label>
+                  {["सुस्त वा बेहोस (Lethargic/Unconscious)", "छटपटीने वा झर्किने (Restless/Irritable)", "आँखा गडेको (Sunken eyes)", "खूब तिर्खाए झैं गरी पिउँछ (Drinks eagerly)", "पिउन नसक्ने वा ढिलो पिउने (Unable to drink)", "छाला तान्दा धेरै ढिलो फर्कने", "छाला तान्दा ढिलो फर्कने"].map(sign => (
                     <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
                       <input 
                         type="checkbox" 
-                        checked={assessmentData.respiratorySigns?.includes(sign)}
+                        checked={assessmentData.dehydrationSigns?.includes(sign)}
                         onChange={(e) => {
-                          const current = assessmentData.respiratorySigns || [];
+                          const current = assessmentData.dehydrationSigns || [];
                           const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
-                          setAssessmentData({...assessmentData, respiratorySigns: next});
+                          setAssessmentData({...assessmentData, dehydrationSigns: next});
                         }}
-                        className="rounded text-blue-600 focus:ring-blue-500"
+                        className="rounded text-emerald-600 focus:ring-emerald-500"
+                      />
+                      {sign}
+                    </label>
+                  ))}
+                </div>
+                <div className="space-y-3">
+                  <Input label="पखाला लागेको दिन" type="number" value={assessmentData.diarrheaDays || ''} onChange={(e) => setAssessmentData({...assessmentData, diarrheaDays: e.target.value})} />
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={assessmentData.bloodInStool}
+                      onChange={(e) => setAssessmentData({...assessmentData, bloodInStool: e.target.checked})}
+                      className="rounded text-red-600 focus:ring-red-500"
+                    />
+                    दिसामा रगत देखिएको (Blood in stool)
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Fever */}
+          <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="font-bold text-amber-800 flex items-center gap-2">
+                <span>४. ज्वरो (Fever)</span>
+                <span className="text-xs font-normal text-amber-600">Booklet Page 27</span>
+              </h4>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowFeverSection(true)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${showFeverSection ? 'bg-amber-600 text-white' : 'bg-white text-amber-600 border border-amber-200'}`}
+                >
+                  छ (Yes)
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowFeverSection(false);
+                    setAssessmentData({...assessmentData, temperature: '', feverDays: '', malariaRisk: '', feverSigns: []});
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${!showFeverSection ? 'bg-slate-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
+                >
+                  छैन (No)
+                </button>
+              </div>
+            </div>
+
+            {showFeverSection && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-amber-200 pt-4">
+                <div className="space-y-3">
+                  <Input label="तापक्रम (Celsius)" type="number" step="0.1" value={assessmentData.temperature || ''} onChange={(e) => setAssessmentData({...assessmentData, temperature: e.target.value})} />
+                  <Input label="ज्वरो आएको दिन" type="number" value={assessmentData.feverDays || ''} onChange={(e) => setAssessmentData({...assessmentData, feverDays: e.target.value})} />
+                  <label className="text-sm font-medium text-slate-700 block">मलेरियाको जोखिम</label>
+                  <select 
+                    value={assessmentData.malariaRisk || ''} 
+                    onChange={(e) => setAssessmentData({...assessmentData, malariaRisk: e.target.value})}
+                    className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                  >
+                    <option value="Low">न्यून (Low)</option>
+                    <option value="High">उच्च (High)</option>
+                    <option value="None">नभएको (None)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">ज्वरोका थप संकेतहरू</label>
+                  {["गर्दन अररो (Stiff neck)", "RDT Positive", "RDT Negative", "दादुरा (Measles)", "आँखा रातो (Red eyes)", "मुखभित्र घाउ (Mouth ulcers)", "कर्निया धमिलो (Cornea clouding)"].map(sign => (
+                    <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={assessmentData.feverSigns?.includes(sign)}
+                        onChange={(e) => {
+                          const current = assessmentData.feverSigns || [];
+                          const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
+                          setAssessmentData({...assessmentData, feverSigns: next});
+                        }}
+                        className="rounded text-amber-600 focus:ring-amber-500"
                       />
                       {sign}
                     </label>
                   ))}
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Diarrhea */}
-          <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
-            <h4 className="font-bold text-emerald-800 border-b border-emerald-200 pb-2 mb-4 flex justify-between items-center">
-              <span>३. पखाला (Diarrhea)</span>
-              <span className="text-xs font-normal text-emerald-600">Booklet Page 26</span>
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">जलवियोजनका संकेतहरू</label>
-                {["सुस्त वा बेहोस (Lethargic/Unconscious)", "छटपटीने वा झर्किने (Restless/Irritable)", "आँखा गडेको (Sunken eyes)", "खूब तिर्खाए झैं गरी पिउँछ (Drinks eagerly)", "पिउन नसक्ने वा ढिलो पिउने (Unable to drink)", "छाला तान्दा धेरै ढिलो फर्कने", "छाला तान्दा ढिलो फर्कने"].map(sign => (
-                  <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={assessmentData.dehydrationSigns?.includes(sign)}
-                      onChange={(e) => {
-                        const current = assessmentData.dehydrationSigns || [];
-                        const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
-                        setAssessmentData({...assessmentData, dehydrationSigns: next});
-                      }}
-                      className="rounded text-emerald-600 focus:ring-emerald-500"
-                    />
-                    {sign}
-                  </label>
-                ))}
-              </div>
-              <div className="space-y-3">
-                <Input label="पखाला लागेको दिन" type="number" value={assessmentData.diarrheaDays || ''} onChange={(e) => setAssessmentData({...assessmentData, diarrheaDays: e.target.value})} />
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={assessmentData.bloodInStool}
-                    onChange={(e) => setAssessmentData({...assessmentData, bloodInStool: e.target.checked})}
-                    className="rounded text-red-600 focus:ring-red-500"
-                  />
-                  दिसामा रगत देखिएको (Blood in stool)
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Fever */}
-          <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
-            <h4 className="font-bold text-amber-800 border-b border-amber-200 pb-2 mb-4 flex justify-between items-center">
-              <span>४. ज्वरो (Fever)</span>
-              <span className="text-xs font-normal text-amber-600">Booklet Page 27</span>
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <Input label="तापक्रम (Celsius)" type="number" step="0.1" value={assessmentData.temperature || ''} onChange={(e) => setAssessmentData({...assessmentData, temperature: e.target.value})} />
-                <Input label="ज्वरो आएको दिन" type="number" value={assessmentData.feverDays || ''} onChange={(e) => setAssessmentData({...assessmentData, feverDays: e.target.value})} />
-                <label className="text-sm font-medium text-slate-700 block">मलेरियाको जोखिम</label>
-                <select 
-                  value={assessmentData.malariaRisk || ''} 
-                  onChange={(e) => setAssessmentData({...assessmentData, malariaRisk: e.target.value})}
-                  className="w-full p-2 border border-slate-300 rounded-lg text-sm"
-                >
-                  <option value="Low">न्यून (Low)</option>
-                  <option value="High">उच्च (High)</option>
-                  <option value="None">नभएको (None)</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">ज्वरोका थप संकेतहरू</label>
-                {["गर्दन अररो (Stiff neck)", "RDT Positive", "RDT Negative", "दादुरा (Measles)", "आँखा रातो (Red eyes)", "मुखभित्र घाउ (Mouth ulcers)", "कर्निया धमिलो (Cornea clouding)"].map(sign => (
-                  <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={assessmentData.feverSigns?.includes(sign)}
-                      onChange={(e) => {
-                        const current = assessmentData.feverSigns || [];
-                        const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
-                        setAssessmentData({...assessmentData, feverSigns: next});
-                      }}
-                      className="rounded text-amber-600 focus:ring-amber-500"
-                    />
-                    {sign}
-                  </label>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Ear Infection */}
           <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
-            <h4 className="font-bold text-slate-800 border-b border-slate-300 pb-2 mb-4 flex justify-between items-center">
-              <span>५. कानको समस्या (Ear Problem)</span>
-              <span className="text-xs font-normal text-slate-600">Booklet Page 28</span>
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={assessmentData.earPain}
-                    onChange={(e) => setAssessmentData({...assessmentData, earPain: e.target.checked})}
-                    className="rounded text-slate-600 focus:ring-slate-500"
-                  />
-                  कान दुख्ने (Ear pain)
-                </label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={assessmentData.earDischarge}
-                    onChange={(e) => setAssessmentData({...assessmentData, earDischarge: e.target.checked})}
-                    className="rounded text-slate-600 focus:ring-slate-500"
-                  />
-                  कानबाट पिप बग्ने (Ear discharge)
-                </label>
-                {assessmentData.earDischarge && (
-                  <Input label="लगातार कति दिन देखि?" type="number" value={assessmentData.earDischargeDays || ''} onChange={(e) => setAssessmentData({...assessmentData, earDischargeDays: e.target.value})} />
-                )}
-              </div>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={assessmentData.mastoidSwelling}
-                    onChange={(e) => setAssessmentData({...assessmentData, mastoidSwelling: e.target.checked})}
-                    className="rounded text-red-600 focus:ring-red-500"
-                  />
-                  कानको पछाडि दुख्ने गरी सुन्निएको (Mastoid swelling)
-                </label>
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                <span>५. कानको समस्या (Ear Problem)</span>
+                <span className="text-xs font-normal text-slate-600">Booklet Page 28</span>
+              </h4>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowEarSection(true)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${showEarSection ? 'bg-slate-800 text-white' : 'bg-white text-slate-800 border border-slate-300'}`}
+                >
+                  छ (Yes)
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowEarSection(false);
+                    setAssessmentData({...assessmentData, earPain: false, earDischarge: false, earDischargeDays: '', mastoidSwelling: false});
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${!showEarSection ? 'bg-slate-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
+                >
+                  छैन (No)
+                </button>
               </div>
             </div>
+
+            {showEarSection && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-300 pt-4">
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={assessmentData.earPain}
+                      onChange={(e) => setAssessmentData({...assessmentData, earPain: e.target.checked})}
+                      className="rounded text-slate-600 focus:ring-slate-500"
+                    />
+                    कान दुख्ने (Ear pain)
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={assessmentData.earDischarge}
+                      onChange={(e) => setAssessmentData({...assessmentData, earDischarge: e.target.checked})}
+                      className="rounded text-slate-600 focus:ring-slate-500"
+                    />
+                    कानबाट पिप बग्ने (Ear discharge)
+                  </label>
+                  {assessmentData.earDischarge && (
+                    <Input label="लगातार कति दिन देखि?" type="number" value={assessmentData.earDischargeDays || ''} onChange={(e) => setAssessmentData({...assessmentData, earDischargeDays: e.target.value})} />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={assessmentData.mastoidSwelling}
+                      onChange={(e) => setAssessmentData({...assessmentData, mastoidSwelling: e.target.checked})}
+                      className="rounded text-red-600 focus:ring-red-500"
+                    />
+                    कानको पछाडि दुख्ने गरी सुन्निएको (Mastoid swelling)
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Malnutrition / Anemia */}
           <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
-            <h4 className="font-bold text-purple-800 border-b border-purple-200 pb-2 mb-4 flex justify-between items-center">
-              <span>६. पोषण र रक्तअल्पता (Nutrition & Anemia)</span>
-              <span className="text-xs font-normal text-purple-600">Booklet Page 28-29</span>
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <Input label="तौल (kg)" type="number" step="0.1" value={assessmentData.weight || ''} onChange={(e) => setAssessmentData({...assessmentData, weight: e.target.value})} />
-                {zScore && (
-                  <div className="p-2 bg-purple-100 rounded-lg border border-purple-200">
-                    <p className="text-xs font-bold text-purple-800">Weight-for-Age Z-Score: {zScore}</p>
-                    <p className="text-[10px] text-purple-600">
-                      {parseFloat(zScore) < -3 ? 'Severe Underweight' : parseFloat(zScore) < -2 ? 'Underweight' : 'Normal Weight'}
-                    </p>
-                  </div>
-                )}
-                <Input label="MUAC (mm)" type="number" value={assessmentData.muac || ''} onChange={(e) => setAssessmentData({...assessmentData, muac: e.target.value})} />
-                <label className="text-sm font-medium text-slate-700 block">रक्तअल्पता (Anemia)</label>
-                <select 
-                  value={assessmentData.pallor || ''} 
-                  onChange={(e) => setAssessmentData({...assessmentData, pallor: e.target.value})}
-                  className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="font-bold text-purple-800 flex items-center gap-2">
+                <span>६. पोषण र रक्तअल्पता (Nutrition & Anemia)</span>
+                <span className="text-xs font-normal text-purple-600">Booklet Page 28-29</span>
+              </h4>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowNutritionSection(true)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${showNutritionSection ? 'bg-purple-600 text-white' : 'bg-white text-purple-600 border border-purple-200'}`}
                 >
-                  <option value="">हत्केलाको अवस्था</option>
-                  <option value="Severe">{"धेरै सेतो (Severe pallor)"}</option>
-                  <option value="Some">{"केही सेतो (Some pallor)"}</option>
-                  <option value="None">{"सामान्य (No pallor)"}</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">पोषणका संकेतहरू</label>
-                {["दुवै खुट्टा सुन्निएको (Oedema both feet)", "धेरै दुब्लो (Visible severe wasting)"].map(sign => (
-                  <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={assessmentData.nutritionSigns?.includes(sign)}
-                      onChange={(e) => {
-                        const current = assessmentData.nutritionSigns || [];
-                        const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
-                        setAssessmentData({...assessmentData, nutritionSigns: next});
-                      }}
-                      className="rounded text-purple-600 focus:ring-purple-500"
-                    />
-                    {sign}
-                  </label>
-                ))}
+                  छ (Yes)
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowNutritionSection(false);
+                    setAssessmentData({...assessmentData, muac: '', pallor: '', nutritionSigns: []});
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${!showNutritionSection ? 'bg-slate-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
+                >
+                  छैन (No)
+                </button>
               </div>
             </div>
+
+            {showNutritionSection && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-purple-200 pt-4">
+                <div className="space-y-3">
+                  <Input label="तौल (kg)" type="number" step="0.1" value={assessmentData.weight || ''} onChange={(e) => setAssessmentData({...assessmentData, weight: e.target.value})} />
+                  {zScore && (
+                    <div className="p-2 bg-purple-100 rounded-lg border border-purple-200">
+                      <p className="text-xs font-bold text-purple-800">Weight-for-Age Z-Score: {zScore}</p>
+                      <p className="text-[10px] text-purple-600">
+                        {parseFloat(zScore) < -3 ? 'Severe Underweight' : parseFloat(zScore) < -2 ? 'Underweight' : 'Normal Weight'}
+                      </p>
+                    </div>
+                  )}
+                  <Input label="MUAC (mm)" type="number" value={assessmentData.muac || ''} onChange={(e) => setAssessmentData({...assessmentData, muac: e.target.value})} />
+                  <label className="text-sm font-medium text-slate-700 block">रक्तअल्पता (Anemia)</label>
+                  <select 
+                    value={assessmentData.pallor || ''} 
+                    onChange={(e) => setAssessmentData({...assessmentData, pallor: e.target.value})}
+                    className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                  >
+                    <option value="">हत्केलाको अवस्था</option>
+                    <option value="Severe">{"धेरै सेतो (Severe pallor)"}</option>
+                    <option value="Some">{"केही सेतो (Some pallor)"}</option>
+                    <option value="None">{"सामान्य (No pallor)"}</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">पोषणका संकेतहरू</label>
+                  {["दुवै खुट्टा सुन्निएको (Oedema both feet)", "धेरै दुब्लो (Visible severe wasting)"].map(sign => (
+                    <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={assessmentData.nutritionSigns?.includes(sign)}
+                        onChange={(e) => {
+                          const current = assessmentData.nutritionSigns || [];
+                          const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
+                          setAssessmentData({...assessmentData, nutritionSigns: next});
+                        }}
+                        className="rounded text-purple-600 focus:ring-purple-500"
+                      />
+                      {sign}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           {/* Immunization */}
           <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
