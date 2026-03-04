@@ -196,6 +196,7 @@ export interface ServiceSeekerRecord {
   age: string; // Keep for display/legacy
   ageYears?: number;
   ageMonths?: number;
+  ageDays?: number;
   dobBs?: string;
   dobAd?: string;
   gender: 'Male' | 'Female' | 'Other';

@@ -175,8 +175,14 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     setSearchId('');
     
     // Auto-select module based on age
-    const ageInMonths = (patient.ageYears || 0) * 12 + (patient.ageMonths || 0);
-    const module = ageInMonths <= 2 ? 'Infant' : 'Child';
+    let isInfant = false;
+    if (patient.ageDays !== undefined && patient.ageDays > 0) {
+      isInfant = patient.ageDays < 60;
+    } else {
+      const ageInMonths = (patient.ageYears || 0) * 12 + (patient.ageMonths || 0);
+      isInfant = ageInMonths < 2; // Less than 2 months
+    }
+    const module = isInfant ? 'Infant' : 'Child';
     setModuleType(module);
     setAssessmentData({
       dangerSigns: [],
@@ -1100,14 +1106,26 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     if (classifications.length === 0) return [];
 
     if (moduleType === 'Infant') {
+      const weight = parseFloat(assessmentData.weight) || 0;
       if (classifications.includes('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease')) {
-        treatments.push('Give first dose of IM Gentamicin and IM Ampicillin');
+        let gentDose = '';
+        let ampDose = '';
+        if (weight > 0) {
+          gentDose = `${(weight * 5).toFixed(1)}mg (0.125ml/kg of 40mg/ml)`;
+          ampDose = `${(weight * 50).toFixed(0)}mg (0.2ml/kg of 250mg/ml)`;
+        }
+        treatments.push(`Give first dose of IM Gentamicin: ${gentDose}`);
+        treatments.push(`Give first dose of IM Ampicillin: ${ampDose}`);
         treatments.push('Refer URGENTLY to hospital');
         treatments.push('Prevent low blood sugar (breastfeed or sugar water)');
         treatments.push('Keep infant warm');
       }
       if (classifications.includes('Local Bacterial Infection')) {
-        treatments.push('Give Amoxicillin for 5 days');
+        let amoxDose = '';
+        if (weight >= 2 && weight < 3.5) amoxDose = '125mg (2.5ml syrup) twice daily';
+        else if (weight >= 3.5 && weight < 5) amoxDose = '250mg (5ml syrup) twice daily';
+        
+        treatments.push(`Give Amoxicillin for 5 days: ${amoxDose}`);
         treatments.push('Teach mother to treat local infections at home');
         treatments.push('Follow-up in 3 days');
       }
@@ -1136,8 +1154,15 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         treatments.push('Advise mother when to return immediately');
       }
     } else {
-      if (classifications.includes('Very Severe Disease')) {
-        treatments.push('Give first dose of appropriate antibiotic');
+      const weight = parseFloat(assessmentData.weight) || 0;
+      if (classifications.includes('Very Severe Disease') || classifications.includes('Severe Acute Malnutrition') || classifications.includes('Severe Complicated Measles')) {
+        let gentDose = '';
+        let ampDose = '';
+        if (weight > 0) {
+          gentDose = `${(weight * 5).toFixed(1)}mg IM`;
+          ampDose = `${(weight * 50).toFixed(0)}mg IM`;
+        }
+        treatments.push(`Give first dose of appropriate antibiotic: Gentamicin (${gentDose}) and Ampicillin (${ampDose})`);
         treatments.push('Refer URGENTLY to hospital');
         treatments.push('Prevent low blood sugar');
         treatments.push('Keep child warm');
@@ -1200,9 +1225,10 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       if (classifications.includes('Acute Ear Infection')) {
         const weight = parseFloat(assessmentData.weight) || 0;
         let amoxDose = '';
-        if (weight >= 4 && weight < 7) amoxDose = '250mg twice daily';
-        else if (weight >= 7 && weight < 10) amoxDose = '375mg twice daily';
-        else if (weight >= 10 && weight < 14) amoxDose = '500mg twice daily';
+        if (weight >= 4 && weight < 7) amoxDose = '250mg (1 tab) twice daily';
+        else if (weight >= 7 && weight < 10) amoxDose = '375mg (1.5 tab) twice daily';
+        else if (weight >= 10 && weight < 14) amoxDose = '500mg (2 tab) twice daily';
+        else if (weight >= 14 && weight < 19) amoxDose = '750mg (3 tab) twice daily';
         
         treatments.push(`Give Amoxicillin for 5 days: ${amoxDose}`);
         treatments.push('Give Paracetamol for pain');
@@ -1210,14 +1236,11 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         treatments.push('Follow-up in 5 days');
       }
       if (classifications.includes('Severe Acute Malnutrition')) {
-        treatments.push('Give first dose of appropriate antibiotic');
-        treatments.push('Refer to outpatient therapeutic care (OTC) or nutrition center');
-        treatments.push('Follow-up in 30 days');
+        // Already handled in the combined block above
       }
       if (classifications.includes('Severe Complicated Measles')) {
         treatments.push('Give Vitamin A');
-        treatments.push('Give first dose of appropriate antibiotic');
-        treatments.push('Refer URGENTLY to hospital');
+        // Already handled in the combined block above
       }
       if (classifications.includes('Measles with Eye/Mouth Complications')) {
         treatments.push('Give Vitamin A');
@@ -1604,14 +1627,38 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                       </button>
                       <button 
                         onClick={() => {
-                          const newItems = suggestedTreatments.map((t, idx) => ({
-                            id: `suggested-${Date.now()}-${idx}`,
-                            medicineName: t,
-                            dosage: '',
-                            frequency: '',
-                            duration: '',
-                            instructions: ''
-                          }));
+                          const newItems = suggestedTreatments.map((t, idx) => {
+                            // Try to extract medicine name and dose
+                            // Pattern: "Give [Medicine] for [Duration]: [Dose]" or "Give [Medicine]: [Dose]"
+                            let medicineName = t;
+                            let dosage = '';
+                            let duration = '';
+
+                            if (t.includes(':')) {
+                              const parts = t.split(':');
+                              const leftPart = parts[0].replace('Give ', '').trim();
+                              dosage = parts[1].trim();
+                              
+                              if (leftPart.includes(' for ')) {
+                                const subParts = leftPart.split(' for ');
+                                medicineName = subParts[0].trim();
+                                duration = subParts[1].trim();
+                              } else {
+                                medicineName = leftPart;
+                              }
+                            } else if (t.startsWith('Give ')) {
+                              medicineName = t.replace('Give ', '').trim();
+                            }
+
+                            return {
+                              id: `suggested-${Date.now()}-${idx}`,
+                              medicineName,
+                              dosage,
+                              frequency: dosage.includes('twice daily') ? '2 times a day' : (dosage.includes('once daily') ? '1 time a day' : ''),
+                              duration,
+                              instructions: ''
+                            };
+                          });
                           setPrescriptionItems([...prescriptionItems, ...newItems]);
                         }}
                         className="text-xs bg-white border border-primary-300 text-primary-700 px-2 py-1 rounded hover:bg-primary-50 transition-colors"

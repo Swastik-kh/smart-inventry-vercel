@@ -58,6 +58,7 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
   // Helper to calculate age in days
   const getAgeInDays = (patient: ServiceSeekerRecord | undefined) => {
     if (!patient) return 0;
+    if (patient.ageDays !== undefined && patient.ageDays > 0) return patient.ageDays;
     const years = patient.ageYears || 0;
     const months = patient.ageMonths || 0;
     return (years * 365) + (months * 30);
@@ -143,7 +144,7 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
       if (isOld) infantStats.feeding_29_59++;
     }
 
-    if (meds.some(m => m.includes('ampicillin'))) {
+    if (meds.some(m => m.includes('ampicillin') || m.includes('appropriate antibiotic'))) {
       if (isYoung) infantStats.ampicillin_0_28++;
       if (isOld) infantStats.ampicillin_29_59++;
     }
@@ -151,7 +152,7 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
       if (isYoung) infantStats.amoxicillin_0_28++;
       if (isOld) infantStats.amoxicillin_29_59++;
     }
-    if (meds.some(m => m.includes('gentamicin'))) {
+    if (meds.some(m => m.includes('gentamicin') || m.includes('appropriate antibiotic'))) {
       infantStats.gentamicin_first++; // Simplified
     }
     if (meds.some(m => !m.includes('ampicillin') && !m.includes('amoxicillin') && !m.includes('gentamicin') && (m.includes('cillin') || m.includes('mycin') || m.includes('xacin')))) {
@@ -242,7 +243,7 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
     if (diag.includes('Measles')) childStats.measles++;
 
     // Ear
-    if (diag.includes('Ear Infection') || diag.includes('Mastoiditis')) childStats.ear_problem++;
+    if ((diag.includes('Ear Infection') && !diag.includes('No Ear Infection')) || diag.includes('Mastoiditis')) childStats.ear_problem++;
 
     // Nutrition
     if (diag.includes('Severe Acute Malnutrition')) childStats.severe_malnutrition++;

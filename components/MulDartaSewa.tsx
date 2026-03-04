@@ -23,6 +23,7 @@ const initialFormData: Omit<ServiceSeekerRecord, 'id' | 'fiscalYear'> = {
   age: '',
   ageYears: 0,
   ageMonths: 0,
+  ageDays: 0,
   dobBs: '',
   dobAd: '',
   gender: 'Male',
@@ -39,6 +40,7 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [formData, setFormData] = useState(initialFormData);
   const [searchQuery, setSearchQuery] = useState('');
+  const [ageUnit, setAgeUnit] = useState<'Days' | 'Months' | 'Years'>('Years');
 
   const handleAddNew = () => {
     setIsEditing(null);
@@ -67,6 +69,16 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
   const handleEdit = (record: ServiceSeekerRecord) => {
     setIsEditing(record.id);
     setFormData(record);
+    
+    // Determine age unit from age string or values
+    if (record.age?.endsWith('D')) {
+      setAgeUnit('Days');
+    } else if (record.age?.endsWith('M') && !record.age?.includes('Y')) {
+      setAgeUnit('Months');
+    } else {
+      setAgeUnit('Years');
+    }
+    
     setShowForm(true);
   };
 
@@ -111,7 +123,7 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
       }
     }
 
-    const finalValue = (name === 'ageYears' || name === 'ageMonths') ? parseInt(value) || 0 : value;
+    const finalValue = (name === 'ageYears' || name === 'ageMonths' || name === 'ageDays') ? parseInt(value) || 0 : value;
     setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
@@ -124,14 +136,19 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
     if (value) {
       try {
         const nd = new NepaliDate(value);
-        dateAd = nd.toJsDate().toISOString().split('T')[0];
+        const jsDate = nd.toJsDate();
+        dateAd = jsDate.toISOString().split('T')[0];
         
         // Auto-calculate age
-        const today = new NepaliDate();
-        const diffYears = today.getYear() - nd.getYear();
-        let diffMonths = today.getMonth() - nd.getMonth();
+        const today = new Date();
+        const diffTime = Math.abs(today.getTime() - jsDate.getTime());
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        const todayNd = new NepaliDate();
+        let diffYears = todayNd.getYear() - nd.getYear();
+        let diffMonths = todayNd.getMonth() - nd.getMonth();
         if (diffMonths < 0) {
-          // diffYears--; // Not necessarily, depends on day
+          diffYears--;
           diffMonths += 12;
         }
         
@@ -140,8 +157,18 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
           dobBs: value, 
           dobAd: dateAd,
           ageYears: diffYears >= 0 ? diffYears : 0,
-          ageMonths: diffMonths >= 0 ? diffMonths : 0
+          ageMonths: diffMonths >= 0 ? diffMonths : 0,
+          ageDays: diffDays >= 0 ? diffDays : 0
         }));
+
+        // Auto-set age unit based on calculated age
+        if (diffDays < 60) {
+          setAgeUnit('Days');
+        } else if (diffYears < 5) {
+          setAgeUnit('Months');
+        } else {
+          setAgeUnit('Years');
+        }
       } catch (e) {
         setFormData(prev => ({ ...prev, dobBs: value }));
       }
@@ -152,7 +179,15 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const ageString = `${formData.ageYears}Y ${formData.ageMonths}M`;
+    let ageString = '';
+    if (ageUnit === 'Days') {
+      ageString = `${formData.ageDays}D`;
+    } else if (ageUnit === 'Months') {
+      ageString = `${formData.ageMonths}M`;
+    } else {
+      ageString = `${formData.ageYears}Y ${formData.ageMonths}M`;
+    }
+
     const recordToSave: ServiceSeekerRecord = {
       ...formData,
       age: ageString,
@@ -322,15 +357,29 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
                   onChange={handleChange} 
                   required 
                 />
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">उमेरको एकाई (Age Unit) *</label>
+                  <select 
+                    value={ageUnit} 
+                    onChange={(e) => setAgeUnit(e.target.value as any)}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  >
+                    <option value="Days">दिन (Days)</option>
+                    <option value="Months">महिना (Months)</option>
+                    <option value="Years">वर्ष (Years)</option>
+                  </select>
+                </div>
+                {ageUnit === 'Days' && (
                   <Input 
-                    label="उमेर (वर्ष) *" 
-                    name="ageYears" 
+                    label="उमेर (दिन) *" 
+                    name="ageDays" 
                     type="number"
-                    value={formData.ageYears} 
+                    value={formData.ageDays} 
                     onChange={handleChange} 
                     required 
                   />
+                )}
+                {ageUnit === 'Months' && (
                   <Input 
                     label="उमेर (महिना) *" 
                     name="ageMonths" 
@@ -339,7 +388,27 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
                     onChange={handleChange} 
                     required 
                   />
-                </div>
+                )}
+                {ageUnit === 'Years' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input 
+                      label="उमेर (वर्ष) *" 
+                      name="ageYears" 
+                      type="number"
+                      value={formData.ageYears} 
+                      onChange={handleChange} 
+                      required 
+                    />
+                    <Input 
+                      label="उमेर (महिना) *" 
+                      name="ageMonths" 
+                      type="number"
+                      value={formData.ageMonths} 
+                      onChange={handleChange} 
+                      required 
+                    />
+                  </div>
+                )}
                 <div className="flex flex-col">
                   <label className="text-sm font-medium text-slate-600 mb-1 block">जातिगत कोड (Caste Code)</label>
                   <select 
