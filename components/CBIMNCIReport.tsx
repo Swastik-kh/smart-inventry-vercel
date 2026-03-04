@@ -15,16 +15,20 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
   serviceSeekerRecords,
   currentFiscalYear
 }) => {
-  const [reportType, setReportType] = useState<'Daily' | 'Monthly' | 'FiscalYear'>('Monthly');
+  const [reportType, setReportType] = useState<'Daily' | 'Monthly' | 'Quarterly' | 'HalfYearly' | 'FiscalYear'>('Monthly');
   const [selectedDate, setSelectedDate] = useState(() => {
     try { return new NepaliDate().format('YYYY-MM-DD'); } catch (e) { return ''; }
   });
   const [selectedMonth, setSelectedMonth] = useState(() => {
     try { return new NepaliDate().format('MM'); } catch (e) { return '01'; }
   });
+  const [selectedQuarter, setSelectedQuarter] = useState('1');
+  const [selectedHalfYear, setSelectedHalfYear] = useState('1');
 
   const filteredRecords = useMemo(() => {
     return cbimnciRecords.filter(record => {
+      const [year, month, day] = record.visitDate.split('-').map(Number);
+      
       if (reportType === 'FiscalYear') {
         return record.fiscalYear === currentFiscalYear;
       } else if (reportType === 'Monthly') {
@@ -32,11 +36,21 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
         const recordYear = record.visitDate.split('-')[0];
         const currentYear = selectedDate.split('-')[0];
         return recordMonth === selectedMonth && recordYear === currentYear;
+      } else if (reportType === 'Quarterly') {
+        // Q1: 04,05,06 | Q2: 07,08,09 | Q3: 10,11,12 | Q4: 01,02,03
+        const m = parseInt(record.visitDate.split('-')[1]);
+        const q = m >= 4 && m <= 6 ? '1' : m >= 7 && m <= 9 ? '2' : m >= 10 && m <= 12 ? '3' : '4';
+        return q === selectedQuarter && record.fiscalYear === currentFiscalYear;
+      } else if (reportType === 'HalfYearly') {
+        // H1: 04-09 | H2: 10-03
+        const m = parseInt(record.visitDate.split('-')[1]);
+        const h = (m >= 4 && m <= 9) ? '1' : '2';
+        return h === selectedHalfYear && record.fiscalYear === currentFiscalYear;
       } else {
         return record.visitDate === selectedDate;
       }
     });
-  }, [cbimnciRecords, reportType, selectedDate, selectedMonth, currentFiscalYear]);
+  }, [cbimnciRecords, reportType, selectedDate, selectedMonth, selectedQuarter, selectedHalfYear, currentFiscalYear]);
 
   // Helper to get patient details
   const getPatient = (id: string) => serviceSeekerRecords.find(p => p.id === id);
@@ -295,6 +309,8 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
           >
             <option value="Daily">दैनिक (Daily)</option>
             <option value="Monthly">मासिक (Monthly)</option>
+            <option value="Quarterly">त्रैमासिक (Quarterly)</option>
+            <option value="HalfYearly">अर्ध-वार्षिक (Half Yearly)</option>
             <option value="FiscalYear">आर्थिक वर्ष (Fiscal Year)</option>
           </select>
         </div>
@@ -332,13 +348,47 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
             </div>
           </>
         )}
+
+        {reportType === 'Quarterly' && (
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">त्रैमासिक (Quarter)</label>
+            <select 
+              value={selectedQuarter} 
+              onChange={(e) => setSelectedQuarter(e.target.value)}
+              className="p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+            >
+              <option value="1">प्रथम त्रैमासिक (Q1)</option>
+              <option value="2">द्वितीय त्रैमासिक (Q2)</option>
+              <option value="3">तृतीय त्रैमासिक (Q3)</option>
+              <option value="4">चौथो त्रैमासिक (Q4)</option>
+            </select>
+          </div>
+        )}
+
+        {reportType === 'HalfYearly' && (
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">अर्ध-वार्षिक (Half Year)</label>
+            <select 
+              value={selectedHalfYear} 
+              onChange={(e) => setSelectedHalfYear(e.target.value)}
+              className="p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+            >
+              <option value="1">प्रथम अर्ध-वार्षिक (H1)</option>
+              <option value="2">द्वितीय अर्ध-वार्षिक (H2)</option>
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
         <div className="text-center mb-6">
           <h3 className="font-bold text-lg">२. नवजात शिशु तथा बालरोगको एकीकृत व्यवस्थापन कार्यक्रम (IMNCI)</h3>
           <p className="text-sm text-slate-500">
-            {reportType === 'Daily' ? `मिति: ${selectedDate}` : reportType === 'Monthly' ? `महिना: ${selectedDate.split('-')[0]}-${selectedMonth}` : `आर्थिक वर्ष: ${currentFiscalYear}`}
+            {reportType === 'Daily' ? `मिति: ${selectedDate}` : 
+             reportType === 'Monthly' ? `महिना: ${selectedDate.split('-')[0]}-${selectedMonth}` : 
+             reportType === 'Quarterly' ? `त्रैमासिक: Q${selectedQuarter} (${currentFiscalYear})` :
+             reportType === 'HalfYearly' ? `अर्ध-वार्षिक: H${selectedHalfYear} (${currentFiscalYear})` :
+             `आर्थिक वर्ष: ${currentFiscalYear}`}
           </p>
         </div>
 
@@ -490,7 +540,7 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
         </div>
 
         {/* Detailed Visit List */}
-        <div className="mt-12 no-print-break">
+        <div className="mt-12 no-print-break print:hidden">
           <h4 className="font-bold text-slate-700 mb-4 border-b pb-2">३. बिरामीको विस्तृत विवरण (Detailed Patient Visits)</h4>
           <table className="w-full text-[10px] border-collapse border border-slate-300">
             <thead className="bg-slate-100">
