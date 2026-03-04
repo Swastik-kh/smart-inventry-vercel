@@ -416,17 +416,19 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                                     >
                                       <FileText size={16} />
                                     </button>
-                                    <button 
-                                      onClick={() => {
-                                        if (window.confirm('के तपाईं यो भर्ना रेकर्ड मेटाउन निश्चित हुनुहुन्छ?')) {
-                                          onDeleteRecord(admission.id);
-                                        }
-                                      }}
-                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                      title="Delete Record"
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
+                                    {currentUser?.role === 'admin' && (
+                                      <button 
+                                        onClick={() => {
+                                          if (window.confirm('के तपाईं यो भर्ना रेकर्ड मेटाउन निश्चित हुनुहुन्छ?')) {
+                                            onDeleteRecord(admission.id);
+                                          }
+                                        }}
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Delete Record"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
@@ -720,17 +722,19 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                 >
                   View / Edit
                 </button>
-                <button 
-                  onClick={() => {
-                    if (window.confirm('के तपाईं यो भर्ना रेकर्ड मेटाउन निश्चित हुनुहुन्छ?')) {
-                      onDeleteRecord(showPatientDetails.id);
-                      setShowPatientDetails(null);
-                    }
-                  }}
-                  className="flex-1 py-3 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition-all"
-                >
-                  Delete
-                </button>
+                {currentUser?.role === 'admin' && (
+                  <button 
+                    onClick={() => {
+                      if (window.confirm('के तपाईं यो भर्ना रेकर्ड मेटाउन निश्चित हुनुहुन्छ?')) {
+                        onDeleteRecord(showPatientDetails.id);
+                        setShowPatientDetails(null);
+                      }
+                    }}
+                    className="flex-1 py-3 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition-all"
+                  >
+                    Delete
+                  </button>
+                )}
                 <button 
                   onClick={() => setShowPatientDetails(null)}
                   className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all"
