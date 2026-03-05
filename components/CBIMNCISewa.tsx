@@ -68,6 +68,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     earDischarge: false,
     mastoidSwelling: false,
     bloodInStool: false,
+    choleraOutbreak: false,
     hivStatus: false,
     parotidSwellingOrLymphNodes: false
   });
@@ -1032,6 +1033,15 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                     />
                     दिसामा रगत देखिएको (Blood in stool)
                   </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={assessmentData.choleraOutbreak}
+                      onChange={(e) => setAssessmentData({...assessmentData, choleraOutbreak: e.target.checked})}
+                      className="rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    हैजा फैलिएको क्षेत्र (Cholera outbreak in area)
+                  </label>
                 </div>
               </div>
             )}
@@ -1116,9 +1126,8 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                     required
                   >
                     <option value="">छान्नुहोस् (Select)</option>
-                    <option value="Low">न्यून (Low)</option>
                     <option value="High">उच्च (High)</option>
-                    <option value="None">नभएको (None)</option>
+                    <option value="None">नभएको (No Risk)</option>
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -1606,17 +1615,22 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         classifications.push('Dysentery');
       }
 
+      // Haija (Cholera)
+      if (dehydrationType === 'Severe Dehydration' && assessmentData.choleraOutbreak) {
+        classifications.push('हैजा (Haija)');
+      }
+
       // Fever
       const hasFever = parseFloat(assessmentData.temperature) >= 37.5 || assessmentData.feverDays > 0;
       if (hasFever) {
         if (assessmentData.feverSigns?.includes('गर्दन अररो (Stiff neck)') || assessmentData.generalDangerSigns?.length > 0) {
-          classifications.push('Very Severe Febrile Disease');
-        }
-        
-        if (assessmentData.malariaRisk === 'High' && assessmentData.feverSigns?.includes('RDT Positive')) {
-          classifications.push('Malaria');
-        } else if (assessmentData.feverSigns?.includes('RDT Negative') || assessmentData.malariaRisk === 'Low') {
-          classifications.push('Fever: Malaria Unlikely');
+          classifications.push('अति कडा ज्वरो (Very Severe Febrile Disease)');
+        } else {
+          if (assessmentData.malariaRisk === 'High' && assessmentData.feverSigns?.includes('RDT Positive')) {
+            classifications.push('मलेरिया (Malaria)');
+          } else if (assessmentData.feverSigns?.includes('RDT Negative') || assessmentData.malariaRisk === 'None') {
+            classifications.push('ज्वरो (Fever: Malaria Unlikely)');
+          }
         }
       }
 
@@ -1732,8 +1746,8 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       if (classifications.includes('Jaundice') || classifications.includes('Severe Jaundice')) return '3 days';
       if (classifications.includes('Some Dehydration') || classifications.includes('Severe Dehydration')) return '2 days';
     } else {
-      if (classifications.includes('Very Severe Disease') || classifications.includes('Very Severe Febrile Disease') || classifications.includes('Severe Complicated Measles') || classifications.includes('Severe Persistent Diarrhea')) return 'Immediate';
-      if (classifications.includes('Pneumonia') || classifications.includes('Malaria') || classifications.includes('Measles with Eye/Mouth Complications') || classifications.includes('Dysentery')) return '3 days';
+      if (classifications.includes('Very Severe Disease') || classifications.includes('अति कडा ज्वरो (Very Severe Febrile Disease)') || classifications.includes('Severe Complicated Measles') || classifications.includes('Severe Persistent Diarrhea') || classifications.includes('हैजा (Haija)')) return 'Immediate';
+      if (classifications.includes('Pneumonia') || classifications.includes('मलेरिया (Malaria)') || classifications.includes('Measles with Eye/Mouth Complications') || classifications.includes('Dysentery')) return '3 days';
       if (classifications.includes('Some Dehydration') || classifications.includes('Severe Dehydration')) return '2 days';
       if (classifications.includes('Acute Ear Infection') || classifications.includes('Persistent Diarrhea')) return '5 days';
       if (classifications.includes('Severe Acute Malnutrition')) return '30 days';
@@ -1808,18 +1822,32 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         treatments.push('Keep child warm');
       }
       if (classifications.includes('Pneumonia')) {
-        const weight = parseFloat(assessmentData.weight) || 0;
         let amoxDose = '';
-        if (weight >= 4 && weight < 7) amoxDose = '250mg (1 tab or 5ml syrup) twice daily';
-        else if (weight >= 7 && weight < 10) amoxDose = '375mg (1.5 tab or 7.5ml syrup) twice daily';
-        else if (weight >= 10 && weight < 14) amoxDose = '500mg (2 tab or 10ml syrup) twice daily';
-        else if (weight >= 14 && weight < 19) amoxDose = '750mg (3 tab or 15ml syrup) twice daily';
+        const ageYears = currentPatient?.ageYears || 0;
+        const ageMonths = currentPatient?.ageMonths || 0;
+        const totalMonths = ageYears * 12 + ageMonths;
+
+        if (weight >= 4 && weight < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
+        else if (weight >= 6 && weight < 8) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
+        else if (weight >= 8 && weight < 10) amoxDose = '250mg tab: 1.5 tab BD OR Syrup 125mg/5ml: 15 ml BD';
+        else if (weight >= 10 && weight < 14) amoxDose = '250mg tab: 2 tab BD';
+        else if (weight >= 14 && weight < 19) amoxDose = '250mg tab: 2.5 tab BD';
+        else if (totalMonths >= 2 && totalMonths < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
+        else if (totalMonths >= 6 && totalMonths < 12) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
+        else if (totalMonths >= 12 && totalMonths < 36) amoxDose = '250mg tab: 2 tab BD';
+        else if (totalMonths >= 36 && totalMonths <= 60) amoxDose = '250mg tab: 2.5 tab BD';
+        else amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
         
         if (assessmentData.hivStatus) {
-          treatments.push(`Give first dose of Amoxicillin: ${amoxDose.split(' twice daily')[0]}`);
+          treatments.push(`Give first dose of Amoxicillin: ${amoxDose.split(' OR ')[0]}`);
           treatments.push('Refer URGENTLY to hospital (HIV exposed/infected)');
-        } else {
+        } else if (!classifications.includes('Dysentery')) {
           treatments.push(`Give Amoxicillin for 5 days: ${amoxDose}`);
+          treatments.push('Soothe the throat and relieve cough with safe remedy');
+          treatments.push('Advise mother when to return immediately');
+          treatments.push('Follow-up in 3 days');
+        } else {
+          treatments.push('Note: Amoxicillin not required as Ciprofloxacin is given for Dysentery');
           treatments.push('Soothe the throat and relieve cough with safe remedy');
           treatments.push('Advise mother when to return immediately');
           treatments.push('Follow-up in 3 days');
@@ -1854,29 +1882,57 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         treatments.push('Follow-up in 5 days');
       }
       if (classifications.includes('Dysentery')) {
-        treatments.push('Give Ciprofloxacin for 3 days');
+        const ageInMonths = (currentPatient?.ageYears || 0) * 12 + (currentPatient?.ageMonths || 0);
+        let ciproDose = '';
+        
+        if (ageInMonths < 6) {
+          ciproDose = '१/२ चक्की (1/2 tab) दिनको २ पटक, ३ दिनसम्म';
+        } else {
+          ciproDose = '१ चक्की (1 tab) दिनको २ पटक, ३ दिनसम्म';
+        }
+        
+        treatments.push(`सिप्रोफ्लोक्सासिन (Ciprofloxacin 250mg): ${ciproDose}`);
         treatments.push('Follow-up in 3 days');
       }
-      if (classifications.includes('Malaria')) {
-        const weight = parseFloat(assessmentData.weight) || 0;
+      if (classifications.includes('हैजा (Haija)')) {
+        let ciproDose = '';
+        if (weight >= 4 && weight < 6) ciproDose = '१/४ चक्की (1/4 tab) दिनको २ पटक, ३ दिनसम्म (२-४ महिना)';
+        else if (weight >= 6 && weight < 10) ciproDose = '१/२ चक्की (1/2 tab) दिनको २ पटक, ३ दिनसम्म (४-१२ महिना)';
+        else if (weight >= 10 && weight <= 19) ciproDose = '१ चक्की (1 tab) दिनको २ पटक, ३ दिनसम्म (१२ महिना-५ वर्ष)';
+        
+        treatments.push(`हैजाको लागि सिप्रोफ्लोक्सासिन (Ciprofloxacin for Cholera): ${ciproDose}`);
+      }
+      if (classifications.includes('मलेरिया (Malaria)')) {
         let actDose = '';
         if (weight >= 5 && weight < 15) actDose = '1 tablet (20/120) once daily for 3 days';
         else if (weight >= 15 && weight < 25) actDose = '2 tablets (20/120) once daily for 3 days';
         
         treatments.push(`Give ACT for 3 days: ${actDose}`);
-        treatments.push('Give Paracetamol for high fever (>= 38.5C)');
         treatments.push('Follow-up in 3 days if fever persists');
       }
       if (classifications.includes('Acute Ear Infection')) {
-        const weight = parseFloat(assessmentData.weight) || 0;
         let amoxDose = '';
-        if (weight >= 4 && weight < 7) amoxDose = '250mg (1 tab) twice daily';
-        else if (weight >= 7 && weight < 10) amoxDose = '375mg (1.5 tab) twice daily';
-        else if (weight >= 10 && weight < 14) amoxDose = '500mg (2 tab) twice daily';
-        else if (weight >= 14 && weight < 19) amoxDose = '750mg (3 tab) twice daily';
+        const ageYears = currentPatient?.ageYears || 0;
+        const ageMonths = currentPatient?.ageMonths || 0;
+        const totalMonths = ageYears * 12 + ageMonths;
+
+        if (weight >= 4 && weight < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
+        else if (weight >= 6 && weight < 8) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
+        else if (weight >= 8 && weight < 10) amoxDose = '250mg tab: 1.5 tab BD OR Syrup 125mg/5ml: 15 ml BD';
+        else if (weight >= 10 && weight < 14) amoxDose = '250mg tab: 2 tab BD';
+        else if (weight >= 14 && weight < 19) amoxDose = '250mg tab: 2.5 tab BD';
+        else if (totalMonths >= 2 && totalMonths < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
+        else if (totalMonths >= 6 && totalMonths < 12) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
+        else if (totalMonths >= 12 && totalMonths < 36) amoxDose = '250mg tab: 2 tab BD';
+        else if (totalMonths >= 36 && totalMonths <= 60) amoxDose = '250mg tab: 2.5 tab BD';
+        else amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD'; // Default fallback
         
-        treatments.push(`Give Amoxicillin for 5 days: ${amoxDose}`);
-        treatments.push('Give Paracetamol for pain');
+        if (!classifications.includes('Dysentery')) {
+          treatments.push(`Give Amoxicillin for 5 days: ${amoxDose}`);
+        } else {
+          treatments.push('Note: Amoxicillin not required as Ciprofloxacin is given for Dysentery');
+        }
+
         treatments.push('Dry the ear by wicking if there is discharge');
         treatments.push('Follow-up in 5 days');
       }
@@ -1943,6 +1999,25 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       if (classifications.includes('LATENT TUBERCULOSIS INFECTION (पहेँलो)')) {
         treatments.push('Start Isoniazid Preventive Therapy (IPT)');
         treatments.push('Follow-up regularly');
+      }
+
+      // Paracetamol for high fever or ear pain/infection
+      const temp = parseFloat(assessmentData.temperature) || 0;
+      if (temp >= 38.5 || assessmentData.earPain || classifications.includes('Acute Ear Infection')) {
+        const ageYears = currentPatient?.ageYears || 0;
+        const ageMonths = currentPatient?.ageMonths || 0;
+        const totalMonths = ageYears * 12 + ageMonths;
+        let pcmDose = '';
+        
+        // In Child module (2m-5y), we always give at least 5ml
+        if (weight >= 14 || totalMonths >= 36) {
+          pcmDose = '७.५ मि.लि. (7.5 ml) दिनको ४ पटक (QID)';
+        } else {
+          pcmDose = '५ मि.लि. (5 ml) दिनको ४ पटक (QID)';
+        }
+        
+        const reason = (temp >= 38.5) ? 'उच्च ज्वरो' : 'कान दुखाई/संक्रमण';
+        treatments.push(`${reason}को लागि प्यारासिटामोल (Paracetamol 125mg/5ml): ${pcmDose} (ज्वरो वा दुखाई निको नभएसम्म)`);
       }
     }
     return treatments;
