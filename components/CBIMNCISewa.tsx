@@ -2051,9 +2051,12 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
             {/* Growth Monitoring Chart Placeholder */}
             <div className="border border-slate-300 p-4 rounded-lg">
               <h4 className="font-bold text-slate-800 border-b border-slate-200 mb-2 pb-1">Growth Monitoring Chart</h4>
-              <div className="h-40 bg-slate-100 flex items-center justify-center border border-slate-200 rounded text-slate-500 italic">
-                [Growth Monitoring Chart Visualization]
-              </div>
+              <img 
+                src="https://picsum.photos/seed/growth-chart/400/200" 
+                alt="Growth Monitoring Chart" 
+                className="w-full h-40 object-contain border border-slate-200 rounded"
+                referrerPolicy="no-referrer"
+              />
             </div>
 
             {/* Breastfeeding Advice for infants < 2 months */}
@@ -2061,9 +2064,12 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
               <div className="border border-blue-300 p-4 rounded-lg bg-blue-50">
                 <h4 className="font-bold text-blue-800 border-b border-blue-200 mb-2 pb-1">स्तनपान सम्बन्धी जानकारी (Breastfeeding Advice)</h4>
                 <div className="flex gap-4 items-center">
-                  <div className="w-24 h-24 bg-blue-200 rounded-full flex items-center justify-center text-blue-600 font-bold">
-                    [Image]
-                  </div>
+                  <img 
+                    src="https://picsum.photos/seed/breastfeeding/200/200" 
+                    alt="Breastfeeding" 
+                    className="w-24 h-24 rounded-full border border-blue-200"
+                    referrerPolicy="no-referrer"
+                  />
                   <ul className="text-sm text-blue-900 list-disc pl-5 space-y-1">
                     <li>शिशुलाई ६ महिनासम्म आमाको दूध मात्र खुवाउनुहोस्।</li>
                     <li>दिनमा कम्तिमा ८-१२ पटक स्तनपान गराउनुहोस्।</li>
