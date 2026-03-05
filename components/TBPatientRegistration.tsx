@@ -69,6 +69,8 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
     patientId: generateId('TB'),
     name: '',
     age: '',
+    gender: 'Male',
+    ethnicity: '',
     address: '',
     phone: '',
     regType: '',
@@ -182,6 +184,8 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
     if (!formData.name.trim()) { alert("कृपया बिरामीको नाम भर्नुहोस्।"); return; }
     if (!formData.age.trim()) { alert(" कृपया बिरामीको उमेर भर्नुहोस्।"); return; }
     if (!formData.address.trim()) { alert(" कृपया बिरामीको ठेगाना भर्नुहोस्।"); return; }
+    if (!formData.gender) { alert("कृपया लिङ्ग छान्नुहोस्।"); return; }
+    if (!formData.ethnicity.trim()) { alert("कृपया जात/जाति भर्नुहोस्।"); return; }
     if (!formData.regType.trim()) { alert(" कृपया दर्ता प्रकार छान्नुहोस्।"); return; }
     if (!formData.registrationDate.trim()) { alert("कृपया दर्ता मिति भर्नुहोस्।"); return; }
 
@@ -235,6 +239,8 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
         patientId: generateId(activeTab), // Re-generate ID for new entry
         name: '',
         age: '',
+        gender: 'Male',
+        ethnicity: '',
         address: '',
         phone: '',
         regType: '',
@@ -342,6 +348,24 @@ export const TBPatientRegistration: React.FC<TBPatientRegistrationProps> = ({
 
           <Input label="बिरामीको नाम" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required icon={<User size={18}/>} />
           
+          <div className="grid grid-cols-2 gap-4">
+            <Select label="लिङ्ग" options={[{id:'m',label:'पुरुष (Male)',value:'Male'},{id:'f',label:'महिला (Female)',value:'Female'},{id:'o',label:'अन्य (Other)',value:'Other'}]} value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value as any})} required />
+            <Select 
+                label="जात/जाति (Ethnicity)" 
+                options={[
+                    {id:'dalit', label:'दलित (Dalit)', value:'Dalit'},
+                    {id:'janajati', label:'जनजाति (Janajati)', value:'Janajati'},
+                    {id:'madhesi', label:'मधेसी (Madhesi)', value:'Madhesi'},
+                    {id:'brahmin', label:'ब्राह्मण/क्षेत्री (Brahmin/Chhetri)', value:'Brahmin/Chhetri'},
+                    {id:'muslim', label:'मुस्लिम (Muslim)', value:'Muslim'},
+                    {id:'other', label:'अन्य (Other)', value:'Other'}
+                ]} 
+                value={formData.ethnicity} 
+                onChange={e => setFormData({...formData, ethnicity: e.target.value})} 
+                required 
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
               <Input label="उमेर" type="number" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} required icon={<Calendar size={18}/>} />
               <Input label="फोन नं." value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} icon={<Phone size={18}/>} />

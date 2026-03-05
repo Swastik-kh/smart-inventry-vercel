@@ -8,6 +8,10 @@ import NepaliDate from 'nepali-date-converter';
 interface IPDSewaProps {
   serviceSeekerRecords?: ServiceSeekerRecord[];
   ipdRecords?: IPDRecord[];
+  opdRecords?: any[];
+  emergencyRecords?: any[];
+  labReports?: any[];
+  billingRecords?: any[];
   onSaveRecord: (record: IPDRecord) => void;
   onDeleteRecord: (recordId: string) => void;
   currentFiscalYear: string;
@@ -19,6 +23,10 @@ interface IPDSewaProps {
 export const IPDSewa: React.FC<IPDSewaProps> = ({ 
   serviceSeekerRecords = [], 
   ipdRecords = [], 
+  opdRecords = [],
+  emergencyRecords = [],
+  labReports = [],
+  billingRecords = [],
   onSaveRecord, 
   onDeleteRecord, 
   currentFiscalYear,
@@ -47,6 +55,29 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
   const [searchResults, setSearchResults] = useState<ServiceSeekerRecord[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+
+  const canDeletePatient = (serviceSeekerId: string) => {
+    const hasOPD = opdRecords.some(r => r.serviceSeekerId === serviceSeekerId);
+    const hasEmergency = emergencyRecords.some(r => r.serviceSeekerId === serviceSeekerId);
+    const hasLab = labReports.some(r => r.serviceSeekerId === serviceSeekerId);
+    const hasBilling = billingRecords.some(r => r.serviceSeekerId === serviceSeekerId);
+    return !(hasOPD || hasEmergency || hasLab || hasBilling);
+  };
+
+  const handleDelete = (admission: IPDRecord) => {
+    if (currentUser?.role !== 'admin') {
+      alert('तपाईंलाई यो रेकर्ड मेटाउने अनुमति छैन।');
+      return;
+    }
+    if (!canDeletePatient(admission.serviceSeekerId)) {
+      alert('यो बिरामीको अन्य सेवाहरूमा रेकर्ड छ, त्यसैले मेटाउन मिल्दैन।');
+      return;
+    }
+    if (window.confirm('के तपाईं यो भर्ना रेकर्ड मेटाउन निश्चित हुनुहुन्छ?')) {
+      onDeleteRecord(admission.id);
+      setShowPatientDetails(null);
+    }
+  };
 
   const wards = useMemo(() => generalSettings.ipdWards || [], [generalSettings.ipdWards]);
 
@@ -301,9 +332,71 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
               >
                 <History size={16} /> इतिहास (History)
               </button>
+              <button 
+                onClick={() => setActiveTab('all-patients')}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'all-patients' ? 'bg-white text-primary-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:bg-white/50'}`}
+              >
+                <User size={16} /> सबै बिरामी (All Patients)
+              </button>
             </div>
 
             <div className="p-6">
+              {activeTab === 'all-patients' && (
+                <div className="space-y-6">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 text-slate-400" size={18} />
+                    <input
+                      type="text"
+                      placeholder="दर्ता नं, बिरामी ID वा नामबाट खोज्नुहोस्..."
+                      value={searchId}
+                      onChange={(e) => setSearchId(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                        <tr>
+                          <th className="p-3">ID / Name</th>
+                          <th className="p-3">भर्ना मिति</th>
+                          <th className="p-3">अवस्था</th>
+                          <th className="p-3 text-right">कार्य</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {ipdRecords
+                          .filter(r => 
+                            r.uniquePatientId.toLowerCase().includes(searchId.toLowerCase()) ||
+                            r.patientName.toLowerCase().includes(searchId.toLowerCase())
+                          )
+                          .map(record => (
+                            <tr key={record.id} className="hover:bg-slate-50">
+                              <td className="p-3">
+                                <div className="font-bold text-slate-800">{record.patientName}</div>
+                                <div className="text-[10px] text-slate-500 font-mono">{record.uniquePatientId}</div>
+                              </td>
+                              <td className="p-3">{record.admissionDate}</td>
+                              <td className="p-3">
+                                <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${record.status === 'Admitted' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
+                                  {record.status}
+                                </span>
+                              </td>
+                              <td className="p-3 text-right">
+                                <button 
+                                  onClick={() => setShowPatientDetails(record)}
+                                  className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg"
+                                >
+                                  <Info size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {activeTab === 'status' && (
                 <div className="space-y-8">
                   {wards.length > 0 ? (
@@ -418,11 +511,7 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                                     </button>
                                     {currentUser?.role === 'admin' && (
                                       <button 
-                                        onClick={() => {
-                                          if (window.confirm('के तपाईं यो भर्ना रेकर्ड मेटाउन निश्चित हुनुहुन्छ?')) {
-                                            onDeleteRecord(admission.id);
-                                          }
-                                        }}
+                                        onClick={() => handleDelete(admission)}
                                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                         title="Delete Record"
                                       >
@@ -724,12 +813,7 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                 </button>
                 {currentUser?.role === 'admin' && (
                   <button 
-                    onClick={() => {
-                      if (window.confirm('के तपाईं यो भर्ना रेकर्ड मेटाउन निश्चित हुनुहुन्छ?')) {
-                        onDeleteRecord(showPatientDetails.id);
-                        setShowPatientDetails(null);
-                      }
-                    }}
+                    onClick={() => handleDelete(showPatientDetails)}
                     className="flex-1 py-3 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition-all"
                   >
                     Delete

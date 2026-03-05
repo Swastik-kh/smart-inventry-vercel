@@ -52,6 +52,8 @@ export interface TBPatient {
   phone: string;
   regType: string;
   classification: string;
+  gender: 'Male' | 'Female' | 'Other';
+  ethnicity: string;
   registrationDate: string;
   serviceType: 'TB' | 'Leprosy';
   leprosyType?: 'MB' | 'PB'; 
