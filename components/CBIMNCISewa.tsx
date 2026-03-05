@@ -6,6 +6,7 @@ import { Input } from './Input';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 import { useReactToPrint } from 'react-to-print';
+import { growthCharts } from '../constants/growthCharts';
 
 interface CBIMNCISewaProps {
   serviceSeekerRecords?: ServiceSeekerRecord[];
@@ -2048,21 +2049,34 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
               </div>
             )}
             
-            {/* Growth Monitoring Chart Placeholder */}
+            {/* Growth Monitoring Chart */}
             <div className="border border-slate-300 p-4 rounded-lg">
               <h4 className="font-bold text-slate-800 border-b border-slate-200 mb-2 pb-1">Growth Monitoring Chart</h4>
               <img 
-                src="https://picsum.photos/seed/growth-chart/400/200" 
+                src={currentPatient?.gender === 'Male' ? growthCharts.Male : growthCharts.Female}
                 alt="Growth Monitoring Chart" 
-                className="w-full h-40 object-contain border border-slate-200 rounded"
+                className="w-full h-auto object-contain border border-slate-200 rounded"
                 referrerPolicy="no-referrer"
               />
             </div>
 
-            {/* Breastfeeding Advice for infants < 2 months */}
-            {moduleType === 'Infant' && (
-              <div className="border border-blue-300 p-4 rounded-lg bg-blue-50">
-                <h4 className="font-bold text-blue-800 border-b border-blue-200 mb-2 pb-1">स्तनपान सम्बन्धी जानकारी (Breastfeeding Advice)</h4>
+            {/* Nutrition and Breastfeeding Advice */}
+            <div className="border border-blue-300 p-4 rounded-lg bg-blue-50">
+              <h4 className="font-bold text-blue-800 border-b border-blue-200 mb-2 pb-1">पोषण तथा स्तनपान सम्बन्धी सल्लाह (Nutrition & Breastfeeding Advice)</h4>
+              
+              {/* Feeding Chart */}
+              <div className="mb-4">
+                <h5 className="font-bold text-blue-700 text-sm mb-1">खाना सम्बन्धि तालिका (Feeding Chart)</h5>
+                <img 
+                  src="https://raw.githubusercontent.com/swastikkhatiwada/imnci-assets/main/feeding-chart.png" 
+                  alt="Feeding Chart" 
+                  className="w-full h-auto object-contain border border-blue-200 rounded"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+
+              {/* Breastfeeding Advice for infants < 2 months */}
+              {moduleType === 'Infant' && (
                 <div className="flex gap-4 items-center">
                   <img 
                     src="https://picsum.photos/seed/breastfeeding/200/200" 
@@ -2077,8 +2091,8 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                     <li>आमाले पोषिलो खाना र प्रशस्त पानी पिउनुपर्छ।</li>
                   </ul>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {cbimnciData.diagnosis && (
               <div>
