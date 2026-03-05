@@ -23,13 +23,32 @@ interface GESIReportProps {
 }
 
 const CASTE_GROUPS = [
-  { id: '1', name: 'दलित' },
-  { id: '2', name: 'जनजाती' },
-  { id: '3', name: 'मधेसी' },
-  { id: '4', name: 'मुस्लिम' },
-  { id: '5', name: 'ब्राह्मण/क्षेत्री' },
-  { id: '6', name: 'अन्य' }
+  { id: 'Dalit', name: 'दलित' },
+  { id: 'Janajati', name: 'जनजाती' },
+  { id: 'Madhesi', name: 'मधेसी' },
+  { id: 'Brahmin/Chhetri', name: 'ब्राह्मण/क्षेत्री' },
+  { id: 'Muslim', name: 'मुस्लिम' },
+  { id: 'Other', name: 'अन्य' }
 ];
+
+const getCasteId = (code: string | undefined) => {
+  if (!code) return 'Other';
+  const mapping: Record<string, string> = {
+    '1': 'Dalit',
+    '2': 'Janajati',
+    '3': 'Madhesi',
+    '4': 'Muslim',
+    '5': 'Brahmin/Chhetri',
+    '6': 'Other',
+    'Dalit': 'Dalit',
+    'Janajati': 'Janajati',
+    'Madhesi': 'Madhesi',
+    'Brahmin/Chhetri': 'Brahmin/Chhetri',
+    'Muslim': 'Muslim',
+    'Other': 'Other'
+  };
+  return mapping[code] || 'Other';
+};
 
 export const GESIReport: React.FC<GESIReportProps> = ({
   currentFiscalYear,
@@ -73,7 +92,7 @@ export const GESIReport: React.FC<GESIReportProps> = ({
     // 1. Fully Immunized within 23 months
     bachhaRecords.forEach(record => {
       if (record.fiscalYear === currentFiscalYear) {
-        const caste = record.jatCode || '6';
+        const caste = getCasteId(record.jatCode);
         const gender = record.gender === 'Male' ? 'm' : 'f';
         // Simplified check for fully immunized (assuming if they have measles 2 or typhoid, they are fully immunized)
         const isFullyImmunized = record.vaccines.some(v => (v.name.includes('MR-2') || v.name.includes('Typhoid')) && v.status === 'Given');
@@ -88,7 +107,7 @@ export const GESIReport: React.FC<GESIReportProps> = ({
       if (record.fiscalYear === currentFiscalYear) {
         const patient = getPatient(record.serviceSeekerId);
         if (patient) {
-          const caste = patient.casteCode || '6';
+          const caste = getCasteId(patient.casteCode);
           const gender = patient.gender === 'Male' ? 'm' : 'f';
           
           if (data[caste]) {
@@ -117,7 +136,7 @@ export const GESIReport: React.FC<GESIReportProps> = ({
       if (record.fiscalYear === currentFiscalYear) {
         // PrasutiRecord doesn't have casteCode directly, we would need to link to GarbhawotiRecord, which also doesn't have it.
         // Defaulting to '6' (Other) for now unless we add it.
-        const caste = (record as any).casteCode || '6';
+        const caste = getCasteId((record as any).casteCode);
         if (data[caste] && (record.deliveryPlace === 'Health Facility' || record.deliveryPlace === 'Hospital')) {
           data[caste].delivery++;
         }
@@ -129,7 +148,7 @@ export const GESIReport: React.FC<GESIReportProps> = ({
       if (record.fiscalYear === currentFiscalYear) {
         const patient = getPatient(record.serviceSeekerId);
         if (patient) {
-          const caste = patient.casteCode || '6';
+          const caste = getCasteId(patient.casteCode);
           const gender = patient.gender === 'Male' ? 'm' : patient.gender === 'Female' ? 'f' : 'o';
           const diag = (record.diagnosis || '').toLowerCase();
           
@@ -159,8 +178,8 @@ export const GESIReport: React.FC<GESIReportProps> = ({
     // 7. Leprosy & 8. TB
     tbPatients.forEach(record => {
       if (record.fiscalYear === currentFiscalYear) {
-        const caste = (record as any).casteCode || '6';
-        const gender = (record as any).gender === 'Male' ? 'm' : 'f'; // Defaulting to f if not male for now
+        const caste = getCasteId(record.ethnicity);
+        const gender = record.gender === 'Male' ? 'm' : 'f';
         
         if (data[caste]) {
           if (record.serviceType === 'Leprosy') {
@@ -177,7 +196,7 @@ export const GESIReport: React.FC<GESIReportProps> = ({
       if (record.fiscalYear === currentFiscalYear && record.status === 'Discharged') {
         const patient = getPatient(record.serviceSeekerId);
         if (patient) {
-          const caste = patient.casteCode || '6';
+          const caste = getCasteId(patient.casteCode);
           const gender = patient.gender === 'Male' ? 'm' : 'f';
           if (data[caste]) {
             data[caste][`discharge_${gender}`]++;
