@@ -1948,7 +1948,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         </div>
       )}
 
-      <div style={{ display: "none" }}>
+      <div className="absolute -top-[9999px] left-0">
         <div ref={printRef} className="p-8 bg-white text-slate-900 print:block">
           <div className="flex justify-between items-start border-b-2 border-slate-800 pb-6 mb-6">
             <div className="flex items-center gap-4">
