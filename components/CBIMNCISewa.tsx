@@ -222,6 +222,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       nextVisitDate: '',
       isRefer: false,
       isDeath: false,
+      isFollowup: false,
       followupDays: 0
     });
     setPrescriptionItems([]);
@@ -268,6 +269,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       nextVisitDate: record.nextVisitDate,
       isRefer: record.isRefer || false,
       isDeath: record.isDeath || false,
+      isFollowup: record.isFollowup || false,
       followupDays: record.followupDays || 0
     });
     setPrescriptionItems(record.prescriptions || []);
@@ -325,6 +327,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       nextVisitDate: latestRecord.nextVisitDate,
       isRefer: latestRecord.isRefer || false,
       isDeath: latestRecord.isDeath || false,
+      isFollowup: latestRecord.isFollowup || false,
       followupDays: latestRecord.followupDays || 0
     });
     setPrescriptionItems(latestRecord.prescriptions || []);
@@ -388,6 +391,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       nextVisitDate: cbimnciData.nextVisitDate,
       isRefer: cbimnciData.isRefer,
       isDeath: cbimnciData.isDeath,
+      isFollowup: cbimnciData.isFollowup,
       followupDays: cbimnciData.followupDays
     };
 
@@ -590,10 +594,10 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
               <div className="space-y-3">
                 <Input label="तौल (kg)" type="number" step="0.01" value={assessmentData.weight || ''} onChange={(e) => setAssessmentData({...assessmentData, weight: e.target.value})} />
                 {zScore && (
-                  <div className="p-2 bg-purple-100 rounded-lg border border-purple-200">
-                    <p className="text-xs font-bold text-purple-800">WAZ Score: {zScore}</p>
-                    <p className="text-[10px] text-purple-600">
-                      {parseFloat(zScore) < -3 ? 'Severe Underweight' : parseFloat(zScore) < -2 ? 'Underweight' : 'Normal Weight'}
+                  <div className={`p-2 rounded-lg border ${parseFloat(zScore) < -3 ? 'bg-red-100 border-red-200 text-red-800' : parseFloat(zScore) < -2 ? 'bg-orange-100 border-orange-200 text-orange-800' : parseFloat(zScore) > 2 ? 'bg-yellow-100 border-yellow-200 text-yellow-800' : 'bg-green-100 border-green-200 text-green-800'}`}>
+                    <p className="text-xs font-bold">WAZ Score: {zScore}</p>
+                    <p className="text-[10px]">
+                      {parseFloat(zScore) < -3 ? 'Severe Underweight' : parseFloat(zScore) < -2 ? 'Underweight' : parseFloat(zScore) > 2 ? 'Overweight' : 'Normal Weight'}
                     </p>
                   </div>
                 )}
@@ -871,10 +875,10 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
               <div className="space-y-3">
                 <Input label="तौल (kg)" type="number" step="0.1" value={assessmentData.weight || ''} onChange={(e) => setAssessmentData({...assessmentData, weight: e.target.value})} />
                 {zScore && (
-                  <div className="p-2 bg-purple-100 rounded-lg border border-purple-200">
-                    <p className="text-xs font-bold text-purple-800">Weight-for-Age Z-Score: {zScore}</p>
-                    <p className="text-[10px] text-purple-600">
-                      {parseFloat(zScore) < -3 ? 'Severe Underweight' : parseFloat(zScore) < -2 ? 'Underweight' : 'Normal Weight'}
+                  <div className={`p-2 rounded-lg border ${parseFloat(zScore) < -3 ? 'bg-red-100 border-red-200 text-red-800' : parseFloat(zScore) < -2 ? 'bg-orange-100 border-orange-200 text-orange-800' : parseFloat(zScore) > 2 ? 'bg-yellow-100 border-yellow-200 text-yellow-800' : 'bg-green-100 border-green-200 text-green-800'}`}>
+                    <p className="text-xs font-bold">Weight-for-Age Z-Score: {zScore}</p>
+                    <p className="text-[10px]">
+                      {parseFloat(zScore) < -3 ? 'Severe Underweight' : parseFloat(zScore) < -2 ? 'Underweight' : parseFloat(zScore) > 2 ? 'Overweight' : 'Normal Weight'}
                     </p>
                   </div>
                 )}
@@ -1856,6 +1860,16 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                     />
                     <label htmlFor="isDeath" className="text-sm font-bold text-red-700 cursor-pointer">मृत्यु भएको (Death)</label>
                   </div>
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      id="isFollowup"
+                      checked={cbimnciData.isFollowup}
+                      onChange={(e) => setCbimnciData({...cbimnciData, isFollowup: e.target.checked})}
+                      className="w-5 h-5 text-amber-600 border-slate-300 rounded focus:ring-amber-500"
+                    />
+                    <label htmlFor="isFollowup" className="text-sm font-bold text-amber-700 cursor-pointer">फलोअप (Followup)</label>
+                  </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">फलोअप (Follow-up Days)</label>
                     <div className="flex items-center gap-2">
@@ -2033,6 +2047,33 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                 <p className="text-sm whitespace-pre-wrap">{cbimnciData.chiefComplaints}</p>
               </div>
             )}
+            
+            {/* Growth Monitoring Chart Placeholder */}
+            <div className="border border-slate-300 p-4 rounded-lg">
+              <h4 className="font-bold text-slate-800 border-b border-slate-200 mb-2 pb-1">Growth Monitoring Chart</h4>
+              <div className="h-40 bg-slate-100 flex items-center justify-center border border-slate-200 rounded text-slate-500 italic">
+                [Growth Monitoring Chart Visualization]
+              </div>
+            </div>
+
+            {/* Breastfeeding Advice for infants < 2 months */}
+            {moduleType === 'Infant' && (
+              <div className="border border-blue-300 p-4 rounded-lg bg-blue-50">
+                <h4 className="font-bold text-blue-800 border-b border-blue-200 mb-2 pb-1">स्तनपान सम्बन्धी जानकारी (Breastfeeding Advice)</h4>
+                <div className="flex gap-4 items-center">
+                  <div className="w-24 h-24 bg-blue-200 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                    [Image]
+                  </div>
+                  <ul className="text-sm text-blue-900 list-disc pl-5 space-y-1">
+                    <li>शिशुलाई ६ महिनासम्म आमाको दूध मात्र खुवाउनुहोस्।</li>
+                    <li>दिनमा कम्तिमा ८-१२ पटक स्तनपान गराउनुहोस्।</li>
+                    <li>शिशुले दूध राम्रोसँग चुसेको सुनिश्चित गर्नुहोस्।</li>
+                    <li>आमाले पोषिलो खाना र प्रशस्त पानी पिउनुपर्छ।</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
             {cbimnciData.diagnosis && (
               <div>
                 <h4 className="font-bold text-slate-800 border-b border-slate-200 mb-2 pb-1">Classification</h4>

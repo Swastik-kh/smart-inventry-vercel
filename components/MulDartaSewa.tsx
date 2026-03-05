@@ -179,6 +179,17 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    if (ageUnit === 'Days' && formData.ageDays > 59) {
+      alert('उमेर ५९ दिन भन्दा बढी हुन सक्दैन।');
+      return;
+    }
+    if (ageUnit === 'Months' && formData.ageMonths > 59) {
+      alert('उमेर ५९ महिना भन्दा बढी हुन सक्दैन।');
+      return;
+    }
+
     let ageString = '';
     if (ageUnit === 'Days') {
       ageString = `${formData.ageDays}D`;

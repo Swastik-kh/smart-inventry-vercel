@@ -169,7 +169,7 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
       if (isOld) infantStats.death_29_59++;
     }
 
-    if (record.followupDays && record.followupDays > 0) {
+    if (record.isFollowup || (record.followupDays && record.followupDays > 0)) {
       infantStats.followup++;
     }
   });
@@ -282,7 +282,7 @@ export const CBIMNCIReport: React.FC<CBIMNCIReportProps> = ({
     }
 
     // Follow-up
-    if (record.followupDays && record.followupDays > 0) {
+    if (record.isFollowup || (record.followupDays && record.followupDays > 0)) {
       childStats.followup++;
     }
   });

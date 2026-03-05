@@ -272,6 +272,7 @@ export interface CBIMNCIRecord {
   isRefer?: boolean;
   isDeath?: boolean;
   followupDays?: number;
+  isFollowup?: boolean;
 }
 
 export interface FamilyPlanningRecord {
