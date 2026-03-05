@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Search, Save, Printer, Plus, Trash2, User, Stethoscope, Pill, History, Baby, Edit } from 'lucide-react';
 import { ServiceSeekerRecord, CBIMNCIRecord, PrescriptionItem, ServiceItem } from '../types/coreTypes';
 import { InventoryItem } from '../types/inventoryTypes';
@@ -68,7 +68,8 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     earDischarge: false,
     mastoidSwelling: false,
     bloodInStool: false,
-    hivStatus: false
+    hivStatus: false,
+    parotidSwellingOrLymphNodes: false
   });
   const [cbimnciData, setCbimnciData] = useState<Partial<CBIMNCIRecord>>({
     chiefComplaints: '',
@@ -96,12 +97,44 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
   const [hasDiarrhea, setHasDiarrhea] = useState<boolean | null>(null);
   const [hasFever, setHasFever] = useState<boolean | null>(null);
   const [hasEarProblem, setHasEarProblem] = useState<boolean | null>(null);
+  const [tempF, setTempF] = useState('');
 
   const medicineSuggestions = useMemo(() => {
+    const defaultMedicines = [
+      'Amoxicillin DT 125mg',
+      'Amoxicillin DT 250mg',
+      'Amoxicillin Syrup',
+      'Paracetamol',
+      'Zinc',
+      'ORS',
+      'Vitamin A',
+      'Albendazole',
+      'Gentamicin Injection',
+      'Ampicillin Injection'
+    ];
     const fromInventory = inventoryItems.map(i => i.itemName);
     const fromRecords = cbimnciRecords.flatMap(r => r.prescriptions?.map(p => p.medicineName) || []);
-    return Array.from(new Set([...fromInventory, ...fromRecords])).filter(Boolean).sort();
+    return Array.from(new Set([...defaultMedicines, ...fromInventory, ...fromRecords])).filter(Boolean).sort();
   }, [inventoryItems, cbimnciRecords]);
+
+  const dosageSuggestions = [
+    '125 mg',
+    '250 mg',
+    '500 mg',
+    '5 ml',
+    '10 ml',
+    '1 Tablet',
+    '1/2 Tablet',
+    '1/4 Tablet'
+  ];
+
+  const frequencySuggestions = [
+    'दिनमा १ पटक (OD)',
+    'दिनमा २ पटक (BD)',
+    'दिनमा ३ पटक (TDS)',
+    'दिनमा ४ पटक (QID)',
+    'आवश्यकता अनुसार (SOS)'
+  ];
   
   const [investigationSearch, setInvestigationSearch] = useState('');
   const [showInvestigationResults, setShowInvestigationResults] = useState(false);
@@ -224,7 +257,17 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       earDischarge: false,
       mastoidSwelling: false,
       bloodInStool: false,
-      hivStatus: false
+      hivStatus: false,
+      parotidSwellingOrLymphNodes: false,
+      hivTestStatus: '',
+      motherHivStatus: '',
+      isBreastfeeding: false,
+      stoppedBreastfeedingLessThan3Months: false,
+      tbContact: false,
+      tbSymptoms: [],
+      tbDiagnosis: false,
+      weightLoss: false,
+      fatigue: false
     });
 
     setCbimnciData({
@@ -241,6 +284,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     });
     setPrescriptionItems([]);
     setEditingRecordId(null);
+    setTempF('');
   };
 
   const selectRecordForEdit = (record: CBIMNCIRecord) => {
@@ -279,8 +323,26 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       earDischarge: data.earDischarge ?? false,
       mastoidSwelling: data.mastoidSwelling ?? false,
       bloodInStool: data.bloodInStool ?? false,
-      hivStatus: data.hivStatus ?? false
+      hivStatus: data.hivStatus ?? false,
+      parotidSwellingOrLymphNodes: data.parotidSwellingOrLymphNodes ?? false,
+      hivTestStatus: data.hivTestStatus || '',
+      motherHivStatus: data.motherHivStatus || '',
+      isBreastfeeding: data.isBreastfeeding ?? false,
+      stoppedBreastfeedingLessThan3Months: data.stoppedBreastfeedingLessThan3Months ?? false,
+      tbContact: data.tbContact ?? false,
+      tbSymptoms: data.tbSymptoms || [],
+      tbDiagnosis: data.tbDiagnosis ?? false,
+      weightLoss: data.weightLoss ?? false,
+      fatigue: data.fatigue ?? false
     });
+
+    if (data.temperature && !isNaN(parseFloat(data.temperature))) {
+      const f = (parseFloat(data.temperature) * 9/5 + 32).toFixed(1);
+      setTempF(f);
+    } else {
+      setTempF('');
+    }
+
     setCbimnciData({
       chiefComplaints: record.chiefComplaints,
       diagnosis: record.diagnosis,
@@ -338,8 +400,26 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       earDischarge: data.earDischarge ?? false,
       mastoidSwelling: data.mastoidSwelling ?? false,
       bloodInStool: data.bloodInStool ?? false,
-      hivStatus: data.hivStatus ?? false
+      hivStatus: data.hivStatus ?? false,
+      parotidSwellingOrLymphNodes: data.parotidSwellingOrLymphNodes ?? false,
+      hivTestStatus: data.hivTestStatus || '',
+      motherHivStatus: data.motherHivStatus || '',
+      isBreastfeeding: data.isBreastfeeding ?? false,
+      stoppedBreastfeedingLessThan3Months: data.stoppedBreastfeedingLessThan3Months ?? false,
+      tbContact: data.tbContact ?? false,
+      tbSymptoms: data.tbSymptoms || [],
+      tbDiagnosis: data.tbDiagnosis ?? false,
+      weightLoss: data.weightLoss ?? false,
+      fatigue: data.fatigue ?? false
     });
+
+    if (data.temperature && !isNaN(parseFloat(data.temperature))) {
+      const f = (parseFloat(data.temperature) * 9/5 + 32).toFixed(1);
+      setTempF(f);
+    } else {
+      setTempF('');
+    }
+
     setCbimnciData({
       chiefComplaints: latestRecord.chiefComplaints,
       diagnosis: latestRecord.diagnosis,
@@ -489,7 +569,17 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       earDischarge: false,
       mastoidSwelling: false,
       bloodInStool: false,
-      hivStatus: false
+      hivStatus: false,
+      parotidSwellingOrLymphNodes: false,
+      hivTestStatus: '',
+      motherHivStatus: '',
+      isBreastfeeding: false,
+      stoppedBreastfeedingLessThan3Months: false,
+      tbContact: false,
+      tbSymptoms: [],
+      tbDiagnosis: false,
+      weightLoss: false,
+      fatigue: false
     });
     setPrescriptionItems([]);
     setEditingRecordId(null);
@@ -540,14 +630,40 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                   onChange={(e) => setAssessmentData({...assessmentData, breathingRate: e.target.value})} 
                   placeholder="६० वा सोभन्दा बढी भए खतरा"
                 />
-                <Input 
-                  label="तापक्रम (Celsius)" 
-                  type="number"
-                  step="0.1"
-                  value={assessmentData.temperature || ''} 
-                  onChange={(e) => setAssessmentData({...assessmentData, temperature: e.target.value})} 
-                  placeholder="37.5+ (ज्वरो), <35.5 (चिसो)"
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input 
+                    label="तापक्रम (Celsius)" 
+                    type="number"
+                    step="0.1"
+                    value={assessmentData.temperature || ''} 
+                    onChange={(e) => {
+                      const c = e.target.value;
+                      setAssessmentData({...assessmentData, temperature: c});
+                      if (c && !isNaN(parseFloat(c))) {
+                        setTempF((parseFloat(c) * 9/5 + 32).toFixed(1));
+                      } else {
+                        setTempF('');
+                      }
+                    }} 
+                    placeholder="37.5+ (ज्वरो), <35.5 (चिसो)"
+                  />
+                  <Input 
+                    label="तापक्रम (Fahrenheit)" 
+                    type="number" 
+                    step="0.1" 
+                    value={tempF} 
+                    onChange={(e) => {
+                      const f = e.target.value;
+                      setTempF(f);
+                      if (f && !isNaN(parseFloat(f))) {
+                        const c = ((parseFloat(f) - 32) * 5/9).toFixed(1);
+                        setAssessmentData({...assessmentData, temperature: c});
+                      } else {
+                        setAssessmentData({...assessmentData, temperature: ''});
+                      }
+                    }} 
+                  />
+                </div>
                 <div className="space-y-2 pt-2">
                   <label className="text-sm font-medium text-slate-700">स्थानीय संक्रमण (Local Infection)</label>
                   {['नाइँटो रातो भएको (Red umbilicus)', 'नाइँटोबाट पीप बगेको (Umbilical pus)', 'छालामा धेरै फोकाहरू (Skin pustules)'].map(sign => (
@@ -769,6 +885,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
             {hasDangerSigns === true && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
+
                   {['पिउन/स्तनपान गर्न नसक्ने', 'सबै कुरा वान्ता गर्ने', 'काँप्ने (Convulsions)', 'सुस्त वा वेहोस (Lethargic/Unconscious)'].map(sign => (
                     <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
                       <input 
@@ -956,7 +1073,40 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
             {hasFever === true && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
-                  <Input label="तापक्रम (Celsius)*" type="number" step="0.1" value={assessmentData.temperature || ''} onChange={(e) => setAssessmentData({...assessmentData, temperature: e.target.value})} required />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input 
+                      label="तापक्रम (Celsius)*" 
+                      type="number" 
+                      step="0.1" 
+                      value={assessmentData.temperature || ''} 
+                      onChange={(e) => {
+                        const c = e.target.value;
+                        setAssessmentData({...assessmentData, temperature: c});
+                        if (c && !isNaN(parseFloat(c))) {
+                          setTempF((parseFloat(c) * 9/5 + 32).toFixed(1));
+                        } else {
+                          setTempF('');
+                        }
+                      }} 
+                      required 
+                    />
+                    <Input 
+                      label="तापक्रम (Fahrenheit)" 
+                      type="number" 
+                      step="0.1" 
+                      value={tempF} 
+                      onChange={(e) => {
+                        const f = e.target.value;
+                        setTempF(f);
+                        if (f && !isNaN(parseFloat(f))) {
+                          const c = ((parseFloat(f) - 32) * 5/9).toFixed(1);
+                          setAssessmentData({...assessmentData, temperature: c});
+                        } else {
+                          setAssessmentData({...assessmentData, temperature: ''});
+                        }
+                      }} 
+                    />
+                  </div>
                   <Input label="ज्वरो आएको दिन*" type="number" value={assessmentData.feverDays || ''} onChange={(e) => setAssessmentData({...assessmentData, feverDays: e.target.value})} required />
                   <label className="text-sm font-medium text-slate-700 block">मलेरियाको जोखिम*</label>
                   <select 
@@ -1117,11 +1267,11 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                 <label className="flex items-center gap-2 text-sm cursor-pointer mt-4 border-t border-purple-200 pt-2 font-medium text-purple-900">
                   <input 
                     type="checkbox" 
-                    checked={assessmentData.hivStatus}
-                    onChange={(e) => setAssessmentData({...assessmentData, hivStatus: e.target.checked})}
+                    checked={assessmentData.weightLoss}
+                    onChange={(e) => setAssessmentData({...assessmentData, weightLoss: e.target.checked})}
                     className="rounded text-purple-600 focus:ring-purple-500"
                   />
-                  HIV संक्रमण वा संक्रमित आमासँग सम्पर्क (HIV Infection or Exposed)
+                  विगत ३ महिना देखि बच्चाको तौल नबढेमा वा घटेमा (No weight gain or weight loss in last 3 months)
                 </label>
               </div>
             </div>
@@ -1153,6 +1303,184 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
               </div>
             </div>
           </div>
+
+          {/* HIV Trigger Checkbox */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4">
+            <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-slate-700">
+              <input 
+                type="checkbox" 
+                checked={assessmentData.parotidSwellingOrLymphNodes}
+                onChange={(e) => setAssessmentData({...assessmentData, parotidSwellingOrLymphNodes: e.target.checked})}
+                className="rounded text-pink-600 focus:ring-pink-500"
+              />
+              बाहिर प्यारोटिड ग्रन्थी सुन्निएको छ वा सबै लिम्फ ग्रन्थीहरु बढेका छन्? (Parotid gland swelling or enlarged lymph nodes?)
+            </label>
+          </div>
+
+          {/* HIV Assessment */}
+          {(() => {
+            const classifications = getClassification();
+            const severeClassifications = classifications.filter(c => 
+              c === 'Severe Pneumonia or Very Severe Disease' || 
+              c === 'Severe Persistent Diarrhea' || 
+              c === 'Very Severe Febrile Disease' || 
+              c === 'Severe Acute Malnutrition'
+            );
+            
+            const hasMouthUlcers = assessmentData.feverSigns?.includes('मुखभित्र घाउ (Mouth ulcers)');
+            
+            const shouldShowHivAssessment = 
+              severeClassifications.length >= 2 || 
+              assessmentData.parotidSwellingOrLymphNodes || 
+              hasMouthUlcers;
+
+            if (!shouldShowHivAssessment) return null;
+
+            return (
+              <div className="bg-pink-50/50 p-4 rounded-xl border border-pink-200">
+                <h4 className="font-bold text-pink-800 border-b border-pink-300 mb-2 pb-1 flex justify-between items-center">
+                  <span>८. एच.आई.भी. संक्रमण (HIV Infection)</span>
+                  <span className="text-xs font-normal text-pink-600">Booklet Page 30</span>
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">आमाको HIV अवस्था (Mother's HIV Status)</label>
+                    <select 
+                      value={assessmentData.motherHivStatus || ''} 
+                      onChange={(e) => setAssessmentData({...assessmentData, motherHivStatus: e.target.value})}
+                      className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="">छान्नुहोस्</option>
+                      <option value="Positive">पोजिटिभ (Positive)</option>
+                      <option value="Negative">नेगेटिभ (Negative)</option>
+                      <option value="Unknown">थाहा नभएको (Unknown)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">बच्चाको HIV जाँच (Child's HIV Test)</label>
+                    <select 
+                      value={assessmentData.hivTestStatus || ''} 
+                      onChange={(e) => setAssessmentData({...assessmentData, hivTestStatus: e.target.value})}
+                      className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                    >
+                      <option value="">छान्नुहोस्</option>
+                      <option value="Virological Positive">Virological Test Positive</option>
+                      <option value="DNA PCR Positive">DNA PCR Positive</option>
+                      <option value="Rapid Test Positive">Rapid Test Positive</option>
+                      <option value="Negative">नेगेटिभ (Negative)</option>
+                      <option value="Unknown">थाहा नभएको / नगरेको (Unknown/Not Done)</option>
+                    </select>
+                  </div>
+                  {assessmentData.motherHivStatus === 'Positive' && (
+                    <div className="col-span-1 md:col-span-2 space-y-2 mt-2 border-t border-pink-200 pt-2">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-slate-700">
+                        <input 
+                          type="checkbox" 
+                          checked={assessmentData.isBreastfeeding}
+                          onChange={(e) => setAssessmentData({...assessmentData, isBreastfeeding: e.target.checked})}
+                          className="rounded text-pink-600 focus:ring-pink-500"
+                        />
+                        बच्चाले हाल स्तनपान गरिरहेको छ? (Is the child currently breastfeeding?)
+                      </label>
+                      
+                      {!assessmentData.isBreastfeeding && (
+                        <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-slate-700">
+                          <input 
+                            type="checkbox" 
+                            checked={assessmentData.stoppedBreastfeedingLessThan3Months}
+                            onChange={(e) => setAssessmentData({...assessmentData, stoppedBreastfeedingLessThan3Months: e.target.checked})}
+                            className="rounded text-pink-600 focus:ring-pink-500"
+                          />
+                          स्तनपान छुटाएको ३ महिना भन्दा कम भएको छ? (Stopped breastfeeding less than 3 months ago?)
+                        </label>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Fatigue Screening */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-slate-700">
+              <input 
+                type="checkbox" 
+                checked={assessmentData.fatigue}
+                onChange={(e) => setAssessmentData({...assessmentData, fatigue: e.target.checked})}
+                className="rounded text-slate-600 focus:ring-slate-500"
+              />
+              चाडै थकाई लाग्ने, खेलकुद लगायत दैनिक क्रियाकलापमा मन नलाग्ने (Easily fatigued / Loss of interest)
+            </label>
+          </div>
+
+          {/* Tuberculosis Assessment */}
+          {(() => {
+            const coughDuration = parseInt(assessmentData.coughDays || '0');
+            const feverDuration = parseInt(assessmentData.feverDays || '0');
+            const temp = parseFloat(assessmentData.temperature || '0');
+            const isSevereMalnutrition = assessmentData.nutritionSigns?.includes('धेरै दुब्लो (Visible severe wasting)') || 
+                                         assessmentData.nutritionSigns?.includes('दुवै खुट्टा सुन्निएको (Oedema both feet)') ||
+                                         (zScore && parseFloat(zScore) < -3);
+            
+            const showTbAssessment = 
+              (coughDuration > 14) ||
+              (feverDuration > 14 && temp > 38) ||
+              (assessmentData.weightLoss) ||
+              (isSevereMalnutrition) ||
+              (assessmentData.fatigue);
+
+            if (!showTbAssessment) return null;
+
+            return (
+              <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-200">
+                <h4 className="font-bold text-orange-800 border-b border-orange-300 mb-2 pb-1 flex justify-between items-center">
+                  <span>९. क्षयरोग (Tuberculosis)</span>
+                  <span className="text-xs font-normal text-orange-600">Booklet Page 31</span>
+                </h4>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-slate-700">
+                    <input 
+                      type="checkbox" 
+                      checked={assessmentData.tbContact}
+                      onChange={(e) => setAssessmentData({...assessmentData, tbContact: e.target.checked})}
+                      className="rounded text-orange-600 focus:ring-orange-500"
+                    />
+                    के बच्चाको परिवारमा वा नजिकको सम्पर्कमा क्षयरोग लागेको व्यक्ति हुनुहुन्छ? (Contact with TB patient?)
+                  </label>
+
+                  <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-slate-700">
+                    <input 
+                      type="checkbox" 
+                      checked={assessmentData.tbDiagnosis}
+                      onChange={(e) => setAssessmentData({...assessmentData, tbDiagnosis: e.target.checked})}
+                      className="rounded text-orange-600 focus:ring-orange-500"
+                    />
+                    खकार पोजिटिभ क्षयरोग लागेका वा क्लिनिकल क्षयरोग भनी निदान भएका (Sputum positive TB or Clinically diagnosed TB)
+                  </label>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">क्षयरोगका लक्षणहरू (TB Symptoms)</label>
+                    {['२ हप्ता वा बढी समयदेखि खोकी (Cough > 2 weeks)', '२ हप्ता वा बढी समयदेखि ज्वरो (Fever > 2 weeks)', 'तौल नबढेको वा घटेको (Weight loss / Poor weight gain)'].map(sign => (
+                      <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={assessmentData.tbSymptoms?.includes(sign)}
+                          onChange={(e) => {
+                            const current = assessmentData.tbSymptoms || [];
+                            const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
+                            setAssessmentData({...assessmentData, tbSymptoms: next});
+                          }}
+                          className="rounded text-orange-600 focus:ring-orange-500"
+                        />
+                        {sign}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       );
     }
@@ -1307,11 +1635,16 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
 
       // Malnutrition
       const muacVal = parseInt(assessmentData.muac);
-      if (assessmentData.nutritionSigns?.includes("दुवै खुट्टा सुन्निएको (Oedema both feet)") || (muacVal > 0 && muacVal < 115)) {
+      const currentZScore = zScore ? parseFloat(zScore) : null;
+      
+      if (assessmentData.nutritionSigns?.includes("दुवै खुट्टा सुन्निएको (Oedema both feet)") || 
+          (muacVal > 0 && muacVal < 115) || 
+          (currentZScore !== null && currentZScore < -3)) {
         classifications.push('Severe Acute Malnutrition');
-      } else if (muacVal >= 115 && muacVal < 125) {
+      } else if ((muacVal >= 115 && muacVal < 125) || 
+                 (currentZScore !== null && currentZScore < -2 && currentZScore >= -3)) {
         classifications.push('Moderate Acute Malnutrition');
-      } else if (muacVal >= 125) {
+      } else if (muacVal >= 125 || (currentZScore !== null && currentZScore >= -2)) {
         classifications.push('No Malnutrition');
       }
 
@@ -1329,8 +1662,61 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         classifications.push('Acute Ear Infection');
       } else if (assessmentData.earDischarge && parseInt(assessmentData.earDischargeDays) >= 14) {
         classifications.push('Chronic Ear Infection');
-      } else if (assessmentData.earPain === false && assessmentData.earDischarge === false) {
+      } else if (assessmentData.earDischarge === false && assessmentData.earPain === false) {
         classifications.push('No Ear Infection');
+      }
+
+      // HIV Classification
+      const isHivInfected = 
+        assessmentData.hivTestStatus === 'Virological Positive' ||
+        (assessmentData.hivTestStatus === 'DNA PCR Positive' && ageInMonths < 18) ||
+        (assessmentData.hivTestStatus === 'Rapid Test Positive' && ageInMonths >= 18);
+
+      const isHivExposedSuspected = 
+        (assessmentData.motherHivStatus === 'Positive' && 
+         (assessmentData.isBreastfeeding || assessmentData.stoppedBreastfeedingLessThan3Months) && 
+         assessmentData.hivTestStatus === 'Negative') ||
+        (assessmentData.motherHivStatus === 'Positive' && 
+         (assessmentData.hivTestStatus === '' || assessmentData.hivTestStatus === 'Unknown'));
+
+      if (isHivInfected) {
+        classifications.push('CONFIRMED HIV INFECTION');
+      } else if (isHivExposedSuspected) {
+        classifications.push('HIV EXPOSED / SUSPECTED HIV');
+      } else if (assessmentData.motherHivStatus === 'Positive' || 
+                 (assessmentData.hivTestStatus === 'Rapid Test Positive' && ageInMonths < 18) ||
+                 (assessmentData.hivTestStatus === 'DNA PCR Positive' && ageInMonths >= 18)) {
+          classifications.push('HIV EXPOSED');
+      } else if (assessmentData.motherHivStatus === 'Unknown') {
+        // Check for symptoms suggestive of HIV
+        const hasSymptoms = classifications.some(c => 
+          c.includes('Pneumonia') || 
+          c.includes('Persistent Diarrhea') || 
+          c.includes('Acute Ear Infection') || 
+          c.includes('Severe Acute Malnutrition')
+        );
+        if (hasSymptoms) {
+          classifications.push('SUSPECTED SYMPTOMATIC HIV');
+        } else {
+          classifications.push('HIV TEST REQUIRED');
+        }
+      } else if (assessmentData.motherHivStatus === 'Negative' && assessmentData.hivTestStatus === 'Negative') {
+        classifications.push('HIV INFECTION UNLIKELY');
+      }
+
+      // Tuberculosis (TB) Classification
+      const hasTbSymptoms = assessmentData.tbSymptoms && assessmentData.tbSymptoms.length > 0;
+      const coughDuration = parseInt(assessmentData.coughDays || '0');
+      const feverDuration = parseInt(assessmentData.feverDays || '0');
+      
+      if (assessmentData.tbDiagnosis) {
+        classifications.push('CONFIRMED TB');
+      } else if (hasTbSymptoms || coughDuration >= 14 || feverDuration >= 14 || assessmentData.fatigue) {
+        classifications.push('POSSIBLE TB');
+      } else if (assessmentData.tbContact) {
+        classifications.push('LATENT TUBERCULOSIS INFECTION');
+      } else {
+        classifications.push('TB UNLIKELY');
       }
     }
 
@@ -1531,6 +1917,32 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         treatments.push('Plan A: Give extra fluid, continue feeding');
         treatments.push('Give Zinc (10-14 days)');
         treatments.push('Advise mother when to return immediately');
+      }
+
+      // HIV Treatment
+      if (classifications.includes('CONFIRMED HIV INFECTION (रातो)')) {
+        treatments.push('Refer to ART Center for treatment');
+        treatments.push('Start Cotrimoxazole Prophylaxis');
+        treatments.push('Treat other infections');
+      }
+      if (classifications.includes('HIV EXPOSED (पहेँलो)')) {
+        treatments.push('Start Cotrimoxazole Prophylaxis from 6 weeks of age');
+        treatments.push('Test for HIV at 6 weeks (PCR)');
+        treatments.push('Follow-up regularly');
+      }
+      if (classifications.includes('SUSPECTED SYMPTOMATIC HIV (पहेँलो)') || classifications.includes('HIV TEST REQUIRED (पहेँलो)')) {
+        treatments.push('Refer for HIV Testing and Counseling');
+        treatments.push('Treat existing conditions');
+      }
+
+      // TB Treatment
+      if (classifications.includes('POSSIBLE TB (पहेँलो)')) {
+        treatments.push('Refer for TB investigation (Mantoux, X-ray, GeneXpert)');
+        treatments.push('Assess for other causes of symptoms');
+      }
+      if (classifications.includes('LATENT TUBERCULOSIS INFECTION (पहेँलो)')) {
+        treatments.push('Start Isoniazid Preventive Therapy (IPT)');
+        treatments.push('Follow-up regularly');
       }
     }
     return treatments;
@@ -1871,9 +2283,9 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                     <div className="flex flex-wrap gap-2">
                       {suggestedClassifications.map((cls, idx) => (
                         <span key={idx} className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                          cls.includes('Severe') || cls.includes('PSBI') || cls.includes('Disease') 
+                          cls.includes('Severe') || cls.includes('PSBI') || cls.includes('Disease') || cls.includes('CONFIRMED')
                             ? 'bg-red-100 text-red-700 border-red-200' 
-                            : cls.includes('Some') || cls.includes('Pneumonia') || cls.includes('Jaundice')
+                            : cls.includes('Some') || cls.includes('Pneumonia') || cls.includes('Jaundice') || cls.includes('POSSIBLE') || cls.includes('LATENT') || cls.includes('EXPOSED') || cls.includes('SUSPECTED') || cls.includes('REQUIRED')
                               ? 'bg-amber-100 text-amber-700 border-amber-200'
                               : 'bg-emerald-100 text-emerald-700 border-emerald-200'
                         }`}>
@@ -2032,8 +2444,18 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                             ))}
                           </datalist>
                         </div>
-                        <Input label="मात्रा (Dosage)" value={currentPrescription.dosage} onChange={e => setCurrentPrescription({...currentPrescription, dosage: e.target.value})} />
-                        <Input label="पटक (Frequency)" value={currentPrescription.frequency} onChange={e => setCurrentPrescription({...currentPrescription, frequency: e.target.value})} />
+                        <div>
+                          <Input label="मात्रा (Dosage)" value={currentPrescription.dosage} onChange={e => setCurrentPrescription({...currentPrescription, dosage: e.target.value})} list="dosage-list" />
+                          <datalist id="dosage-list">
+                            {dosageSuggestions.map((d, i) => <option key={i} value={d} />)}
+                          </datalist>
+                        </div>
+                        <div>
+                          <Input label="पटक (Frequency)" value={currentPrescription.frequency} onChange={e => setCurrentPrescription({...currentPrescription, frequency: e.target.value})} list="frequency-list" />
+                          <datalist id="frequency-list">
+                            {frequencySuggestions.map((f, i) => <option key={i} value={f} />)}
+                          </datalist>
+                        </div>
                         <Input label="अवधि (Duration)" value={currentPrescription.duration} onChange={e => setCurrentPrescription({...currentPrescription, duration: e.target.value})} />
                       </div>
                       <div className="flex justify-end gap-2">
@@ -2175,7 +2597,17 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                       earDischarge: false,
                       mastoidSwelling: false,
                       bloodInStool: false,
-                      hivStatus: false
+                      hivStatus: false,
+                      parotidSwellingOrLymphNodes: false,
+                      hivTestStatus: '',
+                      motherHivStatus: '',
+                      isBreastfeeding: false,
+                      stoppedBreastfeedingLessThan3Months: false,
+                      tbContact: false,
+                      tbSymptoms: [],
+                      tbDiagnosis: false,
+                      weightLoss: false,
+                      fatigue: false
                     });
                     setPrescriptionItems([]);
                   }} className="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 flex items-center gap-2 shadow-sm font-medium border border-slate-200 w-full sm:w-auto justify-center">
