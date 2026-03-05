@@ -67,7 +67,8 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     earPain: false,
     earDischarge: false,
     mastoidSwelling: false,
-    bloodInStool: false
+    bloodInStool: false,
+    hivStatus: false
   });
   const [cbimnciData, setCbimnciData] = useState<Partial<CBIMNCIRecord>>({
     chiefComplaints: '',
@@ -78,6 +79,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     nextVisitDate: '',
     isRefer: false,
     isDeath: false,
+    isFollowup: false,
     followupDays: 0
   });
   const [prescriptionItems, setPrescriptionItems] = useState<PrescriptionItem[]>([]);
@@ -221,7 +223,8 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       earPain: false,
       earDischarge: false,
       mastoidSwelling: false,
-      bloodInStool: false
+      bloodInStool: false,
+      hivStatus: false
     });
 
     setCbimnciData({
@@ -247,34 +250,36 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     setHasDiarrhea(!!record.assessmentData?.diarrheaDays || (record.assessmentData?.dehydrationSigns && record.assessmentData.dehydrationSigns.length > 0) || record.assessmentData?.bloodInStool);
     setHasFever(!!record.assessmentData?.temperature || !!record.assessmentData?.feverDays || (record.assessmentData?.feverSigns && record.assessmentData.feverSigns.length > 0));
     setHasEarProblem(!!record.assessmentData?.earPain || !!record.assessmentData?.earDischarge || !!record.assessmentData?.mastoidSwelling);
+    
+    const data = record.assessmentData || {};
     setAssessmentData({
-      dangerSigns: [],
-      localInfection: [],
-      jaundiceSigns: [],
-      dehydrationSigns: [],
-      feedingProblems: [],
-      generalDangerSigns: [],
-      respiratorySigns: [],
-      feverSigns: [],
-      nutritionSigns: [],
-      immunization: [],
-      breathingRate: '',
-      temperature: '',
-      diarrheaDays: '',
-      weight: '',
-      muac: '',
-      coughDays: '',
-      feverDays: '',
-      earDischargeDays: '',
-      malariaRisk: 'None',
-      pallor: '',
-      attachment: '',
-      suckling: '',
-      earPain: false,
-      earDischarge: false,
-      mastoidSwelling: false,
-      bloodInStool: false,
-      ...(record.assessmentData || {})
+      dangerSigns: data.dangerSigns || [],
+      localInfection: data.localInfection || [],
+      jaundiceSigns: data.jaundiceSigns || [],
+      dehydrationSigns: data.dehydrationSigns || [],
+      feedingProblems: data.feedingProblems || [],
+      generalDangerSigns: data.generalDangerSigns || [],
+      respiratorySigns: data.respiratorySigns || [],
+      feverSigns: data.feverSigns || [],
+      nutritionSigns: data.nutritionSigns || [],
+      immunization: data.immunization || [],
+      breathingRate: data.breathingRate || '',
+      temperature: data.temperature || '',
+      diarrheaDays: data.diarrheaDays || '',
+      weight: data.weight || '',
+      muac: data.muac || '',
+      coughDays: data.coughDays || '',
+      feverDays: data.feverDays || '',
+      earDischargeDays: data.earDischargeDays || '',
+      malariaRisk: data.malariaRisk || 'None',
+      pallor: data.pallor || '',
+      attachment: data.attachment || '',
+      suckling: data.suckling || '',
+      earPain: data.earPain ?? false,
+      earDischarge: data.earDischarge ?? false,
+      mastoidSwelling: data.mastoidSwelling ?? false,
+      bloodInStool: data.bloodInStool ?? false,
+      hivStatus: data.hivStatus ?? false
     });
     setCbimnciData({
       chiefComplaints: record.chiefComplaints,
@@ -303,36 +308,37 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     }
     const sortedRecords = [...patientRecords].sort((a, b) => b.id.localeCompare(a.id));
     const latestRecord = sortedRecords[0];
+    const data = latestRecord.assessmentData || {};
 
     setModuleType(latestRecord.moduleType || 'Child');
     setAssessmentData({
-      dangerSigns: [],
-      localInfection: [],
-      jaundiceSigns: [],
-      dehydrationSigns: [],
-      feedingProblems: [],
-      generalDangerSigns: [],
-      respiratorySigns: [],
-      feverSigns: [],
-      nutritionSigns: [],
-      immunization: [],
-      breathingRate: '',
-      temperature: '',
-      diarrheaDays: '',
-      weight: '',
-      muac: '',
-      coughDays: '',
-      feverDays: '',
-      earDischargeDays: '',
-      malariaRisk: 'None',
-      pallor: '',
-      attachment: '',
-      suckling: '',
-      earPain: false,
-      earDischarge: false,
-      mastoidSwelling: false,
-      bloodInStool: false,
-      ...(latestRecord.assessmentData || {})
+      dangerSigns: data.dangerSigns || [],
+      localInfection: data.localInfection || [],
+      jaundiceSigns: data.jaundiceSigns || [],
+      dehydrationSigns: data.dehydrationSigns || [],
+      feedingProblems: data.feedingProblems || [],
+      generalDangerSigns: data.generalDangerSigns || [],
+      respiratorySigns: data.respiratorySigns || [],
+      feverSigns: data.feverSigns || [],
+      nutritionSigns: data.nutritionSigns || [],
+      immunization: data.immunization || [],
+      breathingRate: data.breathingRate || '',
+      temperature: data.temperature || '',
+      diarrheaDays: data.diarrheaDays || '',
+      weight: data.weight || '',
+      muac: data.muac || '',
+      coughDays: data.coughDays || '',
+      feverDays: data.feverDays || '',
+      earDischargeDays: data.earDischargeDays || '',
+      malariaRisk: data.malariaRisk || 'None',
+      pallor: data.pallor || '',
+      attachment: data.attachment || '',
+      suckling: data.suckling || '',
+      earPain: data.earPain ?? false,
+      earDischarge: data.earDischarge ?? false,
+      mastoidSwelling: data.mastoidSwelling ?? false,
+      bloodInStool: data.bloodInStool ?? false,
+      hivStatus: data.hivStatus ?? false
     });
     setCbimnciData({
       chiefComplaints: latestRecord.chiefComplaints,
@@ -453,6 +459,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       nextVisitDate: '',
       isRefer: false,
       isDeath: false,
+      isFollowup: false,
       followupDays: 0
     });
     setAssessmentData({
@@ -481,7 +488,8 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       earPain: false,
       earDischarge: false,
       mastoidSwelling: false,
-      bloodInStool: false
+      bloodInStool: false,
+      hivStatus: false
     });
     setPrescriptionItems([]);
     setEditingRecordId(null);
@@ -1105,6 +1113,16 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                     {sign}
                   </label>
                 ))}
+                
+                <label className="flex items-center gap-2 text-sm cursor-pointer mt-4 border-t border-purple-200 pt-2 font-medium text-purple-900">
+                  <input 
+                    type="checkbox" 
+                    checked={assessmentData.hivStatus}
+                    onChange={(e) => setAssessmentData({...assessmentData, hivStatus: e.target.checked})}
+                    className="rounded text-purple-600 focus:ring-purple-500"
+                  />
+                  HIV संक्रमण वा संक्रमित आमासँग सम्पर्क (HIV Infection or Exposed)
+                </label>
               </div>
             </div>
           </div>
@@ -1411,10 +1429,15 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         else if (weight >= 10 && weight < 14) amoxDose = '500mg (2 tab or 10ml syrup) twice daily';
         else if (weight >= 14 && weight < 19) amoxDose = '750mg (3 tab or 15ml syrup) twice daily';
         
-        treatments.push(`Give Amoxicillin for 5 days: ${amoxDose}`);
-        treatments.push('Soothe the throat and relieve cough with safe remedy');
-        treatments.push('Advise mother when to return immediately');
-        treatments.push('Follow-up in 3 days');
+        if (assessmentData.hivStatus) {
+          treatments.push(`Give first dose of Amoxicillin: ${amoxDose.split(' twice daily')[0]}`);
+          treatments.push('Refer URGENTLY to hospital (HIV exposed/infected)');
+        } else {
+          treatments.push(`Give Amoxicillin for 5 days: ${amoxDose}`);
+          treatments.push('Soothe the throat and relieve cough with safe remedy');
+          treatments.push('Advise mother when to return immediately');
+          treatments.push('Follow-up in 3 days');
+        }
       }
       if (classifications.includes('Severe Dehydration')) {
         treatments.push('Give fluid for severe dehydration (Plan C)');
@@ -2122,6 +2145,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                       nextVisitDate: '',
                       isRefer: false,
                       isDeath: false,
+                      isFollowup: false,
                       followupDays: 0
                     });
                     setAssessmentData({
@@ -2150,7 +2174,8 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                       earPain: false,
                       earDischarge: false,
                       mastoidSwelling: false,
-                      bloodInStool: false
+                      bloodInStool: false,
+                      hivStatus: false
                     });
                     setPrescriptionItems([]);
                   }} className="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 flex items-center gap-2 shadow-sm font-medium border border-slate-200 w-full sm:w-auto justify-center">
