@@ -1339,8 +1339,8 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
                   onChange={(e) => onSetActiveOrgName(e.target.value)}
                   className="bg-transparent text-[11px] font-bold text-indigo-700 focus:outline-none cursor-pointer font-nepali"
                 >
-                  {managedOrgs.map(org => (
-                    <option key={org} value={org}>{org}</option>
+                  {['All', ...managedOrgs].map(org => (
+                    <option key={org} value={org}>{org === 'All' ? 'सबै (All)' : org}</option>
                   ))}
                 </select>
               </div>

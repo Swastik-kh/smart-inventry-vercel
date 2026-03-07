@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { LoginForm } from './components/LoginForm';
 import { Dashboard } from './components/Dashboard';
 import { APP_NAME, ORG_NAME } from './constants';
@@ -91,6 +91,14 @@ const App: React.FC = () => {
   const [physiotherapyRecords, setPhysiotherapyRecords] = useState<PhysiotherapyRecord[]>([]);
   const [ipdRecords, setIpdRecords] = useState<IPDRecord[]>([]);
 
+  const managedOrgs = useMemo(() => {
+      if (currentUser?.role !== 'HEALTH_SECTION') return [];
+      const orgs = allUsers
+        .filter(u => u.parentId === currentUser.id && u.role === 'ADMIN')
+        .map(u => u.organizationName);
+      return Array.from(new Set([currentUser.organizationName, ...orgs]));
+  }, [allUsers, currentUser]);
+
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
     const onConnect = onValue(connectedRef, (snap) => {
@@ -138,27 +146,46 @@ const App: React.FC = () => {
     }
 
     const safeOrgName = activeOrgName.trim().replace(/[.#$[\]]/g, "_");
-    const orgPath = `orgData/${safeOrgName}`;
+    
+    // If 'All' is selected, we need to fetch data from all managed organizations
+    const isAllOrgs = activeOrgName === 'All';
+    const targetOrgs = isAllOrgs ? managedOrgs : [activeOrgName];
+
     const unsubscribes: Unsubscribe[] = [];
 
     const setupOrgListener = (subPath: string, setter: Function) => {
-        const listenerRef = ref(db, `${orgPath}/${subPath}`);
-        const unsub = onValue(listenerRef, (snap) => {
-            const data = snap.val();
-            setter(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
-        }, (err) => {
-            if (err.message.includes("permission_denied")) {
-                setDbError(`डेटा रिड पर्मिसन छैन: ${subPath}`);
-            }
+        const orgDataMap = new Map<string, any[]>();
+        
+        targetOrgs.forEach(orgName => {
+            const safeName = orgName.trim().replace(/[.#$[\]]/g, "_");
+            const listenerRef = ref(db, `orgData/${safeName}/${subPath}`);
+            const unsub = onValue(listenerRef, (snap) => {
+                const data = snap.val();
+                const orgData = data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : [];
+                orgDataMap.set(orgName, orgData);
+                
+                // Aggregate all data
+                const aggregatedData = Array.from(orgDataMap.values()).flat();
+                setter(aggregatedData);
+            }, (err) => {
+                if (err.message.includes("permission_denied")) {
+                    setDbError(`डेटा रिड पर्मिसन छैन: ${subPath}`);
+                }
+            });
+            unsubscribes.push(unsub);
         });
-        unsubscribes.push(unsub);
     };
 
-    onValue(ref(db, `${orgPath}/settings`), (snap) => {
+    // For settings, we just take the first organization's settings if 'All' is selected, 
+    // or we could aggregate them if needed. For now, take the first one.
+    const settingsOrg = isAllOrgs ? targetOrgs[0] : activeOrgName;
+    const safeSettingsOrg = settingsOrg.trim().replace(/[.#$[\]]/g, "_");
+
+    onValue(ref(db, `orgData/${safeSettingsOrg}/settings`), (snap) => {
         if (snap.exists()) setGeneralSettings(snap.val());
         else {
-            const firstSettings = { ...INITIAL_SETTINGS, orgNameNepali: activeOrgName, orgNameEnglish: activeOrgName };
-            set(ref(db, `${orgPath}/settings`), firstSettings).catch(() => {});
+            const firstSettings = { ...INITIAL_SETTINGS, orgNameNepali: settingsOrg, orgNameEnglish: settingsOrg };
+            set(ref(db, `orgData/${safeSettingsOrg}/settings`), firstSettings).catch(() => {});
             setGeneralSettings(firstSettings);
         }
     });
