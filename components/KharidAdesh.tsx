@@ -574,13 +574,13 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
                                   </td>
                                   <td className="border border-slate-900 p-1 relative group">
                                       <input value={item.remarks} onChange={e => handleItemChange(index, 'remarks', e.target.value)} disabled={!canEdit} className="w-full bg-transparent outline-none pr-6" />
-                                      {canEdit && formData.items.length > 1 && (
+                                      {canEdit && (
                                           <button 
                                               onClick={() => {
                                                   const newItems = formData.items.filter((_, i) => i !== index);
                                                   setFormData({...formData, items: newItems});
                                               }}
-                                              className="absolute right-1 top-1/2 -translate-y-1/2 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity no-print"
+                                              className="absolute right-1 top-1/2 -translate-y-1/2 text-red-500 hover:text-red-700 transition-opacity no-print"
                                               title="हटाउनुहोस्"
                                           >
                                               <X size={14} />

@@ -523,7 +523,7 @@ const App: React.FC = () => {
           isDbLocked={isDbLocked}
           generalSettings={generalSettings} onUpdateGeneralSettings={(s) => set(getOrgRef('settings'), s)}
           magForms={magForms} onSaveMagForm={handleSaveMagForm} onDeleteMagForm={handleDeleteMagForm}
-          purchaseOrders={purchaseOrders} onUpdatePurchaseOrder={(o) => set(getOrgRef(`purchaseOrders/${o.id}`), o)}
+          purchaseOrders={purchaseOrders} onUpdatePurchaseOrder={(o) => set(getOrgRef(`purchaseOrders/${o.id}`), o)} onDeletePurchaseOrder={(id) => remove(getOrgRef(`purchaseOrders/${id}`))}
           issueReports={issueReports} onUpdateIssueReport={handleUpdateIssueReport}
           rabiesPatients={rabiesPatients} onAddRabiesPatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}
           onUpdatePatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)} onDeletePatient={(id) => remove(getOrgRef(`rabiesPatients/${id}`))}

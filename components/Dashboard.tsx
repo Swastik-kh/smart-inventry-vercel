@@ -98,6 +98,7 @@ interface ExtendedDashboardProps extends DashboardProps {
   serviceItems: ServiceItem[];
   onSaveServiceItem: (item: ServiceItem) => void;
   onDeleteServiceItem: (id: string) => void;
+  onDeletePurchaseOrder: (id: string) => void;
   labReports: LabReport[];
   onSaveLabReport: (record: LabReport) => void;
   onDeleteLabReport: (id: string) => void;
@@ -140,7 +141,7 @@ const READ_NOTIFS_KEY_PREFIX = 'smart_inv_read_notifs_v4_';
 export const Dashboard: React.FC<ExtendedDashboardProps> = ({ 
   onLogout, currentUser, currentFiscalYear, users = [], onAddUser, onUpdateUser, onDeleteUser, onChangePassword, isDbLocked,
   generalSettings, onUpdateGeneralSettings, magForms = [], onSaveMagForm, onDeleteMagForm,
-  purchaseOrders = [], onUpdatePurchaseOrder, issueReports = [], onUpdateIssueReport, 
+  purchaseOrders = [], onUpdatePurchaseOrder, onDeletePurchaseOrder, issueReports = [], onUpdateIssueReport, 
   rabiesPatients = [], onAddRabiesPatient, onUpdatePatient, onDeletePatient,
   tbPatients = [], onAddTbPatient, onUpdateTbPatient, onDeleteTbPatient, 
   garbhawatiPatients = [], onAddGarbhawatiPatient, onUpdateGarbhawatiPatient, onDeleteGarbhawatiPatient, 
@@ -712,7 +713,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
       case 'report_pariwar_niyojan': return <FamilyPlanningReport records={pariwarSewaRecords} settings={generalSettings} fiscalYear={currentFiscalYear} />;
       case 'report_gesi': return <GESIReport currentFiscalYear={currentFiscalYear} bachhaRecords={bachhaImmunizationRecords} cbimnciRecords={cbimnciRecords} serviceSeekerRecords={serviceSeekerRecords} prasutiRecords={prasutiRecords} tbPatients={tbPatients} opdRecords={opdRecords} ipdRecords={ipdRecords} />;
       case 'mag_faram': return <MagFaram currentFiscalYear={currentFiscalYear} currentUser={currentUser} existingForms={magForms} onSave={onSaveMagForm} onDelete={onDeleteMagForm} inventoryItems={inventoryItems} stores={stores} generalSettings={generalSettings} />;
-      case 'kharid_adesh': return <KharidAdesh orders={purchaseOrders} currentFiscalYear={currentFiscalYear} onSave={onUpdatePurchaseOrder} currentUser={currentUser} firms={firms} quotations={quotations} onDakhilaClick={(po) => { setActiveItem('jinshi_maujdat'); setPendingPoDakhila(po); }} generalSettings={generalSettings} inventoryItems={inventoryItems} />;
+      case 'kharid_adesh': return <KharidAdesh orders={purchaseOrders} currentFiscalYear={currentFiscalYear} onSave={onUpdatePurchaseOrder} onDelete={onDeletePurchaseOrder} currentUser={currentUser} firms={firms} quotations={quotations} onDakhilaClick={(po) => { setActiveItem('jinshi_maujdat'); setPendingPoDakhila(po); }} generalSettings={generalSettings} inventoryItems={inventoryItems} />;
       case 'nikasha_pratibedan': return <NikashaPratibedan reports={issueReports} onSave={onUpdateIssueReport} currentUser={currentUser} currentFiscalYear={currentFiscalYear} generalSettings={generalSettings} />;
       case 'form_suchikaran': return <FirmListing currentFiscalYear={currentFiscalYear} firms={firms} onAddFirm={onAddFirm} />;
       case 'quotation': return <Quotation currentFiscalYear={currentFiscalYear} firms={firms} quotations={quotations} onAddQuotation={onAddQuotation} inventoryItems={inventoryItems} />;
