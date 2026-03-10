@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ShoppingCart, Printer, Save, ArrowLeft, CheckCircle2, X, Clock, FileText, Send, User, Building2, Calculator, Info, Package, AlertCircle, Search, ShieldCheck } from 'lucide-react';
+import { ShoppingCart, Printer, Save, ArrowLeft, CheckCircle2, X, Clock, FileText, Send, User, Building2, Calculator, Info, Package, AlertCircle, Search, ShieldCheck, Copy } from 'lucide-react';
 import { PurchaseOrderEntry, FirmEntry, QuotationEntry, InventoryItem } from '../types/inventoryTypes';
 import { User as UserType, OrganizationSettings, Option } from '../types/coreTypes';
 import { Input } from './Input';
@@ -341,6 +341,34 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
                               <Package size={16} /> Create Dakhila
                           </button>
                       )}
+                      {isStoreKeeper && (
+                          <button 
+                              onClick={() => {
+                                  if(window.confirm('के तपाईं यो माग फारमबाट नयाँ खरिद आदेश (Duplicate) बनाउन चाहनुहुन्छ?')) {
+                                      const newOrder = {
+                                          ...formData,
+                                          id: `PO-${formData.magFormId}-${Date.now()}`,
+                                          status: 'Pending' as const,
+                                          orderNo: '',
+                                          decisionNo: '',
+                                          decisionDate: '',
+                                          vendorDetails: undefined,
+                                          preparedBy: { name: '', designation: '', date: '' },
+                                          recommendedBy: { name: '', designation: '', date: '', purpose: '' },
+                                          financeBy: { name: '', designation: '', date: '', purpose: '' },
+                                          approvedBy: { name: '', designation: '', date: '', purpose: '' }
+                                      };
+                                      onSave(newOrder);
+                                      alert('नयाँ खरिद आदेश सिर्जना गरियो।');
+                                      handleBack();
+                                  }
+                              }}
+                              className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white hover:bg-amber-600 rounded-lg font-bold text-sm shadow-sm transition-colors"
+                              title="एउटै माग फारमबाट अर्को खरिद आदेश बनाउनुहोस्"
+                          >
+                              <Copy size={16} /> नयाँ आदेश (Duplicate)
+                          </button>
+                      )}
                       
                       <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
                           <button 
@@ -544,8 +572,20 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
                                   <td className="border border-slate-900 p-1 text-right px-2 font-bold">
                                       {(item.totalAmount || 0).toFixed(2)}
                                   </td>
-                                  <td className="border border-slate-900 p-1">
-                                      <input value={item.remarks} onChange={e => handleItemChange(index, 'remarks', e.target.value)} disabled={!canEdit} className="w-full bg-transparent outline-none" />
+                                  <td className="border border-slate-900 p-1 relative group">
+                                      <input value={item.remarks} onChange={e => handleItemChange(index, 'remarks', e.target.value)} disabled={!canEdit} className="w-full bg-transparent outline-none pr-6" />
+                                      {canEdit && formData.items.length > 1 && (
+                                          <button 
+                                              onClick={() => {
+                                                  const newItems = formData.items.filter((_, i) => i !== index);
+                                                  setFormData({...formData, items: newItems});
+                                              }}
+                                              className="absolute right-1 top-1/2 -translate-y-1/2 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity no-print"
+                                              title="हटाउनुहोस्"
+                                          >
+                                              <X size={14} />
+                                          </button>
+                                      )}
                                   </td>
                               </tr>
                           ))}
