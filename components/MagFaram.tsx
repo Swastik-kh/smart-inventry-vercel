@@ -182,6 +182,24 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
             setValidationError("बजारबाट खरिद गर्ने वा मौज्दातमा रहेको मध्ये कम्तिमा एउटा छान्नुहोस्।");
             return;
         }
+        
+        if (formDetails.storeKeeper?.inStock) {
+            for (const item of items) {
+                if (item.name.trim() === '') continue;
+                
+                const totalStock = inventoryItems
+                    .filter(inv => inv.itemName.trim().toLowerCase() === item.name.trim().toLowerCase())
+                    .reduce((sum, inv) => sum + (inv.currentQuantity || 0), 0);
+                
+                const requestedQty = parseFloat(item.quantity) || 0;
+                
+                if (requestedQty > totalStock) {
+                    setValidationError(`सामान '${item.name}' को लागि पर्याप्त मौज्दात छैन। माग गरिएको: ${requestedQty}, उपलब्ध: ${totalStock}`);
+                    return;
+                }
+            }
+        }
+        
         finalStatus = 'Verified';
         finalRecommendedBy = { name: currentUser.fullName, designation: currentUser.designation, date: todayBS };
         // Ensure storekeeper details are captured
