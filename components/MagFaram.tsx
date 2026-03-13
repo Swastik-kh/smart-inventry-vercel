@@ -178,6 +178,10 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
     // WORKFLOW LOGIC:
     // 1. If Storekeeper is saving a 'Pending' form, it becomes 'Verified'.
     if (isStoreKeeper && formDetails.status === 'Pending') {
+        if (!formDetails.storeKeeper?.marketRequired && !formDetails.storeKeeper?.inStock) {
+            setValidationError("बजारबाट खरिद गर्ने वा मौज्दातमा रहेको मध्ये कम्तिमा एउटा छान्नुहोस्।");
+            return;
+        }
         finalStatus = 'Verified';
         finalRecommendedBy = { name: currentUser.fullName, designation: currentUser.designation, date: todayBS };
         // Ensure storekeeper details are captured

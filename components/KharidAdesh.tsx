@@ -580,7 +580,7 @@ export const KharidAdesh: React.FC<KharidAdeshProps> = ({
                                                   const newItems = formData.items.filter((_, i) => i !== index);
                                                   setFormData({...formData, items: newItems});
                                               }}
-                                              className="absolute right-1 top-1/2 -translate-y-1/2 text-red-500 hover:text-red-700 transition-opacity no-print"
+                                              className="absolute right-1 top-1/2 -translate-y-1/2 text-red-500 hover:text-red-700 transition-opacity"
                                               title="हटाउनुहोस्"
                                           >
                                               <X size={14} />
