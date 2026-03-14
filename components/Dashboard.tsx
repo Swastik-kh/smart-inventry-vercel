@@ -1409,6 +1409,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-bold text-slate-800 leading-none">{currentUser?.fullName}</p>
                 <p className="text-[10px] text-slate-400 mt-1">{currentUser?.designation}</p>
+                <p className="text-[10px] text-slate-400 mt-1">{currentUser?.organizationName}</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600">
                 <UserCog size={20} />

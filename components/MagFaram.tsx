@@ -527,6 +527,9 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
 
        <div className="overflow-x-auto pb-8">
          <div className="bg-white p-10 md:p-14 w-[210mm] min-w-[210mm] mx-auto min-h-[297mm] font-nepali text-slate-900 shadow-2xl rounded-xl relative">
+            <div className="text-xs font-bold text-slate-600 mb-2 border-b pb-1">
+              {currentUser.fullName} | {currentUser.designation} | {generalSettings.orgNameNepali}
+            </div>
             {hoveredStock && (
               <div 
                   className="fixed z-[9999] bg-slate-800 text-white p-2.5 rounded-lg shadow-xl pointer-events-none animate-in fade-in zoom-in-95 duration-150 no-print border border-slate-700/50 backdrop-blur-sm"
