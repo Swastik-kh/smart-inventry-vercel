@@ -801,6 +801,15 @@ const App: React.FC = () => {
           const orgPath = `orgData/${safeOrgName}`;
           const updates: Record<string, any> = {};
           updates[`${orgPath}/issueReports/${report.id}`] = report;
+          if (report.status === 'Issued') {
+              const magFormSnap = await get(ref(db, `${orgPath}/magForms/${report.magFormId}`));
+              if (magFormSnap.exists()) {
+                  const magForm = magFormSnap.val();
+                  if (magForm.demandBy) {
+                      updates[`${orgPath}/magForms/${report.magFormId}/receiver`] = magForm.demandBy;
+                  }
+              }
+          }
           if (report.status === 'Issued' && !!report.selectedStoreId && !!report.itemType) {
               const currentInvSnap = await get(ref(db, `${orgPath}/inventory`));
               const currentInvData = currentInvSnap.val() || {};

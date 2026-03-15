@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { FileOutput, ArrowLeft, Printer, CheckCircle2, X, Clock, Eye, Send, AlertCircle } from 'lucide-react';
 // Corrected import path to use the types folder's index file explicitly to avoid shadowing by root types.ts
-import { IssueReportEntry, MagItem, User, OrganizationSettings } from '../types/index';
+import { IssueReportEntry, MagItem, User, OrganizationSettings, Store } from '../types/index';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -12,12 +12,14 @@ interface NikashaPratibedanProps {
     currentUser: User;
     currentFiscalYear: string;
     generalSettings: OrganizationSettings;
+    stores: Store[];
 }
 
-export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, onSave, currentUser, currentFiscalYear, generalSettings }) => {
+export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, onSave, currentUser, currentFiscalYear, generalSettings, stores }) => {
     const [selectedReport, setSelectedReport] = useState<IssueReportEntry | null>(null);
     const [isViewOnlyMode, setIsViewOnlyMode] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [selectedStoreId, setSelectedStoreId] = useState<string>('');
 
     const isStoreKeeper = currentUser.role === 'STOREKEEPER';
     const isApprover = ['ADMIN', 'SUPER_ADMIN', 'APPROVAL'].includes(currentUser.role);
@@ -25,19 +27,26 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
     const handleLoadReport = (report: IssueReportEntry, viewOnly: boolean = false) => {
         setSelectedReport(report);
         setIsViewOnlyMode(viewOnly);
+        setSelectedStoreId(report.selectedStoreId || '');
     };
 
     const handleBack = () => {
         setSelectedReport(null);
         setIsViewOnlyMode(false);
+        setSelectedStoreId('');
     };
 
     const handleAction = (status: 'Pending Approval' | 'Issued' | 'Rejected') => {
         if (!selectedReport) return;
+        if (status === 'Issued' && !selectedStoreId) {
+            alert('कृपया एउटा स्टोर चयन गर्नुहोस्।');
+            return;
+        }
         setIsProcessing(true);
         const updatedReport: IssueReportEntry = {
             ...selectedReport,
             status,
+            selectedStoreId: status === 'Issued' ? selectedStoreId : selectedReport.selectedStoreId,
             issueDate: new NepaliDate().format('YYYY-MM-DD'),
             approvedBy: status === 'Issued' ? { name: currentUser.fullName, designation: currentUser.designation, date: new NepaliDate().format('YYYY-MM-DD') } : selectedReport.approvedBy,
             preparedBy: status === 'Pending Approval' ? { name: currentUser.fullName, designation: currentUser.designation, date: new NepaliDate().format('YYYY-MM-DD') } : selectedReport.preparedBy
@@ -74,9 +83,21 @@ export const NikashaPratibedan: React.FC<NikashaPratibedanProps> = ({ reports, o
                                     </button>
                                 )}
                                 {isApprover && selectedReport.status === 'Pending Approval' && (
-                                    <button onClick={() => handleAction('Issued')} disabled={isProcessing} className="bg-green-600 text-white px-6 py-2 rounded-lg flex items-center gap-2 font-bold text-sm">
-                                        <CheckCircle2 size={18} /> स्वीकृत गर्नुहोस्
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <select 
+                                            value={selectedStoreId} 
+                                            onChange={(e) => setSelectedStoreId(e.target.value)}
+                                            className="border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold"
+                                        >
+                                            <option value="">स्टोर चयन गर्नुहोस्</option>
+                                            {stores.map(store => (
+                                                <option key={store.id} value={store.id}>{store.name}</option>
+                                            ))}
+                                        </select>
+                                        <button onClick={() => handleAction('Issued')} disabled={isProcessing} className="bg-green-600 text-white px-6 py-2 rounded-lg flex items-center gap-2 font-bold text-sm">
+                                            <CheckCircle2 size={18} /> स्वीकृत गर्नुहोस्
+                                        </button>
+                                    </div>
                                 )}
                             </>
                         )}

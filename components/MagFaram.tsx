@@ -527,9 +527,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
 
        <div className="overflow-x-auto pb-8">
          <div className="bg-white p-10 md:p-14 w-[210mm] min-w-[210mm] mx-auto min-h-[297mm] font-nepali text-slate-900 shadow-2xl rounded-xl relative">
-            <div className="text-xs font-bold text-slate-600 mb-2 border-b pb-1">
-              {currentUser.fullName} | {currentUser.designation} | {generalSettings.orgNameNepali}
-            </div>
             {hoveredStock && (
               <div 
                   className="fixed z-[9999] bg-slate-800 text-white p-2.5 rounded-lg shadow-xl pointer-events-none animate-in fade-in zoom-in-95 duration-150 no-print border border-slate-700/50 backdrop-blur-sm"
@@ -566,6 +563,18 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               <div className="text-right space-y-1">
                   <p>माग नं: <span className="text-red-600 border-b border-dotted border-black px-4">#{formDetails.formNo}</span></p>
                   <p>मिति: <input value={formDetails.date} onChange={e => setFormDetails({...formDetails, date: e.target.value})} disabled={isViewOnly} className="border-b border-dotted border-black px-1 outline-none w-32 text-right bg-transparent" /></p>
+                  <div className="flex justify-end items-center gap-2 mt-2">
+                    <span>स्टोर:</span>
+                    <select 
+                      value={formDetails.selectedStoreId || ''} 
+                      onChange={e => setFormDetails({...formDetails, selectedStoreId: e.target.value})} 
+                      disabled={isViewOnly}
+                      className="border-b border-dotted border-black outline-none bg-transparent"
+                    >
+                      <option value="">स्टोर छान्नुहोस्</option>
+                      {stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
+                    </select>
+                  </div>
               </div>
           </div>
 
