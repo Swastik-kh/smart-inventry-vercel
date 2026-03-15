@@ -52,8 +52,7 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
     storeKeeper: { name: '', date: '', verified: false, marketRequired: false, inStock: false },
     approvedBy: { name: '', designation: '', date: '' },
     receiver: { name: '', designation: '', date: '' },
-    issueItemType: 'Expendable',
-    selectedStoreId: ''
+    issueItemType: 'Expendable'
   });
 
   const filteredForms = useMemo(() => {
@@ -563,18 +562,6 @@ export const MagFaram: React.FC<MagFaramProps> = ({ currentFiscalYear, currentUs
               <div className="text-right space-y-1">
                   <p>माग नं: <span className="text-red-600 border-b border-dotted border-black px-4">#{formDetails.formNo}</span></p>
                   <p>मिति: <input value={formDetails.date} onChange={e => setFormDetails({...formDetails, date: e.target.value})} disabled={isViewOnly} className="border-b border-dotted border-black px-1 outline-none w-32 text-right bg-transparent" /></p>
-                  <div className="flex justify-end items-center gap-2 mt-2">
-                    <span>स्टोर:</span>
-                    <select 
-                      value={formDetails.selectedStoreId || ''} 
-                      onChange={e => setFormDetails({...formDetails, selectedStoreId: e.target.value})} 
-                      disabled={isViewOnly}
-                      className="border-b border-dotted border-black outline-none bg-transparent"
-                    >
-                      <option value="">स्टोर छान्नुहोस्</option>
-                      {stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
-                    </select>
-                  </div>
               </div>
           </div>
 

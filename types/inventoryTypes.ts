@@ -36,7 +36,6 @@ export interface MagFormEntry {
   ledgerEntry?: Signature;
   approvedBy?: Signature;
   rejectionReason?: string; 
-  selectedStoreId?: string;
   issueItemType?: 'Expendable' | 'Non-Expendable'; // Corrected to include both types
   isViewedByRequester?: boolean; // Added for notification tracking
   decisionNo?: string; // New field for PO decision number

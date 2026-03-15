@@ -783,7 +783,7 @@ const App: React.FC = () => {
                   updates[`${orgPath}/issueReports/${issueReportId}`] = {
                       id: issueReportId, magFormId: f.id, magFormNo: f.formNo, requestDate: f.date, items: f.items,
                       status: 'Pending', fiscalYear: f.fiscalYear, itemType: f.issueItemType,
-                      selectedStoreId: f.selectedStoreId, demandBy: f.demandBy,
+                      demandBy: f.demandBy,
                       preparedBy: { name: '', designation: '', date: '', purpose: '' }, 
                       recommendedBy: { name: '', designation: '', date: '', purpose: '' }, 
                       approvedBy: { name: '', designation: '', date: '', purpose: '' }, 
