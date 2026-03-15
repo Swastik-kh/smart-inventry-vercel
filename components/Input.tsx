@@ -39,6 +39,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
             ${className}
           `}
           {...props}
+          value={props.value || ''}
         />
       </div>
       {error && (
