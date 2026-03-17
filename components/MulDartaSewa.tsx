@@ -230,7 +230,7 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
     (r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
      r.registrationNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
      r.phone.includes(searchQuery))
-  );
+  ).sort((a, b) => parseInt(b.id) - parseInt(a.id));
 
   const canEditDelete = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN';
 
@@ -303,19 +303,19 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
                     </span>
                   </td>
                   <td className="p-4 text-right">
-                    {canEditDelete && (
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => handleEdit(record)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors">
-                          <Pencil size={16} />
-                        </button>
-                        <button onClick={() => handlePrintSticker(record)} className="p-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200" title="स्टिकर प्रिन्ट गर्नुहोस्">
-                          <Printer size={18} />
-                        </button>
-                        <button onClick={() => handleDelete(record.id)} className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors">
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => handleEdit(record)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors" title="सम्पादन गर्नुहोस्">
+                        <Pencil size={16} />
+                      </button>
+                      <button onClick={() => handlePrintSticker(record)} className="p-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200" title="स्टिकर प्रिन्ट गर्नुहोस्">
+                        <Printer size={18} />
+                      </button>
+                      {canEditDelete && (
+                        <button onClick={() => handleDelete(record.id)} className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors" title="हटाउनुहोस्">
                           <Trash2 size={16} />
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
