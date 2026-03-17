@@ -13,4 +13,19 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  
+  /* Sticker specific print style */
+  .sticker-print {
+    display: block !important;
+    width: 4in !important;
+    height: 2in !important;
+    border: 1px solid #000 !important;
+    padding: 0.1in !important;
+    margin: 0 !important;
+    page-break-after: always;
+  }
+  
+  body > *:not(.sticker-print) {
+    display: none !important;
+  }
 }

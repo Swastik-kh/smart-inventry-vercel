@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ClipboardList, Plus, X, Pencil, Trash2, Search } from 'lucide-react';
+import { ClipboardList, Plus, X, Pencil, Trash2, Search, Printer } from 'lucide-react';
 import { ServiceSeekerRecord, User } from '../types/coreTypes';
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
+import { PatientSticker } from './PatientSticker';
 
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
@@ -41,6 +42,15 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
   const [formData, setFormData] = useState(initialFormData);
   const [searchQuery, setSearchQuery] = useState('');
   const [ageUnit, setAgeUnit] = useState<'Days' | 'Months' | 'Years'>('Years');
+  const [stickerPatient, setStickerPatient] = useState<ServiceSeekerRecord | null>(null);
+
+  const handlePrintSticker = (record: ServiceSeekerRecord) => {
+    setStickerPatient(record);
+    setTimeout(() => {
+      window.print();
+      setStickerPatient(null);
+    }, 100);
+  };
 
   const handleAddNew = () => {
     setIsEditing(null);
@@ -298,6 +308,9 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
                         <button onClick={() => handleEdit(record)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors">
                           <Pencil size={16} />
                         </button>
+                        <button onClick={() => handlePrintSticker(record)} className="p-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200" title="स्टिकर प्रिन्ट गर्नुहोस्">
+                          <Printer size={18} />
+                        </button>
                         <button onClick={() => handleDelete(record.id)} className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors">
                           <Trash2 size={16} />
                         </button>
@@ -315,6 +328,12 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
           </table>
         </div>
       </div>
+
+      {stickerPatient && (
+        <div className="hidden">
+          <PatientSticker record={stickerPatient} />
+        </div>
+      )}
 
       {showForm && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 flex items-center justify-center p-0 sm:p-4 animate-in fade-in">
@@ -382,41 +401,37 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
                 </div>
                 {ageUnit === 'Days' && (
                   <Input 
-                    label="उमेर (दिन) *" 
+                    label="उमेर (दिन)" 
                     name="ageDays" 
                     type="number"
                     value={formData.ageDays} 
                     onChange={handleChange} 
-                    required 
                   />
                 )}
                 {ageUnit === 'Months' && (
                   <Input 
-                    label="उमेर (महिना) *" 
+                    label="उमेर (महिना)" 
                     name="ageMonths" 
                     type="number"
                     value={formData.ageMonths} 
                     onChange={handleChange} 
-                    required 
                   />
                 )}
                 {ageUnit === 'Years' && (
                   <div className="grid grid-cols-2 gap-2">
                     <Input 
-                      label="उमेर (वर्ष) *" 
+                      label="उमेर (वर्ष)" 
                       name="ageYears" 
                       type="number"
                       value={formData.ageYears} 
                       onChange={handleChange} 
-                      required 
                     />
                     <Input 
-                      label="उमेर (महिना) *" 
+                      label="उमेर (महिना)" 
                       name="ageMonths" 
                       type="number"
                       value={formData.ageMonths} 
                       onChange={handleChange} 
-                      required 
                     />
                   </div>
                 )}
