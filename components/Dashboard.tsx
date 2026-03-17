@@ -1004,6 +1004,7 @@ export const Dashboard: React.FC<ExtendedDashboardProps> = ({
         onDeleteRecord={onDeleteServiceSeekerRecord}
         currentFiscalYear={currentFiscalYear}
         currentUser={currentUser}
+        generalSettings={generalSettings}
       />;
       case 'opd_sewa': return <OPDSewa 
         serviceSeekerRecords={serviceSeekerRecords}

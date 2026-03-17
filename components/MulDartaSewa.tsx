@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ClipboardList, Plus, X, Pencil, Trash2, Search, Printer } from 'lucide-react';
-import { ServiceSeekerRecord, User } from '../types/coreTypes';
+import { ServiceSeekerRecord, User, OrganizationSettings } from '../types/coreTypes';
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
 import { PatientSticker } from './PatientSticker';
@@ -14,6 +14,7 @@ interface MulDartaSewaProps {
   onDeleteRecord: (recordId: string) => void;
   currentFiscalYear: string;
   currentUser: User;
+  generalSettings: OrganizationSettings;
 }
 
 const initialFormData: Omit<ServiceSeekerRecord, 'id' | 'fiscalYear'> = {
@@ -36,7 +37,7 @@ const initialFormData: Omit<ServiceSeekerRecord, 'id' | 'fiscalYear'> = {
   remarks: '',
 };
 
-export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSaveRecord, onDeleteRecord, currentFiscalYear, currentUser }) => {
+export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSaveRecord, onDeleteRecord, currentFiscalYear, currentUser, generalSettings }) => {
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [formData, setFormData] = useState(initialFormData);
@@ -116,18 +117,23 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
           </div>
         </div>
         <script>
-          window.onload = function() {
+          function startPrint() {
+            console.log("Generating QR code...");
             QRCode.toCanvas(document.getElementById('qrcode'), \`${stickerData}\`, {
               width: 70,
               margin: 0
             }, function (error) {
-              if (error) console.error(error);
+              if (error) {
+                console.error("QR Code Error:", error);
+                return;
+              }
+              console.log("QR Code generated. Triggering print...");
               setTimeout(function() {
                 window.print();
-                window.close();
               }, 500);
             });
-          };
+          }
+          window.onload = startPrint;
         </script>
       </body>
       </html>
