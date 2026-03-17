@@ -90,8 +90,12 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
             box-sizing: border-box;
             padding: 3px;
           }
+          .header { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
+          .logo { width: 40px; height: 40px; object-fit: contain; }
+          .titles { text-align: center; flex: 1; }
+          .org-name { font-size: 13px; font-weight: bold; }
+          .sub-title { font-size: 10px; }
           .details { flex: 1; }
-          .org-name { font-size: 12px; font-weight: bold; text-align: center; margin-bottom: 2px; }
           .details h3 { font-size: 13px; font-weight: bold; margin: 0 0 2px 0; }
           .details p { margin: 1px 0; }
           .qr-code { width: 0.8in; height: 0.8in; display: flex; align-items: center; justify-content: center; }
@@ -103,7 +107,15 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
       <body>
         <div class="sticker-print">
           <div class="details">
-            <div class="org-name">${generalSettings?.orgNameNepali || 'PHC Beltar'}</div>
+            <div class="header">
+              <img src="${generalSettings?.logoUrl || 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png'}" class="logo" />
+              <div class="titles">
+                <div class="org-name">${generalSettings?.orgNameNepali || 'PHC Beltar'}</div>
+                ${generalSettings?.subTitleNepali ? `<div class="sub-title">${generalSettings.subTitleNepali}</div>` : ''}
+                ${generalSettings?.subTitleNepali2 ? `<div class="sub-title">${generalSettings.subTitleNepali2}</div>` : ''}
+                ${generalSettings?.subTitleNepali3 ? `<div class="sub-title">${generalSettings.subTitleNepali3}</div>` : ''}
+              </div>
+            </div>
             <h3>${record.name}</h3>
             <p><strong>ID:</strong> ${record.uniquePatientId} | <strong>Reg:</strong> ${record.registrationNumber} | <strong>Palo:</strong> ${record.paloNo || 'N/A'}</p>
             <p><strong>Address:</strong> ${record.address || 'N/A'}</p>
