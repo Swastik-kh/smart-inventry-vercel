@@ -59,6 +59,8 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
     if (!doc) return;
 
     const stickerData = `ID: ${record.uniquePatientId}\nName: ${record.name}\nAge: ${record.age}\nGender: ${record.gender}`;
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     
     doc.open();
     doc.write(`
@@ -70,39 +72,44 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
           @page { size: 4in 2in; margin: 0; }
           body { 
             margin: 0; 
-            padding: 0.1in; 
+            padding: 0.05in; 
             font-family: sans-serif; 
             -webkit-print-color-adjust: exact; 
             print-color-adjust: exact;
           }
           .sticker-print {
-            width: 3.8in;
-            height: 1.8in;
+            width: 3.9in;
+            height: 1.9in;
             border: 1px solid #000;
             display: flex;
             flex-direction: row;
             align-items: center;
-            gap: 0.1in;
-            font-size: 12px;
+            gap: 0.05in;
+            font-size: 10px;
             box-sizing: border-box;
-            padding: 5px;
+            padding: 3px;
           }
           .details { flex: 1; }
-          .details h3 { font-size: 14px; font-weight: bold; margin: 0 0 5px 0; }
-          .details p { margin: 2px 0; }
-          .qr-code { width: 1.2in; height: 1.2in; display: flex; align-items: center; justify-content: center; }
+          .org-name { font-size: 12px; font-weight: bold; text-align: center; margin-bottom: 2px; }
+          .details h3 { font-size: 13px; font-weight: bold; margin: 0 0 2px 0; }
+          .details p { margin: 1px 0; }
+          .qr-code { width: 0.8in; height: 0.8in; display: flex; align-items: center; justify-content: center; }
           canvas { max-width: 100%; max-height: 100%; }
+          .footer { font-size: 9px; margin-top: 2px; border-top: 1px solid #ccc; padding-top: 2px; }
         </style>
         <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
       </head>
       <body>
         <div class="sticker-print">
           <div class="details">
+            <div class="org-name">${generalSettings?.orgNameNepali || 'PHC Beltar'}</div>
             <h3>${record.name}</h3>
-            <p><strong>ID:</strong> ${record.uniquePatientId}</p>
-            <p><strong>Reg No:</strong> ${record.registrationNumber}</p>
+            <p><strong>ID:</strong> ${record.uniquePatientId} | <strong>Reg:</strong> ${record.registrationNumber} | <strong>Palo:</strong> ${record.paloNo || 'N/A'}</p>
+            <p><strong>Address:</strong> ${record.address || 'N/A'}</p>
             <p><strong>Age/Gender:</strong> ${record.age} / ${record.gender}</p>
-            <p><strong>Date:</strong> ${record.date}</p>
+            <p><strong>Date/Time:</strong> ${record.date} ${timeString}</p>
+            <p><strong>Service Charge:</strong> Rs. 50</p>
+            <div class="footer"><strong>User:</strong> ${currentUser?.fullName || 'System'}</div>
           </div>
           <div class="qr-code">
             <canvas id="qrcode"></canvas>
@@ -111,7 +118,7 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
         <script>
           window.onload = function() {
             QRCode.toCanvas(document.getElementById('qrcode'), \`${stickerData}\`, {
-              width: 100,
+              width: 70,
               margin: 0
             }, function (error) {
               if (error) console.error(error);

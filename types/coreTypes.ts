@@ -201,6 +201,7 @@ export interface ServiceSeekerRecord {
   dobAd?: string;
   gender: 'Male' | 'Female' | 'Other';
   casteCode: string; // Caste/Ethnicity Code
+  paloNo?: string; // Added Palo Number
   address: string;
   phone: string;
   serviceType: string; // OPD, Emergency, Vaccination, etc.
