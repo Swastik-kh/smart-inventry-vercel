@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ECGRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord } from '../types';
-import { Plus, Search, Edit2, Trash2, Activity, AlertCircle, FileText } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Activity, AlertCircle, FileText, Calendar, User, MessageSquare } from 'lucide-react';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -134,32 +134,41 @@ export const ECGSewa: React.FC<ECGSewaProps> = ({
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800 font-nepali">ई.सी.जी. सेवा (ECG Service)</h2>
-          <p className="text-sm text-gray-500">ई.सी.जी. रेकर्डिङ र व्यवस्थापन</p>
+    <div className="relative min-h-screen">
+      {/* Background ECG Image */}
+      <img 
+        src="https://images.unsplash.com/photo-1557200134-90327ee1352f?q=80&w=1920&auto=format&fit=crop" 
+        alt="ECG Background" 
+        className="absolute inset-0 w-full h-full object-cover opacity-5 pointer-events-none"
+        referrerPolicy="no-referrer"
+      />
+      
+      <div className="relative z-10 space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800 font-nepali">ई.सी.जी. सेवा (ECG Service)</h2>
+            <p className="text-sm text-gray-500">ई.सी.जी. रेकर्डिङ र व्यवस्थापन</p>
+          </div>
+          <button
+            onClick={() => {
+              setEditingRecord(null);
+              setPatientSearchInput('');
+              setReferralInfo(null);
+              setFormData({
+                dateBs: new NepaliDate().format('YYYY-MM-DD'),
+                ecgType: 'Resting',
+                result: '',
+                referredBy: '',
+                remarks: ''
+              });
+              setIsFormOpen(true);
+            }}
+            className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <Plus size={20} />
+            <span>नयाँ ई.सी.जी. थप्नुहोस्</span>
+          </button>
         </div>
-        <button
-          onClick={() => {
-            setEditingRecord(null);
-            setPatientSearchInput('');
-            setReferralInfo(null);
-            setFormData({
-              dateBs: new NepaliDate().format('YYYY-MM-DD'),
-              ecgType: 'Resting',
-              result: '',
-              referredBy: '',
-              remarks: ''
-            });
-            setIsFormOpen(true);
-          }}
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          <Plus size={20} />
-          <span>नयाँ ई.सी.जी. थप्नुहोस्</span>
-        </button>
-      </div>
 
       {isFormOpen && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -167,18 +176,22 @@ export const ECGSewa: React.FC<ECGSewaProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">मिति (B.S.)</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.dateBs || ''}
-                  onChange={e => setFormData({...formData, dateBs: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    type="text"
+                    required
+                    value={formData.dateBs || ''}
+                    onChange={e => setFormData({...formData, dateBs: e.target.value})}
+                    className="w-full pl-10 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2 relative">
                 <label className="text-sm font-medium text-gray-700">सेवाग्राही खोज्नुहोस् (नाम, ID वा दर्ता नं.)</label>
                 <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input
                     type="text"
                     placeholder="खोज्न यहाँ टाइप गर्नुहोस्..."
@@ -188,7 +201,7 @@ export const ECGSewa: React.FC<ECGSewaProps> = ({
                       setShowPatientDropdown(true);
                     }}
                     onFocus={() => setShowPatientDropdown(true)}
-                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    className="w-full pl-10 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                   />
                   {showPatientDropdown && patientSearchInput && (
                     <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
@@ -274,50 +287,62 @@ export const ECGSewa: React.FC<ECGSewaProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">ई.सी.जी. प्रकार (ECG Type)</label>
-                <select
-                  required
-                  value={formData.ecgType || 'Resting'}
-                  onChange={e => setFormData({...formData, ecgType: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="Resting">Resting ECG</option>
-                  <option value="Stress">Stress ECG (TMT)</option>
-                  <option value="Holter">Holter Monitor</option>
-                </select>
+                <div className="relative">
+                  <Activity className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <select
+                    required
+                    value={formData.ecgType || 'Resting'}
+                    onChange={e => setFormData({...formData, ecgType: e.target.value})}
+                    className="w-full pl-10 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="Resting">Resting ECG</option>
+                    <option value="Stress">Stress ECG (TMT)</option>
+                    <option value="Holter">Holter Monitor</option>
+                  </select>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">सिफारिस गर्ने (Referred By)</label>
-                <input
-                  type="text"
-                  value={formData.referredBy || ''}
-                  onChange={e => setFormData({...formData, referredBy: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  placeholder="उदा: OPD, Emergency, Doctor Name"
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    type="text"
+                    value={formData.referredBy || ''}
+                    onChange={e => setFormData({...formData, referredBy: e.target.value})}
+                    className="w-full pl-10 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="उदा: OPD, Emergency, Doctor Name"
+                  />
+                </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">नतिजा / रिपोर्ट (Result/Report)</label>
-                <textarea
-                  rows={3}
-                  value={formData.result || ''}
-                  onChange={e => setFormData({...formData, result: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  placeholder="ई.सी.जी. रिपोर्टको संक्षिप्त विवरण..."
-                />
+                <div className="relative">
+                  <FileText className="absolute left-3 top-3 text-gray-400" size={18} />
+                  <textarea
+                    rows={3}
+                    value={formData.result || ''}
+                    onChange={e => setFormData({...formData, result: e.target.value})}
+                    className="w-full pl-10 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="ई.सी.जी. रिपोर्टको संक्षिप्त विवरण..."
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">कैफियत (Remarks)</label>
-                <textarea
-                  rows={3}
-                  value={formData.remarks || ''}
-                  onChange={e => setFormData({...formData, remarks: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
+                <div className="relative">
+                  <MessageSquare className="absolute left-3 top-3 text-gray-400" size={18} />
+                  <textarea
+                    rows={3}
+                    value={formData.remarks || ''}
+                    onChange={e => setFormData({...formData, remarks: e.target.value})}
+                    className="w-full pl-10 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
               </div>
             </div>
 
@@ -427,5 +452,6 @@ export const ECGSewa: React.FC<ECGSewaProps> = ({
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
