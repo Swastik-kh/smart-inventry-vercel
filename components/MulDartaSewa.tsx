@@ -45,11 +45,94 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
   const [stickerPatient, setStickerPatient] = useState<ServiceSeekerRecord | null>(null);
 
   const handlePrintSticker = (record: ServiceSeekerRecord) => {
-    setStickerPatient(record);
+    // Create a hidden iframe for printing
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    const stickerData = `ID: ${record.uniquePatientId}\nName: ${record.name}\nAge: ${record.age}\nGender: ${record.gender}`;
+    
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Patient Sticker</title>
+        <style>
+          @page { size: 4in 2in; margin: 0; }
+          body { 
+            margin: 0; 
+            padding: 0.1in; 
+            font-family: sans-serif; 
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact;
+          }
+          .sticker-print {
+            width: 3.8in;
+            height: 1.8in;
+            border: 1px solid #000;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.1in;
+            font-size: 12px;
+            box-sizing: border-box;
+            padding: 5px;
+          }
+          .details { flex: 1; }
+          .details h3 { font-size: 14px; font-weight: bold; margin: 0 0 5px 0; }
+          .details p { margin: 2px 0; }
+          .qr-code { width: 1.2in; height: 1.2in; display: flex; align-items: center; justify-content: center; }
+          canvas { max-width: 100%; max-height: 100%; }
+        </style>
+        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+      </head>
+      <body>
+        <div class="sticker-print">
+          <div class="details">
+            <h3>${record.name}</h3>
+            <p><strong>ID:</strong> ${record.uniquePatientId}</p>
+            <p><strong>Reg No:</strong> ${record.registrationNumber}</p>
+            <p><strong>Age/Gender:</strong> ${record.age} / ${record.gender}</p>
+            <p><strong>Date:</strong> ${record.date}</p>
+          </div>
+          <div class="qr-code">
+            <canvas id="qrcode"></canvas>
+          </div>
+        </div>
+        <script>
+          window.onload = function() {
+            QRCode.toCanvas(document.getElementById('qrcode'), \`${stickerData}\`, {
+              width: 100,
+              margin: 0
+            }, function (error) {
+              if (error) console.error(error);
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 500);
+            });
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    // Clean up iframe after a delay
     setTimeout(() => {
-      window.print();
-      setStickerPatient(null);
-    }, 100);
+        if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+        }
+    }, 5000);
   };
 
   const handleAddNew = () => {
@@ -328,12 +411,6 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
           </table>
         </div>
       </div>
-
-      {stickerPatient && (
-        <div className="sticker-print-container hidden print:block">
-          <PatientSticker record={stickerPatient} />
-        </div>
-      )}
 
       {showForm && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 flex items-center justify-center p-0 sm:p-4 animate-in fade-in">
