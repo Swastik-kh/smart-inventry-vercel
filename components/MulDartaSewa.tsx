@@ -126,6 +126,7 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
           </div>
           <div class="qr-code">
             <canvas id="qrcode"></canvas>
+            <div style="font-weight: bold; font-size: 14px; margin-top: 5px;">पालो नं: ${record.paloNo}</div>
           </div>
         </div>
         <script>
@@ -317,8 +318,21 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
       ageString = `${formData.ageYears}Y ${formData.ageMonths}M`;
     }
 
+    // Calculate paloNo if it's a new record
+    let finalPaloNo = formData.paloNo;
+    if (!isEditing) {
+      const today = new NepaliDate().format('YYYY-MM-DD');
+      const sameDayServiceRecords = records.filter(r => r.date === today && r.serviceType === formData.serviceType);
+      const maxPaloNo = sameDayServiceRecords.reduce((max, r) => {
+        const num = parseInt(r.paloNo || '0', 10);
+        return !isNaN(num) && num > max ? num : max;
+      }, 0);
+      finalPaloNo = (maxPaloNo + 1).toString();
+    }
+
     const recordToSave: ServiceSeekerRecord = {
       ...formData,
+      paloNo: finalPaloNo,
       age: ageString,
       id: isEditing || Date.now().toString(),
       fiscalYear: currentFiscalYear,
