@@ -330,7 +330,7 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
       </div>
 
       {stickerPatient && (
-        <div className="hidden">
+        <div className="sticker-print-container hidden print:block">
           <PatientSticker record={stickerPatient} />
         </div>
       )}
