@@ -1,12 +1,13 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Search, Save, Printer, Plus, Trash2, FileText, User, Calendar, Stethoscope, Activity, Pill, FlaskConical, History, X } from 'lucide-react';
-import { ServiceSeekerRecord, OPDRecord, PrescriptionItem, ServiceItem, LabReport } from '../types/coreTypes';
+import { ServiceSeekerRecord, OPDRecord, PrescriptionItem, ServiceItem, LabReport, OrganizationSettings } from '../types/coreTypes';
 import { XRayRecord, ECGRecord, USGRecord, PhysiotherapyRecord } from '../types';
 import { InventoryItem } from '../types/inventoryTypes';
 import { Input } from './Input';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 import { useReactToPrint } from 'react-to-print';
+import { PrescriptionPrint } from './PrescriptionPrint';
 
 interface OPDSewaProps {
   serviceSeekerRecords?: ServiceSeekerRecord[];
@@ -15,6 +16,7 @@ interface OPDSewaProps {
   onDeleteRecord: (recordId: string) => void;
   currentFiscalYear: string;
   currentUser: any;
+  generalSettings: OrganizationSettings;
   serviceItems?: ServiceItem[];
   inventoryItems?: InventoryItem[];
   labReports?: LabReport[];
@@ -45,6 +47,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
   onDeleteRecord, 
   currentFiscalYear,
   currentUser,
+  generalSettings,
   serviceItems = [],
   inventoryItems = [],
   labReports = [],
@@ -729,115 +732,14 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
                 </div>
             )}
         </div>
-        <div ref={printRef} className="p-8 bg-white text-slate-900 print:block">
-          {/* Header */}
-          <div className="flex justify-between items-start border-b-2 border-slate-800 pb-6 mb-6">
-            <div className="flex items-center gap-4">
-              {/* Logo placeholder */}
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center border border-slate-300">
-                <Stethoscope size={32} className="text-slate-600" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">{currentUser?.organizationName || 'स्वास्थ्य संस्थाको नाम'}</h1>
-                <p className="text-sm text-slate-600">ठेगाना, फोन नम्बर</p>
-                <p className="text-xs text-slate-500 mt-1">OPD Prescription Ticket</p>
-              </div>
-            </div>
-            <div className="text-right text-sm">
-              <p><strong>मिति (Date):</strong> {(() => {
-                const dateStr = new NepaliDate().format('YYYY-MM-DD');
-                const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
-                return dateStr.replace(/[0-9]/g, (digit) => nepaliDigits[parseInt(digit)]);
-              })()}</p>
-              <p><strong>OPD No:</strong> {currentPatient?.registrationNumber}</p>
-            </div>
-          </div>
-
-          {/* Patient Info */}
+        <div ref={printRef} className="print:block">
           {currentPatient && (
-            <div className="grid grid-cols-2 gap-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm">
-              <div><span className="font-bold text-slate-600">Name:</span> {currentPatient.name}</div>
-              <div><span className="font-bold text-slate-600">Age/Sex:</span> {currentPatient.age} / {currentPatient.gender}</div>
-              <div><span className="font-bold text-slate-600">Address:</span> {currentPatient.address}</div>
-              <div><span className="font-bold text-slate-600">PID:</span> {currentPatient.uniquePatientId} {currentPatient.mulDartaNo && `| Mul Darta No: ${currentPatient.mulDartaNo}`}</div>
-            </div>
+            <PrescriptionPrint 
+              record={currentPatient} 
+              generalSettings={generalSettings} 
+              opdRecord={opdData as OPDRecord} 
+            />
           )}
-
-          {/* Clinical Notes */}
-          <div className="grid grid-cols-1 gap-6 mb-6">
-            {opdData.chiefComplaints && (
-              <div>
-                <h4 className="font-bold text-slate-800 border-b border-slate-200 mb-2 pb-1">Chief Complaints</h4>
-                <p className="text-sm whitespace-pre-wrap">{opdData.chiefComplaints}</p>
-              </div>
-            )}
-            
-            <div className="grid grid-cols-2 gap-6">
-              {opdData.diagnosis && (
-                <div>
-                  <h4 className="font-bold text-slate-800 border-b border-slate-200 mb-2 pb-1">Diagnosis</h4>
-                  <p className="text-sm whitespace-pre-wrap">{opdData.diagnosis}</p>
-                </div>
-              )}
-              {opdData.investigation && (
-                <div>
-                  <h4 className="font-bold text-slate-800 border-b border-slate-200 mb-2 pb-1">Investigation</h4>
-                  <p className="text-sm whitespace-pre-wrap">{opdData.investigation}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Prescription Table */}
-          {prescriptionItems.length > 0 && (
-            <div className="mb-8">
-              <h4 className="font-bold text-slate-800 border-b-2 border-slate-800 mb-4 pb-1 flex items-center gap-2">
-                <span className="text-2xl">Rx</span> Prescription
-              </h4>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-300 text-left">
-                    <th className="py-2 font-bold w-[40%]">Medicine</th>
-                    <th className="py-2 font-bold">Dosage</th>
-                    <th className="py-2 font-bold">Freq.</th>
-                    <th className="py-2 font-bold">Duration</th>
-                    <th className="py-2 font-bold">Instruction</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {prescriptionItems.map((item, idx) => (
-                    <tr key={idx}>
-                      <td className="py-3 font-medium">{idx + 1}. {item.medicineName}</td>
-                      <td className="py-3">{item.dosage}</td>
-                      <td className="py-3">{item.frequency}</td>
-                      <td className="py-3">{item.duration}</td>
-                      <td className="py-3 text-slate-600">{item.instructions}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Advice & Footer */}
-          <div className="mt-auto pt-8">
-            {opdData.advice && (
-              <div className="mb-8 p-4 bg-slate-50 rounded border border-slate-200">
-                <h4 className="font-bold text-slate-800 mb-2 text-sm">Advice / सल्लाह:</h4>
-                <p className="text-sm">{opdData.advice}</p>
-              </div>
-            )}
-            
-            <div className="flex justify-between items-end mt-12 pt-4 border-t border-slate-200">
-              <div className="text-xs text-slate-400">
-                Printed on: {new Date().toLocaleString()}
-              </div>
-              <div className="text-center">
-                <div className="h-12 border-b border-slate-300 w-48 mb-2"></div>
-                <p className="text-sm font-bold text-slate-700">Doctor's Signature</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

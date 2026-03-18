@@ -1,15 +1,16 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { ServiceSeekerRecord, OrganizationSettings } from '../types/coreTypes';
+import { ServiceSeekerRecord, OrganizationSettings, OPDRecord } from '../types/coreTypes';
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
 interface PrescriptionPrintProps {
   record: ServiceSeekerRecord;
   generalSettings: OrganizationSettings;
+  opdRecord?: OPDRecord;
 }
 
-export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, generalSettings }) => {
+export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, generalSettings, opdRecord }) => {
   const stickerData = `ID: ${record.uniquePatientId}\nName: ${record.name}\nReg: ${record.registrationNumber}`;
 
   return (
@@ -39,7 +40,7 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
         </div>
       </div>
       <div style={{ textAlign: 'right', marginTop: '5px' }}>मिति : {(() => {
-        const dateStr = new NepaliDate().format('YYYY-MM-DD');
+        const dateStr = opdRecord?.visitDate || new NepaliDate().format('YYYY-MM-DD');
         const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
         return dateStr.replace(/[0-9]/g, (digit) => nepaliDigits[parseInt(digit)]);
       })()}</div>
@@ -59,7 +60,7 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
         </div>
         <div style={{ padding: '5px' }}>
           <div>Provisional/Final Diagnosis :-</div>
-          <div style={{ height: '60px' }}></div>
+          <div style={{ minHeight: '40px', fontWeight: 'bold' }}>{opdRecord?.diagnosis}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
             <div>Wt.:</div><div>BP:</div>
             <div>Pulse:</div><div>Temp:</div>
@@ -86,12 +87,39 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
           <div><input type="checkbox" /> X-ray</div>
           <div><input type="checkbox" /> USG</div>
           <br/>
-          <div><strong>Other Investigtion :-</strong></div>
+          <div><strong>Other Investigation :-</strong></div>
+          <div style={{ whiteSpace: 'pre-wrap', fontSize: '9pt' }}>{opdRecord?.investigation}</div>
         </div>
         {/* Right Column: C/O and Rx */}
         <div style={{ padding: '5px' }}>
-          <div style={{ borderBottom: '1px solid #000', minHeight: '100px' }}><strong>C/O</strong></div>
-          <div style={{ minHeight: '400px' }}><strong>Rx</strong></div>
+          <div style={{ borderBottom: '1px solid #000', minHeight: '100px' }}>
+            <strong>C/O</strong>
+            <div style={{ whiteSpace: 'pre-wrap', marginTop: '5px' }}>{opdRecord?.chiefComplaints}</div>
+          </div>
+          <div style={{ minHeight: '400px' }}>
+            <strong>Rx</strong>
+            <div style={{ marginTop: '10px' }}>
+              {opdRecord?.prescriptions?.map((p, i) => (
+                <div key={i} style={{ marginBottom: '8px' }}>
+                  <div style={{ fontWeight: 'bold' }}>{i + 1}. {p.medicineName} {p.dosage}</div>
+                  <div style={{ marginLeft: '15px', fontSize: '9pt' }}>
+                    {p.frequency} x {p.duration} {p.instructions && `(${p.instructions})`}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {opdRecord?.advice && (
+              <div style={{ marginTop: '20px', borderTop: '1px dashed #ccc', paddingTop: '10px' }}>
+                <strong>Advice:</strong>
+                <div style={{ whiteSpace: 'pre-wrap', fontSize: '9pt' }}>{opdRecord.advice}</div>
+              </div>
+            )}
+            {opdRecord?.nextVisitDate && (
+              <div style={{ marginTop: '10px', fontStyle: 'italic' }}>
+                Next Visit: {opdRecord.nextVisitDate}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
