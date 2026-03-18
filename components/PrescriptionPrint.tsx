@@ -41,7 +41,8 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
         <p style={{ margin: 0 }}><strong>Reg No:</strong> {record.registrationNumber}</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '10px' }}>
+        {/* Left Column: Complaints, History, Investigation */}
         <div>
           <div style={{ border: '1px solid #ccc', padding: '5px', marginBottom: '10px' }}>
             <h3 style={{ margin: '0 0 5px 0', fontSize: '10pt', borderBottom: '1px solid #ccc' }}>Chief Complaints</h3>
@@ -53,21 +54,32 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
           </div>
           <div style={{ border: '1px solid #ccc', padding: '5px', marginBottom: '10px' }}>
             <h3 style={{ margin: '0 0 5px 0', fontSize: '10pt', borderBottom: '1px solid #ccc' }}>Investigation</h3>
-            <div style={{ minHeight: '50px' }}></div>
+            <div style={{ minHeight: '50px' }}>
+              <label style={{ display: 'block', fontSize: '9pt' }}><input type="checkbox" /> Blood Test</label>
+              <label style={{ display: 'block', fontSize: '9pt' }}><input type="checkbox" /> Urine Test</label>
+              <label style={{ display: 'block', fontSize: '9pt' }}><input type="checkbox" /> X-Ray</label>
+              <label style={{ display: 'block', fontSize: '9pt' }}><input type="checkbox" /> USG</label>
+            </div>
           </div>
         </div>
+
+        {/* Middle Column: Diagnosis */}
         <div>
           <div style={{ border: '1px solid #ccc', padding: '5px', marginBottom: '10px' }}>
             <h3 style={{ margin: '0 0 5px 0', fontSize: '10pt', borderBottom: '1px solid #ccc' }}>Provisional Diagnosis</h3>
-            <div style={{ minHeight: '50px' }}></div>
+            <div style={{ minHeight: '100px' }}></div>
           </div>
           <div style={{ border: '1px solid #ccc', padding: '5px', marginBottom: '10px' }}>
             <h3 style={{ margin: '0 0 5px 0', fontSize: '10pt', borderBottom: '1px solid #ccc' }}>Final Diagnosis</h3>
-            <div style={{ minHeight: '50px' }}></div>
+            <div style={{ minHeight: '100px' }}></div>
           </div>
-          <div style={{ border: '1px solid #ccc', padding: '5px', marginBottom: '10px' }}>
+        </div>
+
+        {/* Right Column: Treatment (Tallest) */}
+        <div>
+          <div style={{ border: '1px solid #ccc', padding: '5px', height: '100%' }}>
             <h3 style={{ margin: '0 0 5px 0', fontSize: '10pt', borderBottom: '1px solid #ccc' }}>Treatment</h3>
-            <div style={{ minHeight: '130px' }}></div>
+            <div style={{ minHeight: '300px' }}></div>
           </div>
         </div>
       </div>
