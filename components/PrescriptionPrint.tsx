@@ -41,22 +41,34 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
         <p style={{ margin: 0 }}><strong>Reg No:</strong> {record.registrationNumber}</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
         <div>
-          <h3 style={{ borderBottom: '1px solid #000', marginBottom: '5px' }}>Chief Complaints</h3>
-          <div style={{ minHeight: '50px' }}></div>
-          <h3 style={{ borderBottom: '1px solid #000', marginBottom: '5px' }}>Patient History</h3>
-          <div style={{ minHeight: '50px' }}></div>
-          <h3 style={{ borderBottom: '1px solid #000', marginBottom: '5px' }}>Investigation</h3>
-          <div style={{ minHeight: '50px' }}></div>
+          <div style={{ border: '1px solid #ccc', padding: '5px', marginBottom: '10px' }}>
+            <h3 style={{ margin: '0 0 5px 0', fontSize: '10pt', borderBottom: '1px solid #ccc' }}>Chief Complaints</h3>
+            <div style={{ minHeight: '50px' }}></div>
+          </div>
+          <div style={{ border: '1px solid #ccc', padding: '5px', marginBottom: '10px' }}>
+            <h3 style={{ margin: '0 0 5px 0', fontSize: '10pt', borderBottom: '1px solid #ccc' }}>Patient History</h3>
+            <div style={{ minHeight: '50px' }}></div>
+          </div>
+          <div style={{ border: '1px solid #ccc', padding: '5px', marginBottom: '10px' }}>
+            <h3 style={{ margin: '0 0 5px 0', fontSize: '10pt', borderBottom: '1px solid #ccc' }}>Investigation</h3>
+            <div style={{ minHeight: '50px' }}></div>
+          </div>
         </div>
         <div>
-          <h3 style={{ borderBottom: '1px solid #000', marginBottom: '5px' }}>Provisional Diagnosis</h3>
-          <div style={{ minHeight: '50px' }}></div>
-          <h3 style={{ borderBottom: '1px solid #000', marginBottom: '5px' }}>Final Diagnosis</h3>
-          <div style={{ minHeight: '50px' }}></div>
-          <h3 style={{ borderBottom: '1px solid #000', marginBottom: '5px' }}>Treatment</h3>
-          <div style={{ minHeight: '150px' }}></div>
+          <div style={{ border: '1px solid #ccc', padding: '5px', marginBottom: '10px' }}>
+            <h3 style={{ margin: '0 0 5px 0', fontSize: '10pt', borderBottom: '1px solid #ccc' }}>Provisional Diagnosis</h3>
+            <div style={{ minHeight: '50px' }}></div>
+          </div>
+          <div style={{ border: '1px solid #ccc', padding: '5px', marginBottom: '10px' }}>
+            <h3 style={{ margin: '0 0 5px 0', fontSize: '10pt', borderBottom: '1px solid #ccc' }}>Final Diagnosis</h3>
+            <div style={{ minHeight: '50px' }}></div>
+          </div>
+          <div style={{ border: '1px solid #ccc', padding: '5px', marginBottom: '10px' }}>
+            <h3 style={{ margin: '0 0 5px 0', fontSize: '10pt', borderBottom: '1px solid #ccc' }}>Treatment</h3>
+            <div style={{ minHeight: '130px' }}></div>
+          </div>
         </div>
       </div>
 
