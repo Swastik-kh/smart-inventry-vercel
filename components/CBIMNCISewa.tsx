@@ -94,6 +94,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
   const [showExistingResults, setShowExistingResults] = useState(false);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [hasDangerSigns, setHasDangerSigns] = useState<boolean | null>(null);
+  const [hasInfantDangerSigns, setHasInfantDangerSigns] = useState<boolean | null>(null);
   const [hasCoughOrBreathingDifficulty, setHasCoughOrBreathingDifficulty] = useState<boolean | null>(null);
   const [hasDiarrhea, setHasDiarrhea] = useState<boolean | null>(null);
   const [hasFever, setHasFever] = useState<boolean | null>(null);
@@ -605,32 +606,75 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
               <span>१. खतराका संकेतहरू (Danger Signs / PSBI)</span>
               <span className="text-xs font-normal text-blue-600">Booklet Page 14</span>
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                {['काँप्ने (Convulsions)', 'दूध चुस्न/निल्न नसक्ने (Unable to feed)', 'सुस्त वा बेहोस (Lethargic/Unconscious)', 'कोखा हान्ने (Severe chest in-drawing)', 'नाक फुलाउने (Nasal flaring)', 'कन्कने (Grunting)', 'तालु फुलेको (Bulging fontanelle)'].map(sign => (
-                  <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={assessmentData.dangerSigns?.includes(sign)}
-                      onChange={(e) => {
-                        const current = assessmentData.dangerSigns || [];
-                        const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
-                        setAssessmentData({...assessmentData, dangerSigns: next});
-                      }}
-                      className="rounded text-blue-600 focus:ring-blue-500"
-                    />
-                    {sign}
-                  </label>
-                ))}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-2">के बच्चामा खतराका संकेतहरू छन्? (Are there any danger signs?)</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input 
+                    type="radio" 
+                    checked={hasInfantDangerSigns === true} 
+                    onChange={() => setHasInfantDangerSigns(true)} 
+                    className="text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>छ (Yes)</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input 
+                    type="radio" 
+                    checked={hasInfantDangerSigns === false} 
+                    onChange={() => {
+                      setHasInfantDangerSigns(false);
+                      setAssessmentData({...assessmentData, dangerSigns: []});
+                    }} 
+                    className="text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>छैन (No)</span>
+                </label>
               </div>
-              <div className="space-y-3">
-                <Input 
-                  label="सासको दर (प्रति मिनेट)" 
-                  type="number"
-                  value={assessmentData.breathingRate || ''} 
-                  onChange={(e) => setAssessmentData({...assessmentData, breathingRate: e.target.value})} 
-                  placeholder="६० वा सोभन्दा बढी भए खतरा"
-                />
+            </div>
+
+            {hasInfantDangerSigns === true && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  {['काँप्ने (Convulsions)', 'दूध चुस्न/निल्न नसक्ने (Unable to feed)', 'सुस्त वा बेहोस (Lethargic/Unconscious)', 'कोखा हान्ने (Severe chest in-drawing)', 'नाक फुलाउने (Nasal flaring)', 'कन्कने (Grunting)', 'तालु फुलेको (Bulging fontanelle)', 'नाईटोको रातोपना छालासम्म फैलिएको'].map(sign => (
+                    <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={assessmentData.dangerSigns?.includes(sign)}
+                        onChange={(e) => {
+                          const current = assessmentData.dangerSigns || [];
+                          const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
+                          setAssessmentData({...assessmentData, dangerSigns: next});
+                        }}
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                      />
+                      {sign}
+                    </label>
+                  ))}
+                  {(currentPatient?.ageDays !== undefined && currentPatient.ageDays <= 7) && (
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={assessmentData.dangerSigns?.includes('श्वासदर ६० वा सो भन्दा बढी')}
+                        onChange={(e) => {
+                          const current = assessmentData.dangerSigns || [];
+                          const next = e.target.checked ? [...current, 'श्वासदर ६० वा सो भन्दा बढी'] : current.filter((s: string) => s !== 'श्वासदर ६० वा सो भन्दा बढी');
+                          setAssessmentData({...assessmentData, dangerSigns: next});
+                        }}
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                      />
+                      श्वासदर ६० वा सो भन्दा बढी
+                    </label>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <Input 
+                    label="सासको दर (प्रति मिनेट)" 
+                    type="number"
+                    value={assessmentData.breathingRate || ''} 
+                    onChange={(e) => setAssessmentData({...assessmentData, breathingRate: e.target.value})} 
+                    placeholder="६० वा सोभन्दा बढी भए खतरा"
+                  />
                 <div className="grid grid-cols-2 gap-2">
                   <Input 
                     label="तापक्रम (Celsius)" 
@@ -685,6 +729,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                 </div>
               </div>
             </div>
+            )}
           </div>
 
           {/* Jaundice */}
