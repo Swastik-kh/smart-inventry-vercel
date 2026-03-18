@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Building2, Globe, Phone, Mail, FileText, Percent, Calendar, RotateCcw, Image, CheckCircle2, Lock } from 'lucide-react';
+import { Save, Building2, Globe, Phone, Mail, FileText, Percent, Calendar, RotateCcw, Image, CheckCircle2, Lock, ListChecks } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
-import { FISCAL_YEARS } from '../constants';
+import { FISCAL_YEARS, AVAILABLE_SERVICES } from '../constants';
 import { OrganizationSettings, User as UserType } from '../types/coreTypes'; // Changed import
 
 interface GeneralSettingProps {
@@ -85,6 +85,29 @@ export const GeneralSetting: React.FC<GeneralSettingProps> = ({ currentUser, set
                 <div className="mt-4"><Input label="PAN/VAT No" value={localSettings.panNo} onChange={(e) => handleChange('panNo', e.target.value)} icon={<FileText size={16} />} /></div>
             </div>
 
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2 border-b pb-2"><ListChecks size={18} className="text-primary-600"/>उपलब्ध सेवाहरू</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                    {AVAILABLE_SERVICES.map(service => (
+                        <label key={service} className="flex items-center gap-2 cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={localSettings.availableServices?.includes(service) || false}
+                                onChange={(e) => {
+                                    const services = localSettings.availableServices || [];
+                                    const newServices = e.target.checked 
+                                        ? [...services, service] 
+                                        : services.filter(s => s !== service);
+                                    handleChange('availableServices', newServices as any);
+                                }}
+                                className="w-4 h-4 text-primary-600 rounded"
+                            />
+                            <span className="text-sm text-slate-700">{service}</span>
+                        </label>
+                    ))}
+                </div>
+            </div>
+            
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2 border-b pb-2"><Globe size={18} className="text-primary-600"/>प्रणाली कन्फिगरेसन</h3>
                 <div className="grid md:grid-cols-2 gap-6">

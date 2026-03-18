@@ -60,6 +60,7 @@ export interface OrganizationSettings {
   enableEnglishDate: string;
   logoUrl: string;
   ambulancePhone?: string; // Added field
+  availableServices?: string[];
   vaccinationSessions?: number[]; 
   vaccinationCenters?: string[]; // Added for managing centers
   ipdWards?: WardConfig[]; 

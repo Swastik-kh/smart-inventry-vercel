@@ -93,7 +93,7 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
       <div style={{ borderTop: '1px solid #000', fontSize: '9pt' }}>
         <div>कार्यालय सम्पर्क : {generalSettings?.phone || 'N/A'} | एम्बुलेन्स सेवा : {generalSettings?.ambulancePhone || 'N/A'}</div>
         <div style={{ textAlign: 'center', fontWeight: 'bold', background: '#000', color: '#fff', padding: '2px' }}>उपलब्ध सेवाहरु</div>
-        <div>रेविज विरुद्धको भ्याक्सिन सेवा | हरेक दिन ओ.पि.डि. सेवा | २४ सै घण्टा ईमेरजेन्सी सेवा | फार्मेसी, ल्याव, डिजिटल एक्स-रे, इ.सि.जि., नेबुलाईजेसन सेवा | डेसिड सेवा | सुरक्षित मातृत्व सेवा | पोषण सेवा | खोप सेवा | परिवार नियोजन सेवा | सुरक्षित गर्भपतन सेवा | क्षयरोग, कुष्ठरोग, कालाजार, मलेरिया उपचार सेवा | सर्प दंश उपचार सेवा | फार्मेसी सेवा सेवा</div>
+        <div>{generalSettings?.availableServices?.join(' | ') || ''}</div>
         <div style={{ textAlign: 'center', fontWeight: 'bold', background: '#000', color: '#fff', padding: '2px' }}>हरेक पटक आउँदा यो पुर्जा अनिवार्य रुपमा लिई आउनु होला |</div>
       </div>
     </div>
