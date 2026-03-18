@@ -8,6 +8,7 @@ import { Input } from './Input';
 import NepaliDate from 'nepali-date-converter';
 import { useReactToPrint } from 'react-to-print';
 import { PrescriptionPrint } from './PrescriptionPrint';
+import { MedicineSlipPrint } from './MedicineSlipPrint';
 
 interface OPDSewaProps {
   serviceSeekerRecords?: ServiceSeekerRecord[];
@@ -107,8 +108,19 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
   }, [patientReports]);
 
   const printRef = useRef<HTMLDivElement>(null);
+  const medicineSlipPrintRef = useRef<HTMLDivElement>(null);
   const reportPrintRef = useRef<HTMLDivElement>(null);
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Prescription-${currentPatient?.uniquePatientId}`,
+  });
+
+  const handlePrintMedicineSlip = useReactToPrint({
+    contentRef: medicineSlipPrintRef,
+    documentTitle: `MedicineSlip-${currentPatient?.uniquePatientId}`,
+  });
 
   const handlePrintReport = useReactToPrint({
     contentRef: reportPrintRef,
@@ -279,11 +291,6 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
     setPrescriptionItems([]);
     setEditingRecordId(null);
   };
-
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `Prescription-${currentPatient?.uniquePatientId}`,
-  });
 
   const filteredServices = serviceItems?.filter(item => 
     item.serviceName.toLowerCase().includes(investigationSearch.toLowerCase())
@@ -588,6 +595,12 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
                     <Printer size={18} /> प्रिन्ट (Print)
                   </button>
                   <button 
+                    onClick={handlePrintMedicineSlip}
+                    className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-2 shadow-sm font-medium"
+                  >
+                    <Pill size={18} /> औषधि पुर्जा
+                  </button>
+                  <button 
                     onClick={handleSave}
                     className="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2 shadow-sm font-medium"
                   >
@@ -735,6 +748,15 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
         <div ref={printRef} className="print:block">
           {currentPatient && (
             <PrescriptionPrint 
+              record={currentPatient} 
+              generalSettings={generalSettings} 
+              opdRecord={opdData as OPDRecord} 
+            />
+          )}
+        </div>
+        <div ref={medicineSlipPrintRef} className="print:block">
+          {currentPatient && (
+            <MedicineSlipPrint 
               record={currentPatient} 
               generalSettings={generalSettings} 
               opdRecord={opdData as OPDRecord} 
