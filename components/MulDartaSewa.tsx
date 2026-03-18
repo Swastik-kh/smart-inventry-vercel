@@ -98,7 +98,7 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
           .details { flex: 1; }
           .details h3 { font-size: 13px; font-weight: bold; margin: 0 0 2px 0; }
           .details p { margin: 1px 0; }
-          .qr-code { width: 0.8in; height: 0.8in; display: flex; align-items: center; justify-content: center; }
+          .qr-code { width: 0.8in; height: 0.8in; display: flex; flex-direction: column; align-items: center; justify-content: center; }
           canvas { max-width: 100%; max-height: 100%; }
           .footer { font-size: 9px; margin-top: 2px; border-top: 1px solid #ccc; padding-top: 2px; }
         </style>
