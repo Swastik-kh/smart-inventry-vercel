@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Building2, Globe, Phone, Mail, FileText, Percent, Calendar, RotateCcw, Image, CheckCircle2, Lock, ListChecks } from 'lucide-react';
+import { Save, Building2, Globe, Phone, Mail, FileText, Percent, Calendar, RotateCcw, Image, CheckCircle2, Lock, ListChecks, Plus, Trash2 } from 'lucide-react';
 import { Input } from './Input';
 import { Select } from './Select';
 import { FISCAL_YEARS, AVAILABLE_SERVICES } from '../constants';
@@ -14,6 +14,7 @@ interface GeneralSettingProps {
 export const GeneralSetting: React.FC<GeneralSettingProps> = ({ currentUser, settings, onUpdateSettings }) => {
   const [localSettings, setLocalSettings] = useState(settings);
   const [isSaved, setIsSaved] = useState(false);
+  const [newService, setNewService] = useState('');
 
   // Security Guard: Admin and Super Admin only
   const isAuthorized = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
@@ -32,8 +33,39 @@ export const GeneralSetting: React.FC<GeneralSettingProps> = ({ currentUser, set
     );
   }
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: any) => {
     setLocalSettings(prev => ({ ...prev, [field]: value }));
+    setIsSaved(false);
+  };
+
+  const handleAddService = () => {
+    if (!newService.trim()) return;
+    
+    const currentOptions = localSettings.allServiceOptions || AVAILABLE_SERVICES;
+    if (currentOptions.includes(newService.trim())) {
+        alert('यो सेवा पहिले नै सूचीमा छ।');
+        return;
+    }
+
+    const updatedOptions = [...currentOptions, newService.trim()];
+    handleChange('allServiceOptions', updatedOptions);
+    setNewService('');
+  };
+
+  const handleRemoveService = (serviceToRemove: string) => {
+    if (!window.confirm(`के तपाईं "${serviceToRemove}" लाई उपलब्ध सेवाहरूको सूचीबाट हटाउन चाहनुहुन्छ?`)) return;
+
+    const currentOptions = localSettings.allServiceOptions || AVAILABLE_SERVICES;
+    const updatedOptions = currentOptions.filter(s => s !== serviceToRemove);
+    
+    const currentSelected = localSettings.availableServices || [];
+    const updatedSelected = currentSelected.filter(s => s !== serviceToRemove);
+
+    setLocalSettings(prev => ({
+        ...prev,
+        allServiceOptions: updatedOptions,
+        availableServices: updatedSelected
+    }));
     setIsSaved(false);
   };
 
@@ -50,6 +82,8 @@ export const GeneralSetting: React.FC<GeneralSettingProps> = ({ currentUser, set
         setIsSaved(false);
     }
   };
+
+  const serviceOptions = localSettings.allServiceOptions || AVAILABLE_SERVICES;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
@@ -86,24 +120,59 @@ export const GeneralSetting: React.FC<GeneralSettingProps> = ({ currentUser, set
             </div>
 
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2 border-b pb-2"><ListChecks size={18} className="text-primary-600"/>उपलब्ध सेवाहरू</h3>
+                <div className="flex items-center justify-between mb-4 border-b pb-2">
+                    <h3 className="font-bold text-slate-700 flex items-center gap-2"><ListChecks size={18} className="text-primary-600"/>उपलब्ध सेवाहरू</h3>
+                    <div className="flex items-center gap-2">
+                        <input 
+                            type="text" 
+                            placeholder="नयाँ सेवा थप्नुहोस्..." 
+                            value={newService}
+                            onChange={(e) => setNewService(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddService();
+                                }
+                            }}
+                            className="text-xs px-3 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                        <button 
+                            type="button"
+                            onClick={handleAddService}
+                            className="bg-primary-600 text-white p-1.5 rounded-lg hover:bg-primary-700 transition-colors"
+                            title="थप्नुहोस्"
+                        >
+                            <Plus size={16} />
+                        </button>
+                    </div>
+                </div>
                 <div className="grid md:grid-cols-2 gap-4">
-                    {AVAILABLE_SERVICES.map(service => (
-                        <label key={service} className="flex items-center gap-2 cursor-pointer">
-                            <input 
-                                type="checkbox" 
-                                checked={localSettings.availableServices?.includes(service) || false}
-                                onChange={(e) => {
-                                    const services = localSettings.availableServices || [];
-                                    const newServices = e.target.checked 
-                                        ? [...services, service] 
-                                        : services.filter(s => s !== service);
-                                    handleChange('availableServices', newServices as any);
-                                }}
-                                className="w-4 h-4 text-primary-600 rounded"
-                            />
-                            <span className="text-sm text-slate-700">{service}</span>
-                        </label>
+                    {serviceOptions.map(service => (
+                        <div key={service} className="flex items-center justify-between group p-2 hover:bg-slate-50 rounded-lg transition-colors">
+                            <label className="flex items-center gap-2 cursor-pointer flex-1">
+                                <input 
+                                    type="checkbox" 
+                                    checked={localSettings.availableServices?.includes(service) || false}
+                                    onChange={(e) => {
+                                        const services = localSettings.availableServices || [];
+                                        const newServices = e.target.checked 
+                                            ? [...services, service] 
+                                            : services.filter(s => s !== service);
+                                        handleChange('availableServices', newServices);
+                                    }}
+                                    className="w-4 h-4 text-primary-600 rounded"
+                                />
+                                <span className="text-sm text-slate-700">{service}</span>
+                            </label>
+                            <button 
+                                type="button"
+                                onClick={() => handleRemoveService(service)}
+                                className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
+                                title="हटाउनुहोस्"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
                     ))}
                 </div>
             </div>
@@ -121,7 +190,7 @@ export const GeneralSetting: React.FC<GeneralSettingProps> = ({ currentUser, set
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2"><Image size={18} className="text-primary-600"/>लोगो सेटिङ</h3>
                 <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-slate-50 cursor-pointer group">
-                    <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-3 group-hover:scale-105 transition-transform"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png" alt="Emblem" className="w-16 h-16 object-contain opacity-80" /></div>
+                    <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-3 group-hover:scale-105 transition-transform"><img src={localSettings.logoUrl || "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png"} alt="Emblem" className="w-16 h-16 object-contain opacity-80" /></div>
                     <span className="text-sm font-medium text-primary-600">नयाँ लोगो अपलोड गर्नुहोस्</span>
                 </div>
             </div>

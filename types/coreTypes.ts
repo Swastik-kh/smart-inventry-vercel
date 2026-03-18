@@ -61,6 +61,7 @@ export interface OrganizationSettings {
   logoUrl: string;
   ambulancePhone?: string; // Added field
   availableServices?: string[];
+  allServiceOptions?: string[]; // Added for managing master list of services
   vaccinationSessions?: number[]; 
   vaccinationCenters?: string[]; // Added for managing centers
   ipdWards?: WardConfig[]; 

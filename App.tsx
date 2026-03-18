@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { LoginForm } from './components/LoginForm';
 import { Dashboard } from './components/Dashboard';
-import { APP_NAME, ORG_NAME } from './constants';
+import { APP_NAME, ORG_NAME, AVAILABLE_SERVICES } from './constants';
 import { Landmark, ShieldCheck, AlertCircle, Database, ShieldAlert, Lock, Unlock } from 'lucide-react';
 import { 
   User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, 
@@ -28,7 +28,8 @@ const INITIAL_SETTINGS: OrganizationSettings = {
     defaultVatRate: '13',
     activeFiscalYear: '2082/083',
     enableEnglishDate: 'no',
-    logoUrl: ''
+    logoUrl: '',
+    allServiceOptions: AVAILABLE_SERVICES
 };
 
 const DEFAULT_ADMIN: User = {
