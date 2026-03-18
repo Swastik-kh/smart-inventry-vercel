@@ -127,6 +127,28 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
     documentTitle: `Report-${selectedReport?.patientName}`,
   });
 
+  const todayNepaliDate = useMemo(() => new NepaliDate().format('YYYY-MM-DD'), []);
+
+  const todaysOPDRecords = useMemo(() => {
+    return opdRecords
+      .filter(r => r.visitDate === todayNepaliDate && r.fiscalYear === currentFiscalYear)
+      .sort((a, b) => b.id.localeCompare(a.id));
+  }, [opdRecords, todayNepaliDate, currentFiscalYear]);
+
+  const handleSelectAndPrint = (record: OPDRecord) => {
+    const patient = serviceSeekerRecords.find(p => p.uniquePatientId === record.uniquePatientId);
+    if (patient) {
+      setCurrentPatient(patient);
+      setOpdData(record);
+      setPrescriptionItems(record.prescriptions || []);
+      setEditingRecordId(record.id);
+      // Wait for state to update then print
+      setTimeout(() => {
+        handlePrint();
+      }, 100);
+    }
+  };
+
   const markAsViewed = (report: any) => {
     if (report.isViewedByDoctor) return;
 
@@ -297,14 +319,16 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
   ) || [];
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-      {/* Search Section */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <h2 className="text-xl font-bold text-slate-800 font-nepali mb-4 flex items-center gap-2">
-          <Stethoscope className="text-primary-600" />
-          ओ.पी.डी. सेवा (OPD Service)
-        </h2>
-        <form onSubmit={handleSearch} className="flex gap-4 relative">
+    <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4">
+      {/* Main Content Area */}
+      <div className="xl:col-span-3 space-y-6">
+        {/* Search Section */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h2 className="text-xl font-bold text-slate-800 font-nepali mb-4 flex items-center gap-2">
+            <Stethoscope className="text-primary-600" />
+            ओ.पी.डी. सेवा (OPD Service)
+          </h2>
+          <form onSubmit={handleSearch} className="flex gap-4 relative">
           <div className="flex-1 max-w-md relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             <input
@@ -762,6 +786,67 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
               opdRecord={opdData as OPDRecord} 
             />
           )}
+        </div>
+      </div>
+      </div>
+
+      {/* Sidebar: Today's Patients */}
+      <div className="space-y-4">
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 sticky top-6">
+          <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2 border-b pb-2">
+            <History size={18} className="text-primary-600" />
+            आजका बिरामीहरू ({todaysOPDRecords.length})
+          </h3>
+          <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto pr-2 custom-scrollbar">
+            {todaysOPDRecords.map(record => {
+              const patient = serviceSeekerRecords.find(p => p.uniquePatientId === record.uniquePatientId);
+              const isSelected = editingRecordId === record.id;
+              
+              return (
+                <div 
+                  key={record.id}
+                  className={`p-3 rounded-lg border transition-all cursor-pointer group ${
+                    isSelected 
+                      ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500' 
+                      : 'border-slate-100 hover:border-primary-200 hover:bg-slate-50'
+                  }`}
+                  onClick={() => {
+                    if (patient) selectPatient(patient);
+                    setOpdData(record);
+                    setPrescriptionItems(record.prescriptions || []);
+                    setEditingRecordId(record.id);
+                  }}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-800 text-sm truncate">{patient?.name || 'Unknown'}</p>
+                      <p className="text-[10px] text-slate-500 font-mono">{record.uniquePatientId}</p>
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectAndPrint(record);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-white rounded-md transition-colors shadow-sm border border-transparent hover:border-slate-200"
+                        title="Print Card"
+                      >
+                        <Printer size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {todaysOPDRecords.length === 0 && (
+              <div className="text-center py-12">
+                <div className="bg-slate-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <User size={20} className="text-slate-300" />
+                </div>
+                <p className="text-slate-400 text-sm italic">आज कुनै बिरामी छैनन्</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
