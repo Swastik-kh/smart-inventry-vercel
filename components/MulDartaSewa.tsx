@@ -21,6 +21,7 @@ interface MulDartaSewaProps {
 const initialFormData: Omit<ServiceSeekerRecord, 'id' | 'fiscalYear'> = {
   uniquePatientId: '',
   registrationNumber: '',
+  mulDartaNo: '',
   date: '',
   name: '',
   age: '',
@@ -439,6 +440,7 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
             <thead className="bg-slate-50 text-slate-600 font-medium">
               <tr>
                 <th className="p-4">दर्ता नं.</th>
+                <th className="p-4">मूल दर्ता नं.</th>
                 <th className="p-4">बिरामी ID</th>
                 <th className="p-4">मिति</th>
                 <th className="p-4">नाम</th>
@@ -455,6 +457,7 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
               {filteredRecords.map(record => (
                 <tr key={record.id} className="hover:bg-slate-50 transition-colors">
                   <td className="p-4 font-bold text-primary-700">{record.registrationNumber}</td>
+                  <td className="p-4 font-bold text-slate-700">{record.mulDartaNo || '-'}</td>
                   <td className="p-4 font-mono text-xs text-slate-500">{record.uniquePatientId}</td>
                   <td className="p-4">{record.date}</td>
                   <td className="p-4 font-medium">{record.name}</td>
@@ -521,6 +524,13 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
                   required 
                   readOnly
                   className="bg-slate-50 text-slate-500 cursor-not-allowed"
+                />
+                <Input 
+                  label="मूल दर्ता नम्बर" 
+                  name="mulDartaNo" 
+                  value={formData.mulDartaNo || ''} 
+                  onChange={handleChange} 
+                  placeholder="Mul Darta No"
                 />
                 <Input 
                   label="बिरामी ID (Unique)" 

@@ -273,7 +273,7 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                   >
                     <p className="font-bold text-slate-800">{patient.name}</p>
                     <p className="text-xs text-slate-500">
-                      {patient.uniquePatientId} {patient.registrationNumber ? `• Reg: ${patient.registrationNumber}` : ''} • {patient.phone}
+                      {patient.uniquePatientId} {patient.mulDartaNo && `| Mul Darta: ${patient.mulDartaNo}`} {patient.registrationNumber ? `• Reg: ${patient.registrationNumber}` : ''} • {patient.phone}
                     </p>
                   </button>
                 ))}
@@ -289,7 +289,7 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900">{currentPatient.name}</h4>
-                  <p className="text-xs text-primary-700 font-medium">{currentPatient.uniquePatientId}</p>
+                  <p className="text-xs text-primary-700 font-medium">{currentPatient.uniquePatientId} {currentPatient.mulDartaNo && `| ${currentPatient.mulDartaNo}`}</p>
                 </div>
               </div>
               <div className="space-y-2 text-sm">
@@ -373,7 +373,10 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                             <tr key={record.id} className="hover:bg-slate-50">
                               <td className="p-3">
                                 <div className="font-bold text-slate-800">{record.patientName}</div>
-                                <div className="text-[10px] text-slate-500 font-mono">{record.uniquePatientId}</div>
+                                <div className="text-[10px] text-slate-500 font-mono">
+                                  {record.uniquePatientId} 
+                                  {serviceSeekerRecords.find(p => p.id === record.serviceSeekerId)?.mulDartaNo && ` | ${serviceSeekerRecords.find(p => p.id === record.serviceSeekerId)?.mulDartaNo}`}
+                                </div>
                               </td>
                               <td className="p-3">{record.admissionDate}</td>
                               <td className="p-3">
@@ -475,7 +478,10 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
                               <tr key={admission.id} className="hover:bg-slate-50 transition-colors group">
                                 <td className="p-3" data-label="Patient">
                                   <div className="font-bold text-slate-800">{admission.patientName}</div>
-                                  <div className="text-[10px] text-slate-500 font-mono">{admission.uniquePatientId}</div>
+                                  <div className="text-[10px] text-slate-500 font-mono">
+                                    {admission.uniquePatientId}
+                                    {serviceSeekerRecords.find(p => p.id === admission.serviceSeekerId)?.mulDartaNo && ` | ${serviceSeekerRecords.find(p => p.id === admission.serviceSeekerId)?.mulDartaNo}`}
+                                  </div>
                                 </td>
                                 <td className="p-3" data-label="Ward/Bed">
                                   <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-lg font-bold text-xs border border-indigo-100">
@@ -714,7 +720,10 @@ export const IPDSewa: React.FC<IPDSewaProps> = ({
             <div className="bg-primary-600 p-6 text-white flex justify-between items-start">
               <div>
                 <h3 className="text-xl font-bold">{showPatientDetails.patientName}</h3>
-                <p className="text-primary-100 text-sm">{showPatientDetails.uniquePatientId}</p>
+                <p className="text-primary-100 text-sm">
+                  {showPatientDetails.uniquePatientId}
+                  {serviceSeekerRecords.find(p => p.id === showPatientDetails.serviceSeekerId)?.mulDartaNo && ` | Mul Darta No: ${serviceSeekerRecords.find(p => p.id === showPatientDetails.serviceSeekerId)?.mulDartaNo}`}
+                </p>
               </div>
               <button onClick={() => setShowPatientDetails(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                 <X size={24} />

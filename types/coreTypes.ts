@@ -193,6 +193,7 @@ export interface ServiceSeekerRecord {
   id: string;
   uniquePatientId: string; // Unique ID for the patient
   registrationNumber: string;
+  mulDartaNo?: string; // Added Mul Darta No
   date: string;
   name: string;
   age: string; // Keep for display/legacy

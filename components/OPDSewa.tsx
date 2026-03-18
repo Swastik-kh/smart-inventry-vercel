@@ -353,7 +353,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
               </h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-slate-500">नाम:</span> <span className="font-medium">{currentPatient.name}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">ID:</span> <span className="font-mono bg-slate-100 px-2 rounded">{currentPatient.uniquePatientId}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">ID:</span> <span className="font-mono bg-slate-100 px-2 rounded">{currentPatient.uniquePatientId} {currentPatient.mulDartaNo && `| ${currentPatient.mulDartaNo}`}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">उमेर/लिङ्ग:</span> <span>{currentPatient.age} / {currentPatient.gender}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">ठेगाना:</span> <span>{currentPatient.address}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">फोन:</span> <span>{currentPatient.phone}</span></div>
@@ -683,7 +683,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
                     <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
                         <div><strong>Patient:</strong> {selectedReport.patientName}</div>
                         <div><strong>Age/Sex:</strong> {selectedReport.age}/{selectedReport.gender || selectedReport.sex}</div>
-                        <div><strong>ID:</strong> {selectedReport.uniquePatientId || selectedReport.serviceSeekerId}</div>
+                        <div><strong>ID:</strong> {selectedReport.uniquePatientId || selectedReport.serviceSeekerId} {currentPatient?.mulDartaNo && `| Mul Darta No: ${currentPatient.mulDartaNo}`}</div>
                         <div><strong>Referred By:</strong> {selectedReport.referredBy || 'Self'}</div>
                     </div>
 
@@ -755,7 +755,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
               <div><span className="font-bold text-slate-600">Name:</span> {currentPatient.name}</div>
               <div><span className="font-bold text-slate-600">Age/Sex:</span> {currentPatient.age} / {currentPatient.gender}</div>
               <div><span className="font-bold text-slate-600">Address:</span> {currentPatient.address}</div>
-              <div><span className="font-bold text-slate-600">PID:</span> {currentPatient.uniquePatientId}</div>
+              <div><span className="font-bold text-slate-600">PID:</span> {currentPatient.uniquePatientId} {currentPatient.mulDartaNo && `| Mul Darta No: ${currentPatient.mulDartaNo}`}</div>
             </div>
           )}
 

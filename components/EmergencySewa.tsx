@@ -311,7 +311,7 @@ export const EmergencySewa: React.FC<EmergencySewaProps> = ({
               </h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-slate-500">नाम:</span> <span className="font-medium">{currentPatient.name}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">ID:</span> <span className="font-mono bg-slate-100 px-2 rounded">{currentPatient.uniquePatientId}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">ID:</span> <span className="font-mono bg-slate-100 px-2 rounded">{currentPatient.uniquePatientId} {currentPatient.mulDartaNo && `| ${currentPatient.mulDartaNo}`}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">उमेर/लिङ्ग:</span> <span>{currentPatient.age} / {currentPatient.gender}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">ठेगाना:</span> <span>{currentPatient.address}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">फोन:</span> <span>{currentPatient.phone}</span></div>
@@ -629,7 +629,7 @@ export const EmergencySewa: React.FC<EmergencySewaProps> = ({
             <div className="grid grid-cols-2 gap-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm">
               <div><span className="font-bold text-slate-600">Name:</span> {currentPatient.name}</div>
               <div><span className="font-bold text-slate-600">Age/Sex:</span> {currentPatient.age} / {currentPatient.gender}</div>
-              <div><span className="font-bold text-slate-600">PID:</span> {currentPatient.uniquePatientId}</div>
+              <div><span className="font-bold text-slate-600">PID:</span> {currentPatient.uniquePatientId} {currentPatient.mulDartaNo && `| Mul Darta No: ${currentPatient.mulDartaNo}`}</div>
               {emergencyData.vitals && (
                 <div className="col-span-2 mt-2 pt-2 border-t border-slate-200 grid grid-cols-5 gap-2 text-[10px]">
                   <div><span className="font-bold">Temp:</span> {emergencyData.vitals.temp}</div>

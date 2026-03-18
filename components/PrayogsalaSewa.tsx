@@ -313,7 +313,7 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
               </h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-slate-500">नाम:</span> <span className="font-medium">{currentPatient.name}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">ID:</span> <span className="font-mono bg-slate-100 px-2 rounded">{currentPatient.uniquePatientId}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">ID:</span> <span className="font-mono bg-slate-100 px-2 rounded">{currentPatient.uniquePatientId} {currentPatient.mulDartaNo && `| ${currentPatient.mulDartaNo}`}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">उमेर/लिङ्ग:</span> <span>{currentPatient.age} / {currentPatient.gender}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">ठेगाना:</span> <span>{currentPatient.address}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">फोन:</span> <span>{currentPatient.phone}</span></div>
@@ -543,7 +543,7 @@ export const PrayogsalaSewa: React.FC<PrayogsalaSewaProps> = ({
             <div className="space-y-1">
               <p><strong>Patient Name:</strong> {currentReport?.patientName}</p>
               <p><strong>Age/Gender:</strong> {currentReport?.age} / {currentReport?.gender}</p>
-              <p><strong>Patient ID:</strong> {currentPatient?.uniquePatientId}</p>
+              <p><strong>Patient ID:</strong> {currentPatient?.uniquePatientId} {currentPatient?.mulDartaNo && `| Mul Darta No: ${currentPatient.mulDartaNo}`}</p>
             </div>
             <div className="space-y-1 text-right">
               <p><strong>Report Date:</strong> {currentReport?.reportDate}</p>

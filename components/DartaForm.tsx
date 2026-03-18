@@ -15,10 +15,7 @@ interface DartaFormProps {
 
 export const DartaForm: React.FC<DartaFormProps> = ({ onSave, onCancel, nextRegistrationNumber, currentUser }) => {
   const getInitialFormData = () => {
-    let today = '';
-    try {
-      today = new NepaliDate().format('YYYY-MM-DD');
-    } catch (e) {}
+    let today = new NepaliDate().format('YYYY-MM-DD');
     return {
       date: today,
       sender: '',

@@ -1,6 +1,8 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { ServiceSeekerRecord, OrganizationSettings } from '../types/coreTypes';
+// @ts-ignore
+import NepaliDate from 'nepali-date-converter';
 
 interface PrescriptionPrintProps {
   record: ServiceSeekerRecord;
@@ -36,7 +38,7 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
           <div>Health Service Card</div>
         </div>
       </div>
-      <div style={{ textAlign: 'right', marginTop: '5px' }}>मिति : ...........................</div>
+      <div style={{ textAlign: 'right', marginTop: '5px' }}>मिति : {new NepaliDate().format('YYYY-MM-DD')}</div>
 
       {/* Patient Details & Diagnosis */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid #000' }}>
@@ -44,7 +46,7 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
           <div>
             <div><strong>Name:</strong> {record.name}</div>
             <div><strong>Age/Gender:</strong> {record.age} / {record.gender}</div>
-            <div><strong>ID:</strong> {record.uniquePatientId}</div>
+            <div><strong>ID:</strong> {record.uniquePatientId} {record.mulDartaNo && `| Mul Darta No: ${record.mulDartaNo}`}</div>
             <div><strong>Address:</strong> {record.address || 'N/A'}</div>
           </div>
           <div style={{ width: '60px', height: '60px' }}>
