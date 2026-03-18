@@ -4,6 +4,7 @@ import { ServiceSeekerRecord, User, OrganizationSettings } from '../types/coreTy
 import { Input } from './Input';
 import { NepaliDatePicker } from './NepaliDatePicker';
 import { PatientSticker } from './PatientSticker';
+import { PrescriptionPrint } from './PrescriptionPrint';
 
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
@@ -40,6 +41,7 @@ const initialFormData: Omit<ServiceSeekerRecord, 'id' | 'fiscalYear'> = {
 export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSaveRecord, onDeleteRecord, currentFiscalYear, currentUser, generalSettings }) => {
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
+  const [printRecord, setPrintRecord] = useState<ServiceSeekerRecord | null>(null);
   const [formData, setFormData] = useState(initialFormData);
   const [searchQuery, setSearchQuery] = useState('');
   const [ageUnit, setAgeUnit] = useState<'Days' | 'Months' | 'Years'>('Years');
@@ -159,6 +161,52 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
             document.body.removeChild(iframe);
         }
     }, 5000);
+  };
+
+  const handlePrintPrescription = (record: ServiceSeekerRecord) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`
+      <html>
+      <head>
+        <title>Prescription</title>
+        <style>
+          @page { size: A4; margin: 20mm; }
+          body { font-family: serif; font-size: 12pt; }
+        </style>
+      </head>
+      <body>
+        <div id="print-content"></div>
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    // Render PrescriptionPrint into the iframe
+    const root = doc.getElementById('print-content');
+    if (root) {
+      import('react-dom/client').then(({ createRoot }) => {
+        createRoot(root).render(<PrescriptionPrint record={record} generalSettings={generalSettings} />);
+        
+        setTimeout(() => {
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 1000);
+        }, 500);
+      });
+    }
   };
 
   const handleAddNew = () => {
@@ -429,7 +477,7 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
                       <button onClick={() => handleEdit(record)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors" title="सम्पादन गर्नुहोस्">
                         <Pencil size={16} />
                       </button>
-                      <button onClick={() => handlePrintSticker(record)} className="p-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200" title="स्टिकर प्रिन्ट गर्नुहोस्">
+                      <button onClick={() => setPrintRecord(record)} className="p-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200" title="प्रिन्ट गर्नुहोस्">
                         <Printer size={18} />
                       </button>
                       {canEditDelete && (
@@ -639,6 +687,33 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
                   <button type="submit" className="px-6 py-2 bg-primary-600 text-white rounded-lg font-medium shadow-sm hover:bg-primary-700 transition-colors">सुरक्षित गर्नुहोस्</button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+      {printRecord && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl">
+            <h2 className="text-lg font-bold mb-4">प्रिन्ट विकल्प</h2>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => { handlePrintSticker(printRecord); setPrintRecord(null); }}
+                className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+              >
+                स्टिकर प्रिन्ट
+              </button>
+              <button 
+                onClick={() => { handlePrintPrescription(printRecord); setPrintRecord(null); }}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                प्रिस्क्रिप्शन प्रिन्ट
+              </button>
+              <button 
+                onClick={() => setPrintRecord(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+              >
+                रद्द गर्नुहोस्
+              </button>
             </div>
           </div>
         </div>
