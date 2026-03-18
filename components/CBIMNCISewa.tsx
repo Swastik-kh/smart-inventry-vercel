@@ -724,7 +724,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">जलवियोजनका संकेतहरू (Dehydration Signs)</label>
-                {['सुस्त वा बेहोस (Lethargic/Unconscious)', 'आँखा गडेको (Sunken eyes)', 'छाला तान्दा धेरै ढिलो फर्कने (Skin pinch very slow)', 'छाला तान्दा ढिलो फर्कने (Skin pinch slow)'].map(sign => (
+                {['सुस्त वा बेहोस (Lethargic/Unconscious)', 'आँखा गडेको (Sunken eyes)', 'छाला तान्दा धेरै ढिलो फर्कने (Skin pinch very slow)', 'छाला तान्दा ढिलो फर्कने (Skin pinch slow)', 'चटपटिने, झिझिने (Restless/Irritable)'].map(sign => (
                   <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
                     <input 
                       type="checkbox" 
@@ -1518,16 +1518,24 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       }
 
       // Dehydration
-      const dehydSigns = assessmentData.dehydrationSigns || [];
-      const severeCount = dehydSigns.filter((s: string) => s.includes('Lethargic') || s.includes('Sunken') || s.includes('very slow')).length;
-      const someCount = dehydSigns.length;
-      
-      if (severeCount >= 2) {
-        classifications.push('Severe Dehydration');
-      } else if (someCount >= 2) {
-        classifications.push('Some Dehydration');
-      } else if (assessmentData.diarrheaDays) {
-        classifications.push('No Dehydration');
+      if (assessmentData.diarrheaDays) {
+        const dehydSigns = assessmentData.dehydrationSigns || [];
+        
+        // Severe Dehydration: Any 2 of Lethargic, Sunken eyes, Skin pinch very slow
+        const severeSigns = ['सुस्त वा बेहोस (Lethargic/Unconscious)', 'आँखा गडेको (Sunken eyes)', 'छाला तान्दा धेरै ढिलो फर्कने (Skin pinch very slow)'];
+        const severeCount = dehydSigns.filter((s: string) => severeSigns.includes(s)).length;
+        
+        // Some Dehydration: Any 2 of Restless/Irritable, Sunken eyes, Skin pinch slow
+        const someSigns = ['चटपटिने, झिझिने (Restless/Irritable)', 'आँखा गडेको (Sunken eyes)', 'छाला तान्दा ढिलो फर्कने (Skin pinch slow)'];
+        const someCount = dehydSigns.filter((s: string) => someSigns.includes(s)).length;
+        
+        if (severeCount >= 2) {
+          classifications.push('Severe Dehydration');
+        } else if (someCount >= 2) {
+          classifications.push('Some Dehydration');
+        } else {
+          classifications.push('No Dehydration');
+        }
       }
 
       // Feeding Problem and Weight
