@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { Search, FileText, User, Calendar, Activity, AlertCircle, Plus, Trash2, Printer, Save, CreditCard, Banknote, History } from 'lucide-react';
+import { Search, FileText, User, Calendar, Activity, AlertCircle, Plus, Trash2, Printer, Save, CreditCard, Banknote, History, CheckCircle2 } from 'lucide-react';
 import { ServiceSeekerRecord, OPDRecord, BillingRecord, BillingItem, ServiceItem } from '../types/coreTypes';
 import { Input } from './Input';
 // @ts-ignore
@@ -37,6 +37,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({
   const [discount, setDiscount] = useState('');
   const [paymentMode, setPaymentMode] = useState<'Cash' | 'Online' | 'Credit'>('Cash');
   const [currentBill, setCurrentBill] = useState<BillingRecord | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -82,6 +83,24 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({
     
     if (isNaN(price) || isNaN(quantity) || quantity < 1) return;
 
+    // Check for duplicates in current bill
+    const isAlreadyInBill = billingItems.some(item => item.serviceName.toLowerCase() === newItem.serviceName.toLowerCase());
+    if (isAlreadyInBill) {
+      alert('यो सेवा पहिले नै बिलमा थपिसकिएको छ।');
+      return;
+    }
+
+    // Check if already billed in previous records
+    const isAlreadyBilled = billingRecords.some(b => 
+      b.serviceSeekerId === currentPatient?.id && 
+      b.items.some(i => i.serviceName.toLowerCase() === newItem.serviceName.toLowerCase())
+    );
+    if (isAlreadyBilled) {
+      if (!window.confirm('यो सेवा पहिले नै बिलिङ भइसकेको देखिन्छ। के तपाईं फेरि थप्न चाहनुहुन्छ?')) {
+        return;
+      }
+    }
+
     const item: BillingItem = {
       id: Date.now().toString(),
       serviceName: newItem.serviceName,
@@ -102,6 +121,17 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({
     const serviceNames = investigation.split(/[\n,]/).map(s => s.trim()).filter(s => s);
 
     serviceNames.forEach((name, index) => {
+      // Check if already in current billingItems
+      const isAlreadyInBill = billingItems.some(item => item.serviceName.toLowerCase() === name.toLowerCase());
+      if (isAlreadyInBill) return;
+
+      // Check if already billed in previous records
+      const isAlreadyBilled = billingRecords.some(b => 
+        b.serviceSeekerId === currentPatient?.id && 
+        b.items.some(i => i.serviceName.toLowerCase() === name.toLowerCase())
+      );
+      if (isAlreadyBilled) return;
+
       // Find service in settings to get rate
       const service = serviceItems.find(s => s.serviceName === name) || 
                       serviceItems.find(s => s.serviceName.toLowerCase() === name.toLowerCase());
@@ -118,6 +148,11 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({
       itemsToAdd.push(item);
     });
 
+    if (itemsToAdd.length === 0) {
+      alert('यी जाँचहरू पहिले नै बिलमा थपिसकिएका छन् वा बिलिङ भइसकेका छन्।');
+      return;
+    }
+
     setBillingItems(prev => [...prev, ...itemsToAdd]);
   };
 
@@ -129,30 +164,48 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({
   const discountAmount = parseFloat(discount) || 0;
   const grandTotal = Math.max(0, subTotal - discountAmount);
 
-  const handleSaveBill = () => {
-    if (!currentPatient || billingItems.length === 0) return;
+  const handleSaveBill = async () => {
+    if (!currentPatient || billingItems.length === 0 || isSaving) return;
 
-    // Generate Invoice Number (Simple logic for now, ideally should be sequential from DB)
-    const invoiceNumber = `INV-${currentFiscalYear}-${Date.now().toString().slice(-6)}`;
+    setIsSaving(true);
+    try {
+      // Generate Invoice Number (Simple logic for now, ideally should be sequential from DB)
+      const invoiceNumber = `INV-${currentFiscalYear}-${Date.now().toString().slice(-6)}`;
 
-    const newBill: BillingRecord = {
-      id: Date.now().toString(),
-      fiscalYear: currentFiscalYear,
-      billDate: new NepaliDate().format('YYYY-MM-DD'),
-      invoiceNumber: invoiceNumber,
-      serviceSeekerId: currentPatient.id,
-      patientName: currentPatient.name,
-      items: billingItems,
-      subTotal: subTotal,
-      discount: discountAmount,
-      grandTotal: grandTotal,
-      paymentMode: paymentMode,
-      createdBy: currentUser?.username || 'Unknown'
-    };
+      const newBill: BillingRecord = {
+        id: Date.now().toString(),
+        fiscalYear: currentFiscalYear,
+        billDate: new NepaliDate().format('YYYY-MM-DD'),
+        invoiceNumber: invoiceNumber,
+        serviceSeekerId: currentPatient.id,
+        patientName: currentPatient.name,
+        items: billingItems,
+        subTotal: subTotal,
+        discount: discountAmount,
+        grandTotal: grandTotal,
+        paymentMode: paymentMode,
+        createdBy: currentUser?.username || 'Unknown'
+      };
 
-    onSaveRecord(newBill);
-    setCurrentBill(newBill);
-    alert('बिल सुरक्षित गरियो। अब प्रिन्ट गर्न सक्नुहुन्छ।');
+      await onSaveRecord(newBill);
+      setCurrentBill(newBill);
+      
+      // Reset billing items after successful save
+      setBillingItems([]);
+      setDiscount('');
+      
+      alert('बिल सुरक्षित गरियो। अब प्रिन्ट हुँदैछ...');
+      
+      // Trigger print after a short delay to allow state to update
+      setTimeout(() => {
+        handlePrint();
+        setIsSaving(false);
+      }, 500);
+    } catch (error) {
+      console.error("Error saving bill:", error);
+      alert("बिल सुरक्षित गर्दा समस्या आयो।");
+      setIsSaving(false);
+    }
   };
 
   const handlePrint = useReactToPrint({
@@ -216,22 +269,38 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({
               </h3>
               <div className="space-y-4 max-h-[300px] overflow-y-auto">
                 {patientOpdRecords.length > 0 ? (
-                  patientOpdRecords.map((record) => (
-                    record.investigation ? (
+                  patientOpdRecords.map((record) => {
+                    const isBilled = record.investigation ? (() => {
+                      const serviceNames = record.investigation.split(/[\n,]/).map(s => s.trim().toLowerCase()).filter(s => s);
+                      return serviceNames.length > 0 && serviceNames.every(name => 
+                        billingRecords.some(b => 
+                          b.serviceSeekerId === currentPatient?.id && 
+                          b.items.some(i => i.serviceName.toLowerCase() === name)
+                        )
+                      );
+                    })() : false;
+
+                    return record.investigation ? (
                       <div key={record.id} className="border border-slate-100 rounded p-3 bg-slate-50 text-sm">
                         <div className="flex justify-between items-center mb-1">
                           <span className="text-xs font-bold text-slate-500">{record.visitDate}</span>
-                          <button 
-                            onClick={() => handleCopyToBill(record.investigation)}
-                            className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded hover:bg-blue-200"
-                          >
-                            Copy to Bill
-                          </button>
+                          {isBilled ? (
+                            <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded flex items-center gap-1 font-bold">
+                              <CheckCircle2 size={10} /> Billed
+                            </span>
+                          ) : (
+                            <button 
+                              onClick={() => handleCopyToBill(record.investigation)}
+                              className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded hover:bg-blue-200"
+                            >
+                              Copy to Bill
+                            </button>
+                          )}
                         </div>
                         <p className="text-slate-700 whitespace-pre-wrap">{record.investigation}</p>
                       </div>
-                    ) : null
-                  ))
+                    ) : null;
+                  })
                 ) : (
                   <p className="text-slate-400 text-sm italic text-center">कुनै OPD रेकर्ड छैन</p>
                 )}
@@ -409,10 +478,19 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({
                   
                   <button 
                     onClick={handleSaveBill}
-                    disabled={billingItems.length === 0}
+                    disabled={billingItems.length === 0 || isSaving}
                     className="w-full mt-4 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-bold shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Save size={20} /> Save & Print
+                    {isSaving ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={20} /> Save & Print
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -435,7 +513,11 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({
           <div className="flex justify-between mb-6 text-sm">
             <div>
               <p><strong>Invoice No:</strong> {currentBill?.invoiceNumber}</p>
-              <p><strong>Date:</strong> {currentBill?.billDate}</p>
+              <p><strong>मिति (Date):</strong> {(() => {
+                const dateStr = currentBill?.billDate || '';
+                const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+                return dateStr.replace(/[0-9]/g, (digit) => nepaliDigits[parseInt(digit)]);
+              })()}</p>
               <p><strong>Payment Mode:</strong> {currentBill?.paymentMode}</p>
             </div>
             <div className="text-right">

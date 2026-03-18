@@ -289,7 +289,7 @@ export const EmergencySewa: React.FC<EmergencySewaProps> = ({
                       </div>
                       <div className="text-right">
                         <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded font-mono mb-1">
-                          {patient.uniquePatientId}
+                          {patient.uniquePatientId} {patient.mulDartaNo && `| ${patient.mulDartaNo}`}
                         </span>
                         <p className="text-xs text-slate-500">Reg: {patient.registrationNumber}</p>
                       </div>

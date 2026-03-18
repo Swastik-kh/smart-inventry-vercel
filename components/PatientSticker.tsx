@@ -28,7 +28,11 @@ export const PatientSticker: React.FC<PatientStickerProps> = ({ record }) => {
         <p style={{ margin: '2px 0' }}><strong>ID:</strong> {record.uniquePatientId}</p>
         <p style={{ margin: '2px 0' }}><strong>Reg No:</strong> {record.registrationNumber}</p>
         <p style={{ margin: '2px 0' }}><strong>Age/Gender:</strong> {record.age} / {record.gender}</p>
-        <p style={{ margin: '2px 0' }}><strong>Date:</strong> {record.date}</p>
+        <p style={{ margin: '2px 0' }}><strong>Date:</strong> {(() => {
+          const dateStr = record.date || '';
+          const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+          return dateStr.replace(/[0-9]/g, (digit) => nepaliDigits[parseInt(digit)]);
+        })()}</p>
       </div>
       <div style={{ width: '1.5in', height: '1.5in' }}>
         <QRCodeSVG value={stickerData} size={100} />

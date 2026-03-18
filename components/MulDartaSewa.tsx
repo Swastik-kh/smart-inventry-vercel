@@ -123,7 +123,11 @@ export const MulDartaSewa: React.FC<MulDartaSewaProps> = ({ records = [], onSave
             <p><strong>ID:</strong> ${record.uniquePatientId} | <strong>Reg:</strong> ${record.registrationNumber} | <strong>Palo:</strong> ${record.paloNo || 'N/A'}</p>
             <p><strong>Address:</strong> ${record.address || 'N/A'}</p>
             <p><strong>Age/Gender:</strong> ${record.age} / ${record.gender}</p>
-            <p><strong>Date/Time:</strong> ${record.date} ${timeString}</p>
+            <p><strong>Date/Time:</strong> ${(() => {
+              const dateStr = record.date || '';
+              const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+              return dateStr.replace(/[0-9]/g, (digit) => nepaliDigits[parseInt(digit)]);
+            })()} ${timeString}</p>
             <p><strong>Service Charge:</strong> Rs. 50</p>
             <div class="footer"><strong>User:</strong> ${currentUser?.fullName || 'System'}</div>
           </div>

@@ -38,7 +38,11 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
           <div>Health Service Card</div>
         </div>
       </div>
-      <div style={{ textAlign: 'right', marginTop: '5px' }}>मिति : {new NepaliDate().format('YYYY-MM-DD')}</div>
+      <div style={{ textAlign: 'right', marginTop: '5px' }}>मिति : {(() => {
+        const dateStr = new NepaliDate().format('YYYY-MM-DD');
+        const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+        return dateStr.replace(/[0-9]/g, (digit) => nepaliDigits[parseInt(digit)]);
+      })()}</div>
 
       {/* Patient Details & Diagnosis */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid #000' }}>

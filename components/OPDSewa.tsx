@@ -330,7 +330,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
                       </div>
                       <div className="text-right">
                         <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded font-mono mb-1">
-                          {patient.uniquePatientId}
+                          {patient.uniquePatientId} {patient.mulDartaNo && `| ${patient.mulDartaNo}`}
                         </span>
                         <p className="text-xs text-slate-500">Reg: {patient.registrationNumber}</p>
                       </div>
@@ -744,7 +744,11 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
               </div>
             </div>
             <div className="text-right text-sm">
-              <p><strong>Date:</strong> {new NepaliDate().format('YYYY-MM-DD')}</p>
+              <p><strong>मिति (Date):</strong> {(() => {
+                const dateStr = new NepaliDate().format('YYYY-MM-DD');
+                const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+                return dateStr.replace(/[0-9]/g, (digit) => nepaliDigits[parseInt(digit)]);
+              })()}</p>
               <p><strong>OPD No:</strong> {currentPatient?.registrationNumber}</p>
             </div>
           </div>
