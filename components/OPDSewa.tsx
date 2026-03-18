@@ -833,6 +833,20 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
                       >
                         <Printer size={14} />
                       </button>
+                      {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN') && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('के तपाईं यो रेकर्ड हटाउन चाहनुहुन्छ?')) {
+                              onDeleteRecord(record.id);
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-white rounded-md transition-colors shadow-sm border border-transparent hover:border-slate-200"
+                          title="Delete Record"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
