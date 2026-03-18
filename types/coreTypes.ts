@@ -59,6 +59,7 @@ export interface OrganizationSettings {
   activeFiscalYear: string;
   enableEnglishDate: string;
   logoUrl: string;
+  ambulancePhone?: string; // Added field
   vaccinationSessions?: number[]; 
   vaccinationCenters?: string[]; // Added for managing centers
   ipdWards?: WardConfig[]; 
