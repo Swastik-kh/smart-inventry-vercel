@@ -31,7 +31,7 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
           <div style={{ fontWeight: 'bold', border: '1px solid #000', display: 'inline-block', padding: '2px 10px', borderRadius: '15px', marginTop: '5px' }}>स्वास्थ्य सेवा कार्ड</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div>PAN No.: 201601640</div>
+          <div>PAN No.: {generalSettings?.panNo || 'N/A'}</div>
           <div>HMIS1.2:</div>
           <div>Health Service Card</div>
         </div>
@@ -91,7 +91,7 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
 
       {/* Footer */}
       <div style={{ borderTop: '1px solid #000', fontSize: '9pt' }}>
-        <div>कार्यालय सम्पर्क : {generalSettings?.phone || '035-440164'} | एम्बुलेन्स सेवा : {generalSettings?.website || '9862988688'} | PAN No.: {generalSettings?.panNo || '201601640'}</div>
+        <div>कार्यालय सम्पर्क : {generalSettings?.phone || 'N/A'} | एम्बुलेन्स सेवा : {generalSettings?.email || 'N/A'}</div>
         <div style={{ textAlign: 'center', fontWeight: 'bold', background: '#000', color: '#fff', padding: '2px' }}>उपलब्ध सेवाहरु</div>
         <div>रेविज विरुद्धको भ्याक्सिन सेवा | हरेक दिन ओ.पि.डि. सेवा | २४ सै घण्टा ईमेरजेन्सी सेवा | फार्मेसी, ल्याव, डिजिटल एक्स-रे, इ.सि.जि., नेबुलाईजेसन सेवा | डेसिड सेवा | सुरक्षित मातृत्व सेवा | पोषण सेवा | खोप सेवा | परिवार नियोजन सेवा | सुरक्षित गर्भपतन सेवा | क्षयरोग, कुष्ठरोग, कालाजार, मलेरिया उपचार सेवा | सर्प दंश उपचार सेवा | फार्मेसी सेवा सेवा</div>
         <div style={{ textAlign: 'center', fontWeight: 'bold', background: '#000', color: '#fff', padding: '2px' }}>हरेक पटक आउँदा यो पुर्जा अनिवार्य रुपमा लिई आउनु होला |</div>
