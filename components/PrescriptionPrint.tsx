@@ -8,6 +8,8 @@ interface PrescriptionPrintProps {
 }
 
 export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, generalSettings }) => {
+  const stickerData = `ID: ${record.uniquePatientId}\nName: ${record.name}\nReg: ${record.registrationNumber}`;
+
   return (
     <div className="prescription-print" style={{ 
       width: '210mm', 
@@ -20,32 +22,43 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
     }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #000', paddingBottom: '5px' }}>
-        <div style={{ fontSize: '9pt' }}>PAN No.: 201601640</div>
+        <img src={generalSettings?.logoUrl || 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Emblem_of_Nepal.svg/1200px-Emblem_of_Nepal.svg.png'} style={{ width: '80px', height: '80px' }} alt="Logo" />
         <div style={{ textAlign: 'center' }}>
           <h1 style={{ margin: 0, fontSize: '16pt' }}>{generalSettings?.orgNameNepali || 'आधारभूत नगर अस्पताल बेल्टार'}</h1>
           <p style={{ margin: 0 }}>{generalSettings?.subTitleNepali || 'उदयपुर, कोशी प्रदेश'}</p>
+          <p style={{ margin: 0 }}>{generalSettings?.subTitleNepali2 || ''}</p>
+          <p style={{ margin: 0 }}>{generalSettings?.subTitleNepali3 || ''}</p>
           <div style={{ fontWeight: 'bold', border: '1px solid #000', display: 'inline-block', padding: '2px 10px', borderRadius: '15px', marginTop: '5px' }}>स्वास्थ्य सेवा कार्ड</div>
         </div>
         <div style={{ textAlign: 'right' }}>
+          <div>PAN No.: 201601640</div>
           <div>HMIS1.2:</div>
           <div>Health Service Card</div>
         </div>
       </div>
       <div style={{ textAlign: 'right', marginTop: '5px' }}>मिति : ...........................</div>
 
-      {/* Vitals & Diagnosis */}
+      {/* Patient Details & Diagnosis */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid #000' }}>
-        <div style={{ borderRight: '1px solid #000', padding: '5px' }}>
-          {/* Patient info could go here if needed, but not in original */}
+        <div style={{ borderRight: '1px solid #000', padding: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div><strong>Name:</strong> {record.name}</div>
+            <div><strong>Age/Gender:</strong> {record.age} / {record.gender}</div>
+            <div><strong>ID:</strong> {record.uniquePatientId}</div>
+            <div><strong>Address:</strong> {record.address || 'N/A'}</div>
+          </div>
+          <div style={{ width: '60px', height: '60px' }}>
+            <QRCodeSVG value={stickerData} size={60} />
+          </div>
         </div>
         <div style={{ padding: '5px' }}>
           <div>Provisional/Final Diagnosis :-</div>
           <div style={{ height: '60px' }}></div>
-          <div>Wt.:</div>
-          <div>BP:</div>
-          <div>Pulse:</div>
-          <div>Temp:</div>
-          <div>RR:</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+            <div>Wt.:</div><div>BP:</div>
+            <div>Pulse:</div><div>Temp:</div>
+            <div>RR:</div>
+          </div>
         </div>
       </div>
 
