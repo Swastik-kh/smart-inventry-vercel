@@ -78,6 +78,7 @@ export const GeneralSetting: React.FC<GeneralSettingProps> = ({ currentUser, set
                 </div>
                 <div className="grid md:grid-cols-3 gap-4 mt-4">
                     <Input label="फोन नं." value={localSettings.phone} onChange={(e) => handleChange('phone', e.target.value)} icon={<Phone size={16} />} />
+                    <Input label="एम्बुलेन्स सेवा नं." value={localSettings.ambulancePhone || ''} onChange={(e) => handleChange('ambulancePhone', e.target.value)} icon={<Phone size={16} />} />
                     <Input label="ईमेल" value={localSettings.email} onChange={(e) => handleChange('email', e.target.value)} icon={<Mail size={16} />} />
                     <Input label="वेबसाइट" value={localSettings.website} onChange={(e) => handleChange('website', e.target.value)} icon={<Globe size={16} />} />
                 </div>
