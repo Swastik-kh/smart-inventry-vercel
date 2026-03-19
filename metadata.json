@@ -1,5 +1,5 @@
 {
-  "name": "CBIMNCI Classification Tool",
-  "description": "A tool to classify neonatal and childhood illnesses based on age and respiratory rate according to CBIMNCI guidelines.",
+  "name": "Smart Inventory",
+  "description": "A professional inventory management system with secure login and fiscal year tracking.",
   "requestFramePermissions": []
 }
