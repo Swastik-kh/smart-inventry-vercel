@@ -41,6 +41,14 @@ const initialPrescriptionItem: PrescriptionItem = {
   instructions: ''
 };
 
+interface OPDRecordWithVitals extends OPDRecord {
+  weight?: string;
+  bp?: string;
+  pulse?: string;
+  temperature?: string;
+  rr?: string;
+}
+
 export const OPDSewa: React.FC<OPDSewaProps> = ({ 
   serviceSeekerRecords = [], 
   opdRecords = [], 
@@ -65,13 +73,18 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
   const [searchId, setSearchId] = useState('');
   const [currentPatient, setCurrentPatient] = useState<ServiceSeekerRecord | null>(null);
   const [activeTab, setActiveTab] = useState<'form' | 'reports'>('form');
-  const [opdData, setOpdData] = useState<Partial<OPDRecord>>({
+  const [opdData, setOpdData] = useState<Partial<OPDRecordWithVitals>>({
     chiefComplaints: '',
     diagnosis: '',
     investigation: '',
     prescriptions: [],
     advice: '',
-    nextVisitDate: ''
+    nextVisitDate: '',
+    weight: '',
+    bp: '',
+    pulse: '',
+    temperature: '',
+    rr: ''
   });
   const [prescriptionItems, setPrescriptionItems] = useState<PrescriptionItem[]>([]);
   const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
@@ -212,7 +225,12 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
       investigation: '',
       prescriptions: [],
       advice: '',
-      nextVisitDate: ''
+      nextVisitDate: '',
+      weight: '',
+      bp: '',
+      pulse: '',
+      temperature: '',
+      rr: ''
     });
     setPrescriptionItems([]);
     setEditingRecordId(null);
@@ -235,7 +253,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
         return b.id.localeCompare(a.id);
     });
 
-    const latestRecord = sortedRecords[0];
+    const latestRecord = sortedRecords[0] as OPDRecordWithVitals;
 
     setOpdData({
       chiefComplaints: latestRecord.chiefComplaints,
@@ -243,7 +261,12 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
       investigation: latestRecord.investigation,
       prescriptions: latestRecord.prescriptions || [],
       advice: latestRecord.advice,
-      nextVisitDate: latestRecord.nextVisitDate
+      nextVisitDate: latestRecord.nextVisitDate,
+      weight: latestRecord.weight || '',
+      bp: latestRecord.bp || '',
+      pulse: latestRecord.pulse || '',
+      temperature: latestRecord.temperature || '',
+      rr: latestRecord.rr || ''
     });
     setPrescriptionItems(latestRecord.prescriptions || []);
     setEditingRecordId(latestRecord.id);
@@ -284,7 +307,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
       ? (opdRecords.find(r => r.id === editingRecordId)?.visitDate || new NepaliDate().format('YYYY-MM-DD'))
       : new NepaliDate().format('YYYY-MM-DD');
 
-    const newRecord: OPDRecord = {
+    const newRecord: OPDRecordWithVitals = {
       id: recordId,
       fiscalYear: currentFiscalYear,
       serviceSeekerId: currentPatient.id,
@@ -295,10 +318,15 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
       investigation: opdData.investigation || '',
       prescriptions: prescriptionItems,
       advice: opdData.advice,
-      nextVisitDate: opdData.nextVisitDate
+      nextVisitDate: opdData.nextVisitDate,
+      weight: opdData.weight,
+      bp: opdData.bp,
+      pulse: opdData.pulse,
+      temperature: opdData.temperature,
+      rr: opdData.rr
     };
 
-    onSaveRecord(newRecord);
+    onSaveRecord(newRecord as any);
     alert(editingRecordId ? 'OPD रेकर्ड अपडेट गरियो।' : 'OPD रेकर्ड सुरक्षित गरियो।');
     
     // Clear form
@@ -308,7 +336,12 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
       investigation: '',
       prescriptions: [],
       advice: '',
-      nextVisitDate: ''
+      nextVisitDate: '',
+      weight: '',
+      bp: '',
+      pulse: '',
+      temperature: '',
+      rr: ''
     });
     setPrescriptionItems([]);
     setEditingRecordId(null);
@@ -424,6 +457,40 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
 
               {activeTab === 'form' && (
               <div className="space-y-6 animate-in fade-in">
+                {/* Vitals Section */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <Input 
+                    label="BP" 
+                    value={opdData.bp} 
+                    onChange={e => setOpdData({...opdData, bp: e.target.value})}
+                    placeholder="120/80"
+                  />
+                  <Input 
+                    label="Weight (kg)" 
+                    value={opdData.weight} 
+                    onChange={e => setOpdData({...opdData, weight: e.target.value})}
+                    placeholder="65"
+                  />
+                  <Input 
+                    label="Pulse" 
+                    value={opdData.pulse} 
+                    onChange={e => setOpdData({...opdData, pulse: e.target.value})}
+                    placeholder="72"
+                  />
+                  <Input 
+                    label="Temp (°F)" 
+                    value={opdData.temperature} 
+                    onChange={e => setOpdData({...opdData, temperature: e.target.value})}
+                    placeholder="98.6"
+                  />
+                  <Input 
+                    label="RR" 
+                    value={opdData.rr} 
+                    onChange={e => setOpdData({...opdData, rr: e.target.value})}
+                    placeholder="18"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">मुख्य समस्याहरू (Chief Complaints)</label>
                   <textarea
