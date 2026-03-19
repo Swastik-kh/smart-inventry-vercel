@@ -94,73 +94,11 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
   const [showExistingResults, setShowExistingResults] = useState(false);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [hasDangerSigns, setHasDangerSigns] = useState<boolean | null>(null);
-  const [hasInfantDangerSigns, setHasInfantDangerSigns] = useState<boolean | null>(null);
   const [hasCoughOrBreathingDifficulty, setHasCoughOrBreathingDifficulty] = useState<boolean | null>(null);
   const [hasDiarrhea, setHasDiarrhea] = useState<boolean | null>(null);
   const [hasFever, setHasFever] = useState<boolean | null>(null);
-  const zScore = useMemo(() => calculateZScore(), [assessmentData.weight, currentPatient]);
   const [hasEarProblem, setHasEarProblem] = useState<boolean | null>(null);
   const [tempF, setTempF] = useState('');
-
-  function calculateZScore() {
-    if (!assessmentData.weight || !currentPatient) return null;
-    const weight = parseFloat(assessmentData.weight);
-    
-    // Calculate precise age in months
-    const today = new Date();
-    const birthDate = currentPatient.dobAd ? new Date(currentPatient.dobAd) : null;
-    let ageMonths = (currentPatient.ageYears || 0) * 12 + (currentPatient.ageMonths || 0);
-    
-    if (birthDate) {
-      const diffTime = Math.abs(today.getTime() - birthDate.getTime());
-      ageMonths = diffTime / (1000 * 60 * 60 * 24 * 30.44);
-    }
-
-    // More granular WHO Weight-for-Age Z-score (WAZ) logic (Approximate Median and SD)
-    const wazData: any = {
-      0: { m: 3.3, s: 0.4 },
-      1: { m: 4.5, s: 0.5 },
-      2: { m: 5.6, s: 0.6 },
-      3: { m: 6.4, s: 0.7 },
-      4: { m: 7.0, s: 0.8 },
-      5: { m: 7.5, s: 0.8 },
-      6: { m: 7.9, s: 0.8 },
-      9: { m: 8.9, s: 0.9 },
-      12: { m: 9.6, s: 1.0 },
-      15: { m: 10.3, s: 1.1 },
-      18: { m: 10.9, s: 1.1 },
-      21: { m: 11.5, s: 1.2 },
-      24: { m: 12.2, s: 1.3 },
-      30: { m: 13.3, s: 1.4 },
-      36: { m: 14.3, s: 1.6 },
-      42: { m: 15.3, s: 1.7 },
-      48: { m: 16.3, s: 1.9 },
-      54: { m: 17.3, s: 2.2 },
-      60: { m: 18.3, s: 2.2 }
-    };
-
-    const ages = Object.keys(wazData).map(Number).sort((a, b) => a - b);
-    
-    // Linear interpolation for more accuracy
-    let m, s;
-    if (ageMonths <= 0) {
-      m = wazData[0].m;
-      s = wazData[0].s;
-    } else if (ageMonths >= 60) {
-      m = wazData[60].m;
-      s = wazData[60].s;
-    } else {
-      const lowerAge = ages.filter(a => a <= ageMonths).pop() || 0;
-      const upperAge = ages.find(a => a > ageMonths) || 60;
-      const factor = (ageMonths - lowerAge) / (upperAge - lowerAge);
-      
-      m = wazData[lowerAge].m + factor * (wazData[upperAge].m - wazData[lowerAge].m);
-      s = wazData[lowerAge].s + factor * (wazData[upperAge].s - wazData[lowerAge].s);
-    }
-    
-    const zScore = (weight - m) / s;
-    return zScore.toFixed(2);
-  };
 
   const medicineSuggestions = useMemo(() => {
     const defaultMedicines = [
@@ -667,75 +605,32 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
               <span>१. खतराका संकेतहरू (Danger Signs / PSBI)</span>
               <span className="text-xs font-normal text-blue-600">Booklet Page 14</span>
             </h4>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-2">के बच्चामा खतराका संकेतहरू छन्? (Are there any danger signs?)</label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2">
-                  <input 
-                    type="radio" 
-                    checked={hasInfantDangerSigns === true} 
-                    onChange={() => setHasInfantDangerSigns(true)} 
-                    className="text-blue-600 focus:ring-blue-500"
-                  />
-                  <span>छ (Yes)</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input 
-                    type="radio" 
-                    checked={hasInfantDangerSigns === false} 
-                    onChange={() => {
-                      setHasInfantDangerSigns(false);
-                      setAssessmentData({...assessmentData, dangerSigns: []});
-                    }} 
-                    className="text-blue-600 focus:ring-blue-500"
-                  />
-                  <span>छैन (No)</span>
-                </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                {['काँप्ने (Convulsions)', 'दूध चुस्न/निल्न नसक्ने (Unable to feed)', 'सुस्त वा बेहोस (Lethargic/Unconscious)', 'कोखा हान्ने (Severe chest in-drawing)', 'नाक फुलाउने (Nasal flaring)', 'कन्कने (Grunting)', 'तालु फुलेको (Bulging fontanelle)'].map(sign => (
+                  <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={assessmentData.dangerSigns?.includes(sign)}
+                      onChange={(e) => {
+                        const current = assessmentData.dangerSigns || [];
+                        const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
+                        setAssessmentData({...assessmentData, dangerSigns: next});
+                      }}
+                      className="rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    {sign}
+                  </label>
+                ))}
               </div>
-            </div>
-
-            {hasInfantDangerSigns === true && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  {['काँप्ने (Convulsions)', 'दूध चुस्न/निल्न नसक्ने (Unable to feed)', 'सुस्त वा बेहोस (Lethargic/Unconscious)', 'कोखा हान्ने (Severe chest in-drawing)', 'नाक फुलाउने (Nasal flaring)', 'कन्कने (Grunting)', 'तालु फुलेको (Bulging fontanelle)', 'नाईटोको रातोपना छालासम्म फैलिएको'].map(sign => (
-                    <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={assessmentData.dangerSigns?.includes(sign)}
-                        onChange={(e) => {
-                          const current = assessmentData.dangerSigns || [];
-                          const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
-                          setAssessmentData({...assessmentData, dangerSigns: next});
-                        }}
-                        className="rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      {sign}
-                    </label>
-                  ))}
-                  {(currentPatient?.ageDays !== undefined && currentPatient.ageDays <= 7) && (
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={assessmentData.dangerSigns?.includes('श्वासदर ६० वा सो भन्दा बढी')}
-                        onChange={(e) => {
-                          const current = assessmentData.dangerSigns || [];
-                          const next = e.target.checked ? [...current, 'श्वासदर ६० वा सो भन्दा बढी'] : current.filter((s: string) => s !== 'श्वासदर ६० वा सो भन्दा बढी');
-                          setAssessmentData({...assessmentData, dangerSigns: next});
-                        }}
-                        className="rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      श्वासदर ६० वा सो भन्दा बढी
-                    </label>
-                  )}
-                </div>
-                <div className="space-y-3">
-                  <Input 
-                    label="सासको दर (प्रति मिनेट)" 
-                    type="number"
-                    value={assessmentData.breathingRate || ''} 
-                    onChange={(e) => setAssessmentData({...assessmentData, breathingRate: e.target.value})} 
-                    placeholder="६० वा सोभन्दा बढी भए खतरा"
-                  />
+              <div className="space-y-3">
+                <Input 
+                  label="सासको दर (प्रति मिनेट)" 
+                  type="number"
+                  value={assessmentData.breathingRate || ''} 
+                  onChange={(e) => setAssessmentData({...assessmentData, breathingRate: e.target.value})} 
+                  placeholder="६० वा सोभन्दा बढी भए खतरा"
+                />
                 <div className="grid grid-cols-2 gap-2">
                   <Input 
                     label="तापक्रम (Celsius)" 
@@ -790,7 +685,6 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                 </div>
               </div>
             </div>
-            )}
           </div>
 
           {/* Jaundice */}
@@ -830,7 +724,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">जलवियोजनका संकेतहरू (Dehydration Signs)</label>
-                {['सुस्त वा बेहोस (Lethargic/Unconscious)', 'आँखा गडेको (Sunken eyes)', 'छाला तान्दा धेरै ढिलो फर्कने (Skin pinch very slow)', 'छाला तान्दा ढिलो फर्कने (Skin pinch slow)', 'चटपटिने, झिझिने (Restless/Irritable)'].map(sign => (
+                {['सुस्त वा बेहोस (Lethargic/Unconscious)', 'आँखा गडेको (Sunken eyes)', 'छाला तान्दा धेरै ढिलो फर्कने (Skin pinch very slow)', 'छाला तान्दा ढिलो फर्कने (Skin pinch slow)'].map(sign => (
                   <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
                     <input 
                       type="checkbox" 
@@ -1516,9 +1410,93 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
             );
           })()}
 
+          {/* Fatigue Screening */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-slate-700">
+              <input 
+                type="checkbox" 
+                checked={assessmentData.fatigue}
+                onChange={(e) => setAssessmentData({...assessmentData, fatigue: e.target.checked})}
+                className="rounded text-slate-600 focus:ring-slate-500"
+              />
+              चाडै थकाई लाग्ने, खेलकुद लगायत दैनिक क्रियाकलापमा मन नलाग्ने (Easily fatigued / Loss of interest)
+            </label>
+          </div>
 
-  const getClassification = (): Array<{text: string, color: 'red' | 'yellow' | 'green'}> => {
-    const classifications: Array<{text: string, color: 'red' | 'yellow' | 'green'}> = [];
+          {/* Tuberculosis Assessment */}
+          {(() => {
+            const coughDuration = parseInt(assessmentData.coughDays || '0');
+            const feverDuration = parseInt(assessmentData.feverDays || '0');
+            const temp = parseFloat(assessmentData.temperature || '0');
+            const isSevereMalnutrition = assessmentData.nutritionSigns?.includes('धेरै दुब्लो (Visible severe wasting)') || 
+                                         assessmentData.nutritionSigns?.includes('दुवै खुट्टा सुन्निएको (Oedema both feet)') ||
+                                         (zScore && parseFloat(zScore) < -3);
+            
+            const showTbAssessment = 
+              (coughDuration > 14) ||
+              (feverDuration > 14 && temp > 38) ||
+              (assessmentData.weightLoss) ||
+              (isSevereMalnutrition) ||
+              (assessmentData.fatigue);
+
+            if (!showTbAssessment) return null;
+
+            return (
+              <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-200">
+                <h4 className="font-bold text-orange-800 border-b border-orange-300 mb-2 pb-1 flex justify-between items-center">
+                  <span>९. क्षयरोग (Tuberculosis)</span>
+                  <span className="text-xs font-normal text-orange-600">Booklet Page 31</span>
+                </h4>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-slate-700">
+                    <input 
+                      type="checkbox" 
+                      checked={assessmentData.tbContact}
+                      onChange={(e) => setAssessmentData({...assessmentData, tbContact: e.target.checked})}
+                      className="rounded text-orange-600 focus:ring-orange-500"
+                    />
+                    के बच्चाको परिवारमा वा नजिकको सम्पर्कमा क्षयरोग लागेको व्यक्ति हुनुहुन्छ? (Contact with TB patient?)
+                  </label>
+
+                  <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-slate-700">
+                    <input 
+                      type="checkbox" 
+                      checked={assessmentData.tbDiagnosis}
+                      onChange={(e) => setAssessmentData({...assessmentData, tbDiagnosis: e.target.checked})}
+                      className="rounded text-orange-600 focus:ring-orange-500"
+                    />
+                    खकार पोजिटिभ क्षयरोग लागेका वा क्लिनिकल क्षयरोग भनी निदान भएका (Sputum positive TB or Clinically diagnosed TB)
+                  </label>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">क्षयरोगका लक्षणहरू (TB Symptoms)</label>
+                    {['२ हप्ता वा बढी समयदेखि खोकी (Cough > 2 weeks)', '२ हप्ता वा बढी समयदेखि ज्वरो (Fever > 2 weeks)', 'तौल नबढेको वा घटेको (Weight loss / Poor weight gain)'].map(sign => (
+                      <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={assessmentData.tbSymptoms?.includes(sign)}
+                          onChange={(e) => {
+                            const current = assessmentData.tbSymptoms || [];
+                            const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
+                            setAssessmentData({...assessmentData, tbSymptoms: next});
+                          }}
+                          className="rounded text-orange-600 focus:ring-orange-500"
+                        />
+                        {sign}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      );
+    }
+  };
+
+  const getClassification = () => {
+    const classifications: string[] = [];
     
     if (moduleType === 'Infant') {
       // PSBI
@@ -1526,32 +1504,30 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                             (parseFloat(assessmentData.breathingRate) >= 60) ||
                             (parseFloat(assessmentData.temperature) >= 37.5) ||
                             (parseFloat(assessmentData.temperature) <= 35.5);
-      if (hasDangerSign) classifications.push({text: 'Possible Serious Bacterial Infection (PSBI) or Very Severe Disease', color: 'red'});
+      if (hasDangerSign) classifications.push('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease');
       
       // Local Infection
-      if (assessmentData.localInfection?.length > 0) classifications.push({text: 'Local Bacterial Infection', color: 'yellow'});
+      if (assessmentData.localInfection?.length > 0) classifications.push('Local Bacterial Infection');
       
       // Jaundice
       if (assessmentData.jaundiceSigns?.includes('हत्केला र पैताला पहेंलो (Yellow palms/soles)') || 
           assessmentData.jaundiceSigns?.includes('२४ घण्टा भन्दा कमको शिशुमा कमलपित्त')) {
-        classifications.push({text: 'Severe Jaundice', color: 'red'});
+        classifications.push('Severe Jaundice');
       } else if (assessmentData.jaundiceSigns?.includes('कमलपित्त देखिएको (Jaundice present)')) {
-        classifications.push({text: 'Jaundice', color: 'yellow'});
-      } else {
-        classifications.push({text: 'No Jaundice', color: 'green'});
+        classifications.push('Jaundice');
       }
 
       // Dehydration
-      if (assessmentData.diarrheaDays) {
-        const dehydSigns = assessmentData.dehydrationSigns || [];
-        const severeSigns = ['सुस्त वा बेहोस (Lethargic/Unconscious)', 'आँखा गडेको (Sunken eyes)', 'छाला तान्दा धेरै ढिलो फर्कने (Skin pinch very slow)'];
-        const severeCount = dehydSigns.filter((s: string) => severeSigns.includes(s)).length;
-        const someSigns = ['चटपटिने, झिझिने (Restless/Irritable)', 'आँखा गडेको (Sunken eyes)', 'छाला तान्दा ढिलो फर्कने (Skin pinch slow)'];
-        const someCount = dehydSigns.filter((s: string) => someSigns.includes(s)).length;
-        
-        if (severeCount >= 2) classifications.push({text: 'Severe Dehydration', color: 'red'});
-        else if (someCount >= 2) classifications.push({text: 'Some Dehydration', color: 'yellow'});
-        else classifications.push({text: 'No Dehydration', color: 'green'});
+      const dehydSigns = assessmentData.dehydrationSigns || [];
+      const severeCount = dehydSigns.filter((s: string) => s.includes('Lethargic') || s.includes('Sunken') || s.includes('very slow')).length;
+      const someCount = dehydSigns.length;
+      
+      if (severeCount >= 2) {
+        classifications.push('Severe Dehydration');
+      } else if (someCount >= 2) {
+        classifications.push('Some Dehydration');
+      } else if (assessmentData.diarrheaDays) {
+        classifications.push('No Dehydration');
       }
 
       // Feeding Problem and Weight
@@ -1560,220 +1536,352 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                                 assessmentData.attachment === 'Not at all' || 
                                 assessmentData.suckling === 'Not Effective' || 
                                 assessmentData.suckling === 'Not at all';
+      
       const weight = parseFloat(assessmentData.weight || '0');
+      const ageDays = currentPatient?.ageDays || 0;
       const isWeightNormal = weight >= 2.5;
 
-      if (hasFeedingProblem) classifications.push({text: 'Feeding Problem', color: 'yellow'});
-      else if (assessmentData.attachment || assessmentData.suckling) {
-        if (isWeightNormal) classifications.push({text: 'Feeding Problem', color: 'yellow'});
+      if (hasFeedingProblem) {
+        classifications.push('Feeding Problem');
+      } else if (assessmentData.attachment || assessmentData.suckling) {
+        if (isWeightNormal) {
+           classifications.push('No Feeding Problem and Normal Weight');
+        } else {
+           classifications.push('No Feeding Problem');
+        }
+      }
+
+      if (weight > 0) {
+        if (ageDays < 7 && weight < 2) {
+          classifications.push('Very Low Birth Weight');
+        } else if (weight < 2.5) {
+          classifications.push('Low Birth Weight');
+        }
       }
     } else {
-      // Child Module (2m-5y)
-      const hasDangerSign = assessmentData.dangerSigns?.length > 0;
-      if (hasDangerSign) classifications.push({text: 'Very Severe Disease', color: 'red'});
+      // Child
+      // General Danger Signs
+      if (assessmentData.generalDangerSigns?.length > 0) {
+        classifications.push('Very Severe Disease');
+      }
 
-      if (assessmentData.coughDays) {
-        const br = parseFloat(assessmentData.breathingRate || '0');
+      // Pneumonia
+      const rate = parseInt(assessmentData.breathingRate);
+      let isInfant = false;
+      if (currentPatient?.ageDays !== undefined && currentPatient?.ageDays > 0) {
+        isInfant = currentPatient.ageDays < 60;
+      } else {
         const ageInMonths = (currentPatient?.ageYears || 0) * 12 + (currentPatient?.ageMonths || 0);
-        const isFastBreathing = (ageInMonths < 12 && br >= 50) || (ageInMonths >= 12 && br >= 40);
-        
-        if (assessmentData.chestIndrawing || assessmentData.stridor) {
-          classifications.push({text: 'Severe Pneumonia or Very Severe Disease', color: 'red'});
-        } else if (isFastBreathing) {
-          classifications.push({text: 'Pneumonia', color: 'yellow'});
+        isInfant = ageInMonths < 2;
+      }
+      const ageInMonths = (currentPatient?.ageYears || 0) * 12 + (currentPatient?.ageMonths || 0);
+      const isFast = (ageInMonths < 12 && rate >= 50) || (ageInMonths >= 12 && rate >= 40);
+      
+      if (assessmentData.respiratorySigns?.includes('शान्त रहेको बच्चामा स्ट्राइडर (Stridor in calm child)')) {
+        classifications.push('Severe Pneumonia or Very Severe Disease');
+      } else if (isFast || assessmentData.respiratorySigns?.includes('कोखा हान्ने (Chest in-drawing)')) {
+        classifications.push('Pneumonia');
+      } else if (assessmentData.coughDays) {
+        classifications.push('No Pneumonia: Cough or Cold');
+      }
+
+      // Dehydration
+      const dehydSigns = assessmentData.dehydrationSigns || [];
+      const severeCount = dehydSigns.filter((s: string) => s.includes('Lethargic') || s.includes('Sunken') || s.includes('Unable') || s.includes('very slow')).length;
+      const someCount = dehydSigns.length;
+      
+      let dehydrationType = '';
+      if (severeCount >= 2) {
+        dehydrationType = 'Severe Dehydration';
+      } else if (someCount >= 2) {
+        dehydrationType = 'Some Dehydration';
+      } else if (assessmentData.diarrheaDays) {
+        dehydrationType = 'No Dehydration';
+      }
+      if (dehydrationType) classifications.push(dehydrationType);
+
+      // Persistent Diarrhea
+      const diarrheaDays = parseInt(assessmentData.diarrheaDays);
+      if (diarrheaDays >= 14) {
+        if (dehydrationType === 'Severe Dehydration' || dehydrationType === 'Some Dehydration') {
+          classifications.push('Severe Persistent Diarrhea');
         } else {
-          classifications.push({text: 'No Pneumonia: Cough or Cold', color: 'green'});
+          classifications.push('Persistent Diarrhea');
         }
       }
 
-      if (assessmentData.diarrheaDays) {
-        const dehydSigns = assessmentData.dehydrationSigns || [];
-        const severeSigns = ['सुस्त वा बेहोस (Lethargic/Unconscious)', 'आँखा गडेको (Sunken eyes)', 'पिउन नसक्ने वा राम्ररी नपिउने (Not able to drink/drinking poorly)', 'छाला तान्दा धेरै ढिलो फर्कने (Skin pinch very slow)'];
-        const someSigns = ['चटपटिने, झिझिने (Restless/Irritable)', 'आँखा गडेको (Sunken eyes)', 'तिर्खाएको, लोभी भएर पिउने (Drinks eagerly/thirsty)', 'छाला तान्दा ढिलो फर्कने (Skin pinch slow)'];
-        const severeCount = dehydSigns.filter((s: string) => severeSigns.includes(s)).length;
-        const someCount = dehydSigns.filter((s: string) => someSigns.includes(s)).length;
-
-        if (severeCount >= 2) classifications.push({text: 'Severe Dehydration', color: 'red'});
-        else if (someCount >= 2) classifications.push({text: 'Some Dehydration', color: 'yellow'});
-        else classifications.push({text: 'No Dehydration', color: 'green'});
-
-        if (parseInt(assessmentData.diarrheaDays) >= 14) {
-          if (dehydSigns.length > 0) classifications.push({text: 'Severe Persistent Diarrhea', color: 'red'});
-          else classifications.push({text: 'Persistent Diarrhea', color: 'yellow'});
-        }
-        if (assessmentData.bloodInStool) classifications.push({text: 'Dysentery', color: 'yellow'});
+      // Dysentery
+      if (assessmentData.bloodInStool) {
+        classifications.push('Dysentery');
       }
 
-      if (assessmentData.feverDays) {
-        if (assessmentData.malariaRisk) {
-          if (assessmentData.dangerSigns?.length > 0 || assessmentData.stiffNeck) classifications.push({text: 'Very Severe Febrile Disease', color: 'red'});
-          else if (assessmentData.rdtResult === 'Positive') classifications.push({text: 'मलेरिया (Malaria)', color: 'yellow'});
-          else classifications.push({text: 'ज्वरो (Fever: Malaria Unlikely)', color: 'green'});
-        }
-        if (assessmentData.measlesSigns?.includes('ज्वरो र शरीरभरी विमिरा (Fever and generalized rash)')) {
-          if (assessmentData.dangerSigns?.length > 0 || assessmentData.cloudyCornea || assessmentData.mouthUlcersDeep) classifications.push({text: 'Severe Complicated Measles', color: 'red'});
-          else if (assessmentData.eyePus || assessmentData.mouthUlcers) classifications.push({text: 'Measles with Eye/Mouth Complications', color: 'yellow'});
-          else classifications.push({text: 'Measles', color: 'green'});
+      // Haija (Cholera)
+      if (dehydrationType === 'Severe Dehydration' && assessmentData.choleraOutbreak) {
+        classifications.push('हैजा (Haija)');
+      }
+
+      // Fever
+      const hasFever = parseFloat(assessmentData.temperature) >= 37.5 || assessmentData.feverDays > 0;
+      if (hasFever) {
+        if (assessmentData.feverSigns?.includes('गर्दन अररो (Stiff neck)') || assessmentData.generalDangerSigns?.length > 0) {
+          classifications.push('अति कडा ज्वरो (Very Severe Febrile Disease)');
+        } else {
+          if (assessmentData.malariaRisk === 'High' && assessmentData.feverSigns?.includes('RDT Positive')) {
+            classifications.push('मलेरिया (Malaria)');
+          } else if (assessmentData.feverSigns?.includes('RDT Negative') || assessmentData.malariaRisk === 'None') {
+            classifications.push('ज्वरो (Fever: Malaria Unlikely)');
+          }
         }
       }
 
-      if (assessmentData.earProblem) {
-        if (assessmentData.tenderSwelling) classifications.push({text: 'Mastoiditis', color: 'red'});
-        else if (assessmentData.earPus) {
-          if (parseInt(assessmentData.earPusDays || '0') < 14) classifications.push({text: 'Acute Ear Infection', color: 'yellow'});
-          else classifications.push({text: 'Chronic Ear Infection', color: 'yellow'});
-        } else if (assessmentData.earPain) classifications.push({text: 'Acute Ear Infection', color: 'yellow'});
-        else classifications.push({text: 'No Ear Infection', color: 'green'});
+      // Measles
+      if (assessmentData.feverSigns?.includes('दादुरा (Measles)')) {
+        if (assessmentData.generalDangerSigns?.length > 0 || 
+            assessmentData.feverSigns?.includes('कर्निया धमिलो (Cornea clouding)') || 
+            assessmentData.feverSigns?.includes('मुखभित्र घाउ (Mouth ulcers)')) {
+          classifications.push('Severe Complicated Measles');
+        } else if (assessmentData.feverSigns?.includes('आँखा रातो (Red eyes)')) {
+          classifications.push('Measles with Eye/Mouth Complications');
+        } else {
+          classifications.push('Measles');
+        }
       }
 
-      if (assessmentData.visibleWasting || assessmentData.edemaBothFeet || assessmentData.muacColor === 'Red') classifications.push({text: 'Severe Acute Malnutrition', color: 'red'});
-      else if (assessmentData.muacColor === 'Yellow') classifications.push({text: 'Moderate Acute Malnutrition', color: 'yellow'});
-      if (assessmentData.palmarPallor === 'Severe') classifications.push({text: 'Severe Anemia', color: 'red'});
-      else if (assessmentData.palmarPallor === 'Some') classifications.push({text: 'Anemia', color: 'yellow'});
-      else classifications.push({text: 'No Anemia', color: 'green'});
+      // Malnutrition
+      const muacVal = parseInt(assessmentData.muac);
+      const currentZScore = zScore ? parseFloat(zScore) : null;
+      
+      if (assessmentData.nutritionSigns?.includes("दुवै खुट्टा सुन्निएको (Oedema both feet)") || 
+          (muacVal > 0 && muacVal < 115) || 
+          (currentZScore !== null && currentZScore < -3)) {
+        classifications.push('Severe Acute Malnutrition');
+      } else if ((muacVal >= 115 && muacVal < 125) || 
+                 (currentZScore !== null && currentZScore < -2 && currentZScore >= -3)) {
+        classifications.push('Moderate Acute Malnutrition');
+      } else if (muacVal >= 125 || (currentZScore !== null && currentZScore >= -2)) {
+        classifications.push('No Malnutrition');
+      }
 
-      if (assessmentData.hivStatus === 'Positive') classifications.push({text: 'CONFIRMED HIV INFECTION (रातो)', color: 'red'});
-      else if (assessmentData.hivStatus === 'Exposed') classifications.push({text: 'HIV EXPOSED (पहेँलो)', color: 'yellow'});
+      // Anemia
+      if (assessmentData.pallor === 'Severe') {
+        classifications.push('Severe Anemia');
+      } else if (assessmentData.pallor === 'Some') {
+        classifications.push('Anemia');
+      }
+
+      // Ear Infection
+      if (assessmentData.mastoidSwelling) {
+        classifications.push('Mastoiditis');
+      } else if (assessmentData.earPain || (assessmentData.earDischarge && parseInt(assessmentData.earDischargeDays) < 14)) {
+        classifications.push('Acute Ear Infection');
+      } else if (assessmentData.earDischarge && parseInt(assessmentData.earDischargeDays) >= 14) {
+        classifications.push('Chronic Ear Infection');
+      } else if (assessmentData.earDischarge === false && assessmentData.earPain === false) {
+        classifications.push('No Ear Infection');
+      }
+
+      // HIV Classification
+      const isHivInfected = 
+        assessmentData.hivTestStatus === 'Virological Positive' ||
+        (assessmentData.hivTestStatus === 'DNA PCR Positive' && ageInMonths < 18) ||
+        (assessmentData.hivTestStatus === 'Rapid Test Positive' && ageInMonths >= 18);
+
+      const isHivExposedSuspected = 
+        (assessmentData.motherHivStatus === 'Positive' && 
+         (assessmentData.isBreastfeeding || assessmentData.stoppedBreastfeedingLessThan3Months) && 
+         assessmentData.hivTestStatus === 'Negative') ||
+        (assessmentData.motherHivStatus === 'Positive' && 
+         (assessmentData.hivTestStatus === '' || assessmentData.hivTestStatus === 'Unknown'));
+
+      if (isHivInfected) {
+        classifications.push('CONFIRMED HIV INFECTION');
+      } else if (isHivExposedSuspected) {
+        classifications.push('HIV EXPOSED / SUSPECTED HIV');
+      } else if (assessmentData.motherHivStatus === 'Positive' || 
+                 (assessmentData.hivTestStatus === 'Rapid Test Positive' && ageInMonths < 18) ||
+                 (assessmentData.hivTestStatus === 'DNA PCR Positive' && ageInMonths >= 18)) {
+          classifications.push('HIV EXPOSED');
+      } else if (assessmentData.motherHivStatus === 'Unknown') {
+        // Check for symptoms suggestive of HIV
+        const hasSymptoms = classifications.some(c => 
+          c.includes('Pneumonia') || 
+          c.includes('Persistent Diarrhea') || 
+          c.includes('Acute Ear Infection') || 
+          c.includes('Severe Acute Malnutrition')
+        );
+        if (hasSymptoms) {
+          classifications.push('SUSPECTED SYMPTOMATIC HIV');
+        } else {
+          classifications.push('HIV TEST REQUIRED');
+        }
+      } else if (assessmentData.motherHivStatus === 'Negative' && assessmentData.hivTestStatus === 'Negative') {
+        classifications.push('HIV INFECTION UNLIKELY');
+      }
+
+      // Tuberculosis (TB) Classification
+      const hasTbSymptoms = assessmentData.tbSymptoms && assessmentData.tbSymptoms.length > 0;
+      const coughDuration = parseInt(assessmentData.coughDays || '0');
+      const feverDuration = parseInt(assessmentData.feverDays || '0');
+      
+      if (assessmentData.tbDiagnosis) {
+        classifications.push('CONFIRMED TB');
+      } else if (hasTbSymptoms || coughDuration >= 14 || feverDuration >= 14 || assessmentData.fatigue) {
+        classifications.push('POSSIBLE TB');
+      } else if (assessmentData.tbContact) {
+        classifications.push('LATENT TUBERCULOSIS INFECTION');
+      } else {
+        classifications.push('TB UNLIKELY');
+      }
     }
+
     return classifications;
   };
 
-  const getSuggestedTreatment = (classifications: Array<{text: string, color: 'red' | 'yellow' | 'green'}>): string[] => {
+  const getSuggestedNextVisit = (classifications: string[]) => {
+    if (classifications.length === 0) return null;
+    
+    if (moduleType === 'Infant') {
+      if (classifications.includes('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease')) return 'Immediate';
+      if (classifications.includes('Local Bacterial Infection')) return '3 days';
+      if (classifications.includes('Jaundice') || classifications.includes('Severe Jaundice')) return '3 days';
+      if (classifications.includes('Some Dehydration') || classifications.includes('Severe Dehydration')) return '2 days';
+    } else {
+      if (classifications.includes('Very Severe Disease') || classifications.includes('अति कडा ज्वरो (Very Severe Febrile Disease)') || classifications.includes('Severe Complicated Measles') || classifications.includes('Severe Persistent Diarrhea') || classifications.includes('हैजा (Haija)')) return 'Immediate';
+      if (classifications.includes('Pneumonia') || classifications.includes('मलेरिया (Malaria)') || classifications.includes('Measles with Eye/Mouth Complications') || classifications.includes('Dysentery')) return '3 days';
+      if (classifications.includes('Some Dehydration') || classifications.includes('Severe Dehydration')) return '2 days';
+      if (classifications.includes('Acute Ear Infection') || classifications.includes('Persistent Diarrhea')) return '5 days';
+      if (classifications.includes('Severe Acute Malnutrition')) return '30 days';
+    }
+    return null;
+  };
+
+  const getSuggestedTreatment = (classifications: string[]) => {
     const treatments: string[] = [];
     if (classifications.length === 0) return [];
-    const classificationTexts = classifications.map(c => c.text);
-    const weight = parseFloat(assessmentData.weight) || 0;
-    const ageYears = currentPatient?.ageYears || 0;
-    const ageMonths = currentPatient?.ageMonths || 0;
-    const totalMonths = ageYears * 12 + ageMonths;
-
-    let amoxDose = '';
-    if (weight >= 4 && weight < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
-    else if (weight >= 6 && weight < 8) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
-    else if (weight >= 8 && weight < 10) amoxDose = '250mg tab: 1.5 tab BD OR Syrup 125mg/5ml: 15 ml BD';
-    else if (weight >= 10 && weight < 14) amoxDose = '250mg tab: 2 tab BD';
-    else if (weight >= 14 && weight < 19) amoxDose = '250mg tab: 2.5 tab BD';
-    else if (totalMonths >= 2 && totalMonths < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
-    else if (totalMonths >= 6 && totalMonths < 12) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
-    else if (totalMonths >= 12 && totalMonths < 36) amoxDose = '250mg tab: 2 tab BD';
-    else if (totalMonths >= 36 && totalMonths <= 60) amoxDose = '250mg tab: 2.5 tab BD';
-    else amoxDose = '250mg tab: 1 tab BD';
 
     if (moduleType === 'Infant') {
-      if (classificationTexts.includes('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease')) {
-        let gentDose = weight > 0 ? `${(weight * 5).toFixed(1)}mg (0.125ml/kg of 40mg/ml)` : '';
-        let ampDose = weight > 0 ? `${(weight * 50).toFixed(0)}mg (0.2ml/kg of 250mg/ml)` : '';
+      const weight = parseFloat(assessmentData.weight) || 0;
+      if (classifications.includes('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease')) {
+        let gentDose = '';
+        let ampDose = '';
+        if (weight > 0) {
+          gentDose = `${(weight * 5).toFixed(1)}mg (0.125ml/kg of 40mg/ml)`;
+          ampDose = `${(weight * 50).toFixed(0)}mg (0.2ml/kg of 250mg/ml)`;
+        }
         treatments.push(`Give first dose of IM Gentamicin: ${gentDose}`);
         treatments.push(`Give first dose of IM Ampicillin: ${ampDose}`);
         treatments.push('Refer URGENTLY to hospital');
         treatments.push('Prevent low blood sugar (breastfeed or sugar water)');
         treatments.push('Keep infant warm');
       }
-      if (classificationTexts.includes('Local Bacterial Infection')) {
-        let infantAmoxDose = '';
-        if (weight >= 2 && weight < 3.5) infantAmoxDose = '125mg (2.5ml syrup) twice daily';
-        else if (weight >= 3.5 && weight < 5) infantAmoxDose = '250mg (5ml syrup) twice daily';
-        treatments.push(`Give Amoxicillin for 5 days: ${infantAmoxDose}`);
+      if (classifications.includes('Local Bacterial Infection')) {
+        let amoxDose = '';
+        if (weight >= 2 && weight < 3.5) amoxDose = '125mg (2.5ml syrup) twice daily';
+        else if (weight >= 3.5 && weight < 5) amoxDose = '250mg (5ml syrup) twice daily';
+        
+        treatments.push(`Give Amoxicillin for 5 days: ${amoxDose}`);
         treatments.push('Teach mother to treat local infections at home');
         treatments.push('Follow-up in 3 days');
       }
-      if (classificationTexts.includes('Severe Jaundice')) {
+      if (classifications.includes('Severe Jaundice')) {
         treatments.push('Refer URGENTLY to hospital');
         treatments.push('Prevent low blood sugar');
         treatments.push('Keep infant warm');
-      } else if (classificationTexts.includes('Jaundice')) {
-        treatments.push('Advise mother on home care');
-        treatments.push('Follow-up in 2 days');
       }
-      if (classificationTexts.includes('Severe Dehydration')) {
+      if (classifications.includes('Severe Dehydration')) {
         treatments.push('Give fluid for severe dehydration (Plan C)');
         treatments.push('Refer URGENTLY to hospital');
-      } else if (classificationTexts.includes('Some Dehydration')) {
+        treatments.push('If child can drink, give ORS by mouth while drip is being set up');
+        treatments.push('Give 100 ml/kg Ringer\'s Lactate (or Normal Saline)');
+      }
+      if (classifications.includes('Some Dehydration')) {
         treatments.push('Give fluid and food for some dehydration (Plan B)');
-        treatments.push('Follow-up in 2 days');
-      } else if (classificationTexts.includes('No Dehydration')) {
+        treatments.push('Give 75 ml/kg of ORS in the clinic over 4 hours');
+        treatments.push('Show mother how to give ORS solution');
+        treatments.push('After 4 hours, reassess child and classify for dehydration');
+      }
+      if (classifications.includes('No Dehydration')) {
         treatments.push('Treat diarrhea at home (Plan A)');
-      }
-      if (classificationTexts.includes('Feeding Problem')) {
-        treatments.push('Advise mother on breastfeeding and home care');
-        treatments.push('Follow-up in 2 days');
-      }
-    } else {
-      if (classificationTexts.includes('Very Severe Disease') || classificationTexts.includes('Severe Pneumonia or Very Severe Diseatments.push('Dry the ear by wicking if there is discharge');
-        treatments.push('Follow-up in 5 days');
-      } else if (classificationTexts.includes('Chronic Ear Infection')) {
-        treatments.push('Dry the ear by wicking if there is discharge');
-        treatments.push('Follow-up in 5 days');
-      }
-
-      if (classificationTexts.includes('Severe Anemia')) {
-        treatments.push('Refer URGENTLY to hospital');
-      } else if (classificationTexts.includes('Anemia')) {
-        treatments.push('Give Iron/Folate');
-        treatments.push('Give Mebendazole if child is 1 year or older');
-        treatments.push('Advise mother on feeding');
-        treatments.push('Follow-up in 14 days');
-      }
-
-      if (classificationTexts.includes('Severe Acute Malnutrition')) {
-        treatments.push('Give first dose of appropriate antibiotic');
-        treatments.push('Refer URGENTLY to hospital');
-      }
-    }
-
-    if (classificationTexts.includes('हैजा (Haija)') || classificationTexts.includes('Dysentery')) {
-      let ciproDose = '';
-      if (weight >= 4 && weight < 6) ciproDose = '१/४ चक्की (1/4 tab) दिनको २ पटक, ३ दिनसम्म';
-      else if (weight >= 6 && weight < 10) ciproDose = '१/२ चक्की (1/2 tab) दिनको २ पटक, ३ दिनसम्म';
-      else if (weight >= 10 && weight <= 19) ciproDose = '१ चक्की (1 tab) दिनको २ पटक, ३ दिनसम्म';
-      treatments.push(`सिप्रोफ्लोक्सासिन (Ciprofloxacin 250mg): ${ciproDose}`);
-    }
-
-    if (classificationTexts.includes('CONFIRMED HIV INFECTION (रातो)')) {
-      treatments.push('Refer to ART Center for treatment');
-      treatments.push('Start Cotrimoxazole Prophylaxis');
-    } else if (classificationTexts.includes('HIV EXPOSED (पहेँलो)')) {
-      treatments.push('Start Cotrimoxazole Prophylaxis from 6 weeks of age');
-    }
-
-    const temp = parseFloat(assessmentData.temperature) || 0;
-    if (temp >= 38.5 || assessmentData.earPain || classificationTexts.includes('Acute Ear Infection')) {
-      let pcmDose = (weight >= 14 || totalMonths >= 36) ? '७.५ मि.लि. (7.5 ml) दिनको ४ पटक' : '५ मि.लि. (5 ml) दिनको ४ पटक';
-      treatments.push(`प्यारासिटामोल (Paracetamol 125mg/5ml): ${pcmDose}`);
-    }
-
-    return treatments;
-  };
-
-  const getSuggestedNextVisit = (classifications: Array<{text: string, color: 'red' | 'yellow' | 'green'}>): string => {
-    const texts = classifications.map(c => c.text);
-    if (texts.some(t => t.includes('Severe') || t.includes('Very Severe') || t.includes('Possible Serious Bacterial Infection'))) {
-      return 'Immediately (Referral)';
-    }
-    if (texts.some(t => t.includes('Pneumonia') || t.includes('Dehydration') || t.includes('Malaria') || t.includes('Jaundice') || t.includes('Feeding Problem'))) {
-      return '2 days';
-    }
-    if (texts.some(t => t.includes('Local Bacterial Infection') || t.includes('Dysentery') || t.includes('Ear Infection') || t.includes('Measles'))) {
-      return '3 days';
-    }
-    if (texts.some(t => t.includes('Anemia') || t.includes('Malnutrition'))) {
-      return '14 days';
-    }
-    return 'Regular Follow-up';
-  };
-
+        treatments.push('Give extra fluid (as much as child will take)');
+        treatments.push('Give Zinc Supplement for 10 days (2-6m: 10mg, >6m: 20mg)');
+        treatments.push('Continue feeding');
         treatments.push('Advise mother when to return immediately');
       }
-      if (classificationTexts.includes('Severe Persistent Diarrhea')) {
+    } else {
+      const weight = parseFloat(assessmentData.weight) || 0;
+      if (classifications.includes('Very Severe Disease') || classifications.includes('Severe Pneumonia or Very Severe Disease') || classifications.includes('Severe Acute Malnutrition') || classifications.includes('Severe Complicated Measles')) {
+        let gentDose = '';
+        let ampDose = '';
+        if (weight > 0) {
+          gentDose = `${(weight * 5).toFixed(1)}mg IM`;
+          ampDose = `${(weight * 50).toFixed(0)}mg IM`;
+        }
+        treatments.push(`Give first dose of appropriate antibiotic: Gentamicin (${gentDose}) and Ampicillin (${ampDose})`);
+        treatments.push('Refer URGENTLY to hospital');
+        treatments.push('Prevent low blood sugar');
+        treatments.push('Keep child warm');
+      }
+      if (classifications.includes('Pneumonia')) {
+        let amoxDose = '';
+        const ageYears = currentPatient?.ageYears || 0;
+        const ageMonths = currentPatient?.ageMonths || 0;
+        const totalMonths = ageYears * 12 + ageMonths;
+
+        if (weight >= 4 && weight < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
+        else if (weight >= 6 && weight < 8) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
+        else if (weight >= 8 && weight < 10) amoxDose = '250mg tab: 1.5 tab BD OR Syrup 125mg/5ml: 15 ml BD';
+        else if (weight >= 10 && weight < 14) amoxDose = '250mg tab: 2 tab BD';
+        else if (weight >= 14 && weight < 19) amoxDose = '250mg tab: 2.5 tab BD';
+        else if (totalMonths >= 2 && totalMonths < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
+        else if (totalMonths >= 6 && totalMonths < 12) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
+        else if (totalMonths >= 12 && totalMonths < 36) amoxDose = '250mg tab: 2 tab BD';
+        else if (totalMonths >= 36 && totalMonths <= 60) amoxDose = '250mg tab: 2.5 tab BD';
+        else amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
+        
+        if (assessmentData.hivStatus) {
+          treatments.push(`Give first dose of Amoxicillin: ${amoxDose.split(' OR ')[0]}`);
+          treatments.push('Refer URGENTLY to hospital (HIV exposed/infected)');
+        } else if (!classifications.includes('Dysentery')) {
+          treatments.push(`Give Amoxicillin for 5 days: ${amoxDose}`);
+          treatments.push('Soothe the throat and relieve cough with safe remedy');
+          treatments.push('Advise mother when to return immediately');
+          treatments.push('Follow-up in 3 days');
+        } else {
+          treatments.push('Note: Amoxicillin not required as Ciprofloxacin is given for Dysentery');
+          treatments.push('Soothe the throat and relieve cough with safe remedy');
+          treatments.push('Advise mother when to return immediately');
+          treatments.push('Follow-up in 3 days');
+        }
+      }
+      if (classifications.includes('Severe Dehydration')) {
+        treatments.push('Give fluid for severe dehydration (Plan C)');
+        treatments.push('Refer URGENTLY to hospital');
+        treatments.push('If child can drink, give ORS by mouth while drip is being set up');
+        treatments.push('Give 100 ml/kg Ringer\'s Lactate (or Normal Saline)');
+      }
+      if (classifications.includes('Some Dehydration')) {
+        treatments.push('Give fluid and food for some dehydration (Plan B)');
+        treatments.push('Give 75 ml/kg of ORS in the clinic over 4 hours');
+        treatments.push('Show mother how to give ORS solution');
+        treatments.push('After 4 hours, reassess child and classify for dehydration');
+      }
+      if (classifications.includes('No Dehydration')) {
+        treatments.push('Treat diarrhea at home (Plan A)');
+        treatments.push('Give extra fluid (as much as child will take)');
+        treatments.push('Give Zinc Supplement for 10 days (2-6m: 10mg, >6m: 20mg)');
+        treatments.push('Continue feeding');
+        treatments.push('Advise mother when to return immediately');
+      }
+      if (classifications.includes('Severe Persistent Diarrhea')) {
         treatments.push('Treat dehydration before referral');
         treatments.push('Refer URGENTLY to hospital');
       }
-      if (classificationTexts.includes('Persistent Diarrhea')) {
+      if (classifications.includes('Persistent Diarrhea')) {
         treatments.push('Advise on feeding for persistent diarrhea');
         treatments.push('Give Vitamin A');
         treatments.push('Follow-up in 5 days');
       }
-      if (classificationTexts.includes('Dysentery')) {
+      if (classifications.includes('Dysentery')) {
         const ageInMonths = (currentPatient?.ageYears || 0) * 12 + (currentPatient?.ageMonths || 0);
         let ciproDose = '';
         
@@ -1786,7 +1894,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         treatments.push(`सिप्रोफ्लोक्सासिन (Ciprofloxacin 250mg): ${ciproDose}`);
         treatments.push('Follow-up in 3 days');
       }
-      if (classificationTexts.includes('हैजा (Haija)')) {
+      if (classifications.includes('हैजा (Haija)')) {
         let ciproDose = '';
         if (weight >= 4 && weight < 6) ciproDose = '१/४ चक्की (1/4 tab) दिनको २ पटक, ३ दिनसम्म (२-४ महिना)';
         else if (weight >= 6 && weight < 10) ciproDose = '१/२ चक्की (1/2 tab) दिनको २ पटक, ३ दिनसम्म (४-१२ महिना)';
@@ -1794,25 +1902,57 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         
         treatments.push(`हैजाको लागि सिप्रोफ्लोक्सासिन (Ciprofloxacin for Cholera): ${ciproDose}`);
       }
-      if (classificationTexts.includes('म�ollow-up in 5 days');
+      if (classifications.includes('मलेरिया (Malaria)')) {
+        let actDose = '';
+        if (weight >= 5 && weight < 15) actDose = '1 tablet (20/120) once daily for 3 days';
+        else if (weight >= 15 && weight < 25) actDose = '2 tablets (20/120) once daily for 3 days';
+        
+        treatments.push(`Give ACT for 3 days: ${actDose}`);
+        treatments.push('Follow-up in 3 days if fever persists');
       }
-      if (classificationTexts.includes('Severe Acute Malnutrition')) {
+      if (classifications.includes('Acute Ear Infection')) {
+        let amoxDose = '';
+        const ageYears = currentPatient?.ageYears || 0;
+        const ageMonths = currentPatient?.ageMonths || 0;
+        const totalMonths = ageYears * 12 + ageMonths;
+
+        if (weight >= 4 && weight < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
+        else if (weight >= 6 && weight < 8) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
+        else if (weight >= 8 && weight < 10) amoxDose = '250mg tab: 1.5 tab BD OR Syrup 125mg/5ml: 15 ml BD';
+        else if (weight >= 10 && weight < 14) amoxDose = '250mg tab: 2 tab BD';
+        else if (weight >= 14 && weight < 19) amoxDose = '250mg tab: 2.5 tab BD';
+        else if (totalMonths >= 2 && totalMonths < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
+        else if (totalMonths >= 6 && totalMonths < 12) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
+        else if (totalMonths >= 12 && totalMonths < 36) amoxDose = '250mg tab: 2 tab BD';
+        else if (totalMonths >= 36 && totalMonths <= 60) amoxDose = '250mg tab: 2.5 tab BD';
+        else amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD'; // Default fallback
+        
+        if (!classifications.includes('Dysentery')) {
+          treatments.push(`Give Amoxicillin for 5 days: ${amoxDose}`);
+        } else {
+          treatments.push('Note: Amoxicillin not required as Ciprofloxacin is given for Dysentery');
+        }
+
+        treatments.push('Dry the ear by wicking if there is discharge');
+        treatments.push('Follow-up in 5 days');
+      }
+      if (classifications.includes('Severe Acute Malnutrition')) {
         // Already handled in the combined block above
       }
-      if (classificationTexts.includes('Severe Complicated Measles')) {
+      if (classifications.includes('Severe Complicated Measles')) {
         treatments.push('Give Vitamin A');
         // Already handled in the combined block above
       }
-      if (classificationTexts.includes('Measles with Eye/Mouth Complications')) {
+      if (classifications.includes('Measles with Eye/Mouth Complications')) {
         treatments.push('Give Vitamin A');
         treatments.push('Apply Tetracycline eye ointment if eye complications');
         treatments.push('Treat mouth ulcers with Gentian Violet');
         treatments.push('Follow-up in 3 days');
       }
-      if (classificationTexts.includes('Severe Anemia')) {
+      if (classifications.includes('Severe Anemia')) {
         treatments.push('Refer URGENTLY to hospital');
       }
-      if (classificationTexts.includes('Anemia')) {
+      if (classifications.includes('Anemia')) {
         treatments.push('Give Iron/Folate');
         treatments.push('Give Mebendazole if child is 1 year or older');
         treatments.push('Advise mother on feeding');
@@ -1820,50 +1960,50 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       }
 
       // Dehydration Plans
-      if (classificationTexts.includes('Severe Dehydration')) {
+      if (classifications.includes('Severe Dehydration')) {
         treatments.push('Plan C: Start IV fluids immediately (Ringer\'s Lactate)');
-        treatments.push('If child can drink, give ORS by mouth while drip is being set up');
+        treatments.push('If child can drink, give ORS by mouth while drip is set up');
         treatments.push('Refer URGENTLY to hospital');
-      } else if (classificationTexts.includes('Some Dehydration')) {
+      } else if (classifications.includes('Some Dehydration')) {
         treatments.push('Plan B: Give ORS in clinic (75ml/kg over 4 hours)');
         treatments.push('Show mother how to give ORS');
         treatments.push('Give Zinc (10-14 days)');
         treatments.push('Reassess after 4 hours');
-      } else if (classificationTexts.includes('No Dehydration')) {
+      } else if (classifications.includes('No Dehydration')) {
         treatments.push('Plan A: Give extra fluid, continue feeding');
         treatments.push('Give Zinc (10-14 days)');
         treatments.push('Advise mother when to return immediately');
       }
 
       // HIV Treatment
-      if (classificationTexts.includes('CONFIRMED HIV INFECTION (रातो)')) {
+      if (classifications.includes('CONFIRMED HIV INFECTION (रातो)')) {
         treatments.push('Refer to ART Center for treatment');
         treatments.push('Start Cotrimoxazole Prophylaxis');
         treatments.push('Treat other infections');
       }
-      if (classificationTexts.includes('HIV EXPOSED (पहेँलो)')) {
+      if (classifications.includes('HIV EXPOSED (पहेँलो)')) {
         treatments.push('Start Cotrimoxazole Prophylaxis from 6 weeks of age');
         treatments.push('Test for HIV at 6 weeks (PCR)');
         treatments.push('Follow-up regularly');
       }
-      if (classificationTexts.includes('SUSPECTED SYMPTOMATIC HIV (पहेँलो)') || classificationTexts.includes('HIV TEST REQUIRED (पहेँलो)')) {
+      if (classifications.includes('SUSPECTED SYMPTOMATIC HIV (पहेँलो)') || classifications.includes('HIV TEST REQUIRED (पहेँलो)')) {
         treatments.push('Refer for HIV Testing and Counseling');
         treatments.push('Treat existing conditions');
       }
 
       // TB Treatment
-      if (classificationTexts.includes('POSSIBLE TB (पहेँलो)')) {
+      if (classifications.includes('POSSIBLE TB (पहेँलो)')) {
         treatments.push('Refer for TB investigation (Mantoux, X-ray, GeneXpert)');
         treatments.push('Assess for other causes of symptoms');
       }
-      if (classificationTexts.includes('LATENT TUBERCULOSIS INFECTION (पहेँलो)')) {
+      if (classifications.includes('LATENT TUBERCULOSIS INFECTION (पहेँलो)')) {
         treatments.push('Start Isoniazid Preventive Therapy (IPT)');
         treatments.push('Follow-up regularly');
       }
 
       // Paracetamol for high fever or ear pain/infection
       const temp = parseFloat(assessmentData.temperature) || 0;
-      if (temp >= 38.5 || assessmentData.earPain || classificationTexts.includes('Acute Ear Infection')) {
+      if (temp >= 38.5 || assessmentData.earPain || classifications.includes('Acute Ear Infection')) {
         const ageYears = currentPatient?.ageYears || 0;
         const ageMonths = currentPatient?.ageMonths || 0;
         const totalMonths = ageYears * 12 + ageMonths;
@@ -1883,8 +2023,65 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     return treatments;
   };
 
+  const calculateZScore = () => {
+    if (!assessmentData.weight || !currentPatient) return null;
+    const weight = parseFloat(assessmentData.weight);
+    
+    // Calculate precise age in months
+    const today = new Date();
+    const birthDate = currentPatient.dobAd ? new Date(currentPatient.dobAd) : null;
+    let ageMonths = (currentPatient.ageYears || 0) * 12 + (currentPatient.ageMonths || 0);
+    
+    if (birthDate) {
+      const diffTime = Math.abs(today.getTime() - birthDate.getTime());
+      ageMonths = diffTime / (1000 * 60 * 60 * 24 * 30.44);
+    }
 
+    // More granular WHO Weight-for-Age Z-score (WAZ) logic (Approximate Median and SD)
+    const wazData: any = {
+      0: { m: 3.3, s: 0.4 },
+      1: { m: 4.5, s: 0.5 },
+      2: { m: 5.6, s: 0.6 },
+      3: { m: 6.4, s: 0.7 },
+      4: { m: 7.0, s: 0.8 },
+      5: { m: 7.5, s: 0.8 },
+      6: { m: 7.9, s: 0.8 },
+      9: { m: 8.9, s: 0.9 },
+      12: { m: 9.6, s: 1.0 },
+      15: { m: 10.3, s: 1.1 },
+      18: { m: 10.9, s: 1.1 },
+      21: { m: 11.5, s: 1.2 },
+      24: { m: 12.2, s: 1.3 },
+      30: { m: 13.3, s: 1.4 },
+      36: { m: 14.3, s: 1.6 },
+      42: { m: 15.3, s: 1.7 },
+      48: { m: 16.3, s: 1.9 },
+      54: { m: 17.3, s: 2.0 },
+      60: { m: 18.3, s: 2.2 }
+    };
 
+    const ages = Object.keys(wazData).map(Number).sort((a, b) => a - b);
+    
+    // Linear interpolation for more accuracy
+    let m, s;
+    if (ageMonths <= 0) {
+      m = wazData[0].m;
+      s = wazData[0].s;
+    } else if (ageMonths >= 60) {
+      m = wazData[60].m;
+      s = wazData[60].s;
+    } else {
+      const lowerAge = ages.filter(a => a <= ageMonths).pop() || 0;
+      const upperAge = ages.find(a => a > ageMonths) || 60;
+      const factor = (ageMonths - lowerAge) / (upperAge - lowerAge);
+      
+      m = wazData[lowerAge].m + factor * (wazData[upperAge].m - wazData[lowerAge].m);
+      s = wazData[lowerAge].s + factor * (wazData[upperAge].s - wazData[lowerAge].s);
+    }
+    
+    const zScore = (weight - m) / s;
+    return zScore.toFixed(2);
+  };
 
   const zScore = calculateZScore();
   const suggestedClassifications = getClassification();
@@ -2698,4 +2895,3 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     </div>
   );
 };
-

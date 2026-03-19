@@ -1,20 +1,18 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { LoginForm } from './components/LoginForm';
 import { Dashboard } from './components/Dashboard';
-import { APP_NAME, ORG_NAME } from './constants';
+import { APP_NAME, ORG_NAME, AVAILABLE_SERVICES } from './constants';
 import { Landmark, ShieldCheck, AlertCircle, Database, ShieldAlert, Lock, Unlock } from 'lucide-react';
 import { 
   User, OrganizationSettings, MagFormEntry, RabiesPatient, PurchaseOrderEntry, 
   IssueReportEntry, FirmEntry, QuotationEntry, InventoryItem, Store, StockEntryRequest, 
   DakhilaPratibedanEntry, ReturnEntry, MarmatEntry, DhuliyaunaEntry, LogBookEntry, 
-  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord,
-  ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord,
-  DispensaryRecord, ServiceItem, LabReport, GarbhawotiRecord, PrasutiRecord,
-  LeaveApplication, LeaveBalance
+  DakhilaItem, TBPatient, GarbhawatiPatient, ChildImmunizationRecord, LeaveApplication, LeaveStatus, LeaveBalance, Darta, Chalani, BharmanAdeshEntry,
+  GarbhawotiRecord, PrasutiRecord, ServiceSeekerRecord, OPDRecord, EmergencyRecord, CBIMNCIRecord, BillingRecord, ServiceItem, LabReport, PariwarSewaRecord, XRayRecord, ECGRecord, USGRecord, PhysiotherapyRecord, IPDRecord
 } from './types';
 import { db } from './firebase';
-import { ref, onValue, set, remove, update, get, Unsubscribe, off } from "firebase/database";
+import { ref, onValue, set, remove, update, get, Unsubscribe, off, push } from "firebase/database";
 // @ts-ignore
 import NepaliDate from 'nepali-date-converter';
 
@@ -30,7 +28,8 @@ const INITIAL_SETTINGS: OrganizationSettings = {
     defaultVatRate: '13',
     activeFiscalYear: '2082/083',
     enableEnglishDate: 'no',
-    logoUrl: ''
+    logoUrl: '',
+    allServiceOptions: AVAILABLE_SERVICES
 };
 
 const DEFAULT_ADMIN: User = {
@@ -42,12 +41,13 @@ const DEFAULT_ADMIN: User = {
     fullName: 'Administrator',
     designation: 'System Manager',
     phoneNumber: '98XXXXXXXX',
-    allowedMenus: ['dashboard', 'inventory', 'settings', 'services', 'khop_sewa']
+    allowedMenus: ['dashboard', 'inventory', 'settings', 'services', 'khop_sewa', 'emergency_sewa', 'cbimnci_sewa']
 };
 
 const App: React.FC = () => {
   const [allUsers, setAllUsers] = useState<User[]>([DEFAULT_ADMIN]); 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [activeOrgName, setActiveOrgName] = useState<string>('');
   const [currentFiscalYear, setCurrentFiscalYear] = useState<string>('2082/083');
   const [generalSettings, setGeneralSettings] = useState<OrganizationSettings>(INITIAL_SETTINGS);
   const [isDbConnected, setIsDbConnected] = useState(false);
@@ -71,18 +71,34 @@ const App: React.FC = () => {
   const [marmatEntries, setMarmatEntries] = useState<MarmatEntry[]>([]);
   const [dhuliyaunaEntries, setDhuliyaunaEntries] = useState<DhuliyaunaEntry[]>([]);
   const [logBookEntries, setLogBookEntries] = useState<LogBookEntry[]>([]);
+  const [leaveApplications, setLeaveApplications] = useState<LeaveApplication[]>([]);
+  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
+  const [dartaEntries, setDartaEntries] = useState<Darta[]>([]);
+  const [chalaniEntries, setChalaniEntries] = useState<Chalani[]>([]);
+  const [bharmanAdeshEntries, setBharmanAdeshEntries] = useState<BharmanAdeshEntry[]>([]);
+  const [garbhawotiRecords, setGarbhawotiRecords] = useState<GarbhawotiRecord[]>([]);
+  const [prasutiRecords, setPrasutiRecords] = useState<PrasutiRecord[]>([]);
   const [serviceSeekerRecords, setServiceSeekerRecords] = useState<ServiceSeekerRecord[]>([]);
   const [opdRecords, setOpdRecords] = useState<OPDRecord[]>([]);
   const [emergencyRecords, setEmergencyRecords] = useState<EmergencyRecord[]>([]);
   const [cbimnciRecords, setCbimnciRecords] = useState<CBIMNCIRecord[]>([]);
   const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
-  const [dispensaryRecords, setDispensaryRecords] = useState<DispensaryRecord[]>([]);
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
   const [labReports, setLabReports] = useState<LabReport[]>([]);
-  const [garbhawotiRecords, setGarbhawotiRecords] = useState<GarbhawotiRecord[]>([]);
-  const [prasutiRecords, setPrasutiRecords] = useState<PrasutiRecord[]>([]);
-  const [leaveApplications, setLeaveApplications] = useState<LeaveApplication[]>([]);
-  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
+  const [pariwarSewaRecords, setPariwarSewaRecords] = useState<PariwarSewaRecord[]>([]);
+  const [xrayRecords, setXrayRecords] = useState<XRayRecord[]>([]);
+  const [ecgRecords, setEcgRecords] = useState<ECGRecord[]>([]);
+  const [usgRecords, setUsgRecords] = useState<USGRecord[]>([]);
+  const [physiotherapyRecords, setPhysiotherapyRecords] = useState<PhysiotherapyRecord[]>([]);
+  const [ipdRecords, setIpdRecords] = useState<IPDRecord[]>([]);
+
+  const managedOrgs = useMemo(() => {
+      if (currentUser?.role !== 'HEALTH_SECTION') return [];
+      const orgs = allUsers
+        .filter(u => u.parentId === currentUser.id && u.role === 'ADMIN')
+        .map(u => u.organizationName);
+      return Array.from(new Set([currentUser.organizationName, ...orgs]));
+  }, [allUsers, currentUser]);
 
   useEffect(() => {
     const connectedRef = ref(db, ".info/connected");
@@ -120,30 +136,57 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setActiveOrgName('');
+      return;
+    }
 
-    const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
-    const orgPath = `orgData/${safeOrgName}`;
+    if (!activeOrgName) {
+      setActiveOrgName(currentUser.organizationName);
+      return;
+    }
+
+    const safeOrgName = activeOrgName.trim().replace(/[.#$[\]]/g, "_");
+    
+    // If 'All' is selected, we need to fetch data from all managed organizations
+    const isAllOrgs = activeOrgName === 'All';
+    const targetOrgs = isAllOrgs ? managedOrgs : [activeOrgName];
+
     const unsubscribes: Unsubscribe[] = [];
 
     const setupOrgListener = (subPath: string, setter: Function) => {
-        const listenerRef = ref(db, `${orgPath}/${subPath}`);
-        const unsub = onValue(listenerRef, (snap) => {
-            const data = snap.val();
-            setter(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
-        }, (err) => {
-            if (err.message.includes("permission_denied")) {
-                setDbError(`डेटा रिड पर्मिसन छैन: ${subPath}`);
-            }
+        const orgDataMap = new Map<string, any[]>();
+        
+        targetOrgs.forEach(orgName => {
+            const safeName = orgName.trim().replace(/[.#$[\]]/g, "_");
+            const listenerRef = ref(db, `orgData/${safeName}/${subPath}`);
+            const unsub = onValue(listenerRef, (snap) => {
+                const data = snap.val();
+                const orgData = data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : [];
+                orgDataMap.set(orgName, orgData);
+                
+                // Aggregate all data
+                const aggregatedData = Array.from(orgDataMap.values()).flat();
+                setter(aggregatedData);
+            }, (err) => {
+                if (err.message.includes("permission_denied")) {
+                    setDbError(`डेटा रिड पर्मिसन छैन: ${subPath}`);
+                }
+            });
+            unsubscribes.push(unsub);
         });
-        unsubscribes.push(unsub);
     };
 
-    onValue(ref(db, `${orgPath}/settings`), (snap) => {
+    // For settings, we just take the first organization's settings if 'All' is selected, 
+    // or we could aggregate them if needed. For now, take the first one.
+    const settingsOrg = isAllOrgs ? targetOrgs[0] : activeOrgName;
+    const safeSettingsOrg = settingsOrg.trim().replace(/[.#$[\]]/g, "_");
+
+    onValue(ref(db, `orgData/${safeSettingsOrg}/settings`), (snap) => {
         if (snap.exists()) setGeneralSettings(snap.val());
         else {
-            const firstSettings = { ...INITIAL_SETTINGS, orgNameNepali: currentUser.organizationName, orgNameEnglish: currentUser.organizationName };
-            set(ref(db, `${orgPath}/settings`), firstSettings).catch(() => {});
+            const firstSettings = { ...INITIAL_SETTINGS, orgNameNepali: settingsOrg, orgNameEnglish: settingsOrg };
+            set(ref(db, `orgData/${safeSettingsOrg}/settings`), firstSettings).catch(() => {});
             setGeneralSettings(firstSettings);
         }
     });
@@ -165,31 +208,518 @@ const App: React.FC = () => {
     setupOrgListener('marmatEntries', setMarmatEntries);
     setupOrgListener('disposalEntries', setDhuliyaunaEntries);
     setupOrgListener('logBook', setLogBookEntries);
-    setupOrgListener('serviceSeekers', setServiceSeekerRecords);
+    setupOrgListener('leaveApplications', setLeaveApplications);
+    setupOrgListener('leaveBalances', setLeaveBalances);
+    setupOrgListener('dartaEntries', setDartaEntries);
+    setupOrgListener('chalaniEntries', setChalaniEntries);
+    setupOrgListener('bharmanAdeshEntries', setBharmanAdeshEntries);
+    setupOrgListener('garbhawotiRecords', setGarbhawotiRecords);
+    setupOrgListener('prasutiRecords', setPrasutiRecords);
+    setupOrgListener('serviceSeekerRecords', setServiceSeekerRecords);
     setupOrgListener('opdRecords', setOpdRecords);
     setupOrgListener('emergencyRecords', setEmergencyRecords);
     setupOrgListener('cbimnciRecords', setCbimnciRecords);
     setupOrgListener('billingRecords', setBillingRecords);
-    setupOrgListener('dispensaryRecords', setDispensaryRecords);
     setupOrgListener('serviceItems', setServiceItems);
     setupOrgListener('labReports', setLabReports);
-    setupOrgListener('garbhawotiRecords', setGarbhawotiRecords);
-    setupOrgListener('prasutiRecords', setPrasutiRecords);
-    setupOrgListener('leaveApplications', setLeaveApplications);
-    setupOrgListener('leaveBalances', setLeaveBalances);
+    setupOrgListener('pariwarSewaRecords', setPariwarSewaRecords);
+    setupOrgListener('xrayRecords', setXrayRecords);
+    setupOrgListener('ecgRecords', setEcgRecords);
+    setupOrgListener('usgRecords', setUsgRecords);
+    setupOrgListener('physiotherapyRecords', setPhysiotherapyRecords);
+    setupOrgListener('ipdRecords', setIpdRecords);
 
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [currentUser]);
+  }, [currentUser, activeOrgName]);
+
+  useEffect(() => {
+    if (currentUser) {
+      const updatedUser = allUsers.find(u => u.id === currentUser.id);
+      if (updatedUser && JSON.stringify(updatedUser) !== JSON.stringify(currentUser)) {
+        setCurrentUser(updatedUser);
+      }
+    }
+  }, [allUsers, currentUser]);
+
+  const handleUpdateReadNotifications = async (userId: string, readIds: string[]) => {
+    try {
+      await update(ref(db, `users/${userId}`), { readNotifications: readIds });
+    } catch (error) {
+      console.error("Error updating read notifications", error);
+    }
+  };
 
   const handleLoginSuccess = (user: User, fiscalYear: string) => {
     setCurrentUser(user);
+    setActiveOrgName(user.organizationName);
     setCurrentFiscalYear(fiscalYear);
+    localStorage.removeItem('smart_inv_active_item');
   };
 
   const getOrgRef = (subPath: string) => {
-      const safeOrgName = currentUser?.organizationName.trim().replace(/[.#$[\]]/g, "_") || "unknown";
+      const safeOrgName = activeOrgName.trim().replace(/[.#$[\\]]/g, "_") || "unknown";
       return ref(db, `orgData/${safeOrgName}/${subPath}`);
   };
+
+  const handleAddLeaveApplication = async (app: LeaveApplication) => {
+      if (!currentUser) return;
+      try {
+          const orgRef = getOrgRef('leaveApplications');
+          const newRef = push(orgRef);
+          await set(newRef, { ...app, id: newRef.key });
+      } catch (error) {
+          alert("बिदा आवेदन सुरक्षित गर्न सकिएन।");
+      }
+  };
+
+  const handleSaveLeaveBalance = async (balance: LeaveBalance) => {
+      if (!currentUser) return;
+      try {
+          await set(getOrgRef(`leaveBalances/${balance.id}`), balance);
+      } catch (error) {
+          console.error("Error saving leave balance", error);
+          alert("सञ्चित बिदा विवरण सुरक्षित गर्न सकिएन।");
+      }
+  };
+
+  const handleSaveDarta = async (darta: Darta) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`dartaEntries/${darta.id}`), darta);
+    } catch (error) { 
+      alert("दर्ता सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleSaveChalani = async (chalani: Chalani) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`chalaniEntries/${chalani.id}`), chalani);
+    } catch (error) { 
+      alert("चलानी सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleSaveBharmanAdesh = async (entry: BharmanAdeshEntry) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`bharmanAdeshEntries/${entry.id}`), entry);
+    } catch (error) { 
+      alert("भ्रमण आदेश सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteDarta = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`dartaEntries/${id}`));
+    } catch (error) {
+      alert("दर्ता हटाउन सकिएन।");
+    }
+  };
+
+  const handleDeleteChalani = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`chalaniEntries/${id}`));
+    } catch (error) {
+      alert("चलानी हटाउन सकिएन।");
+    }
+  };
+
+  const handleDeleteBharmanAdesh = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`bharmanAdeshEntries/${id}`));
+    } catch (error) {
+      alert("भ्रमण आदेश हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveGarbhawotiRecord = async (record: GarbhawotiRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`garbhawotiRecords/${record.id}`), record);
+    } catch (error) {
+      alert("गर्भवती रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteGarbhawotiRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`garbhawotiRecords/${id}`));
+    } catch (error) {
+      alert("गर्भवती रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSavePrasutiRecord = async (record: PrasutiRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`prasutiRecords/${record.id}`), record);
+    } catch (error) {
+      alert("प्रसूति रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeletePrasutiRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`prasutiRecords/${id}`));
+    } catch (error) {
+      alert("प्रसूति रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveServiceSeekerRecord = async (record: ServiceSeekerRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`serviceSeekerRecords/${record.id}`), record);
+    } catch (error) {
+      alert("सेवाग्राही दर्ता सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteServiceSeekerRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`serviceSeekerRecords/${id}`));
+    } catch (error) {
+      alert("सेवाग्राही दर्ता हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveOPDRecord = async (record: OPDRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`opdRecords/${record.id}`), record);
+    } catch (error) {
+      alert("OPD रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteOPDRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`opdRecords/${id}`));
+    } catch (error) {
+      alert("OPD रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveEmergencyRecord = async (record: EmergencyRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`emergencyRecords/${record.id}`), record);
+    } catch (error) {
+      alert("Emergency रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteEmergencyRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`emergencyRecords/${id}`));
+    } catch (error) {
+      alert("Emergency रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveCBIMNCIRecord = async (record: CBIMNCIRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`cbimnciRecords/${record.id}`), record);
+    } catch (error) {
+      alert("CBIMNCI रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteCBIMNCIRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`cbimnciRecords/${id}`));
+    } catch (error) {
+      alert("CBIMNCI रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveBillingRecord = async (record: BillingRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`billingRecords/${record.id}`), record);
+    } catch (error) {
+      alert("बिलिङ रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteBillingRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`billingRecords/${id}`));
+    } catch (error) {
+      alert("बिलिङ रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveServiceItem = async (item: ServiceItem) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`serviceItems/${item.id}`), item);
+    } catch (error) {
+      alert("सेवा सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteServiceItem = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`serviceItems/${id}`));
+    } catch (error) {
+      alert("सेवा हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveLabReport = async (record: LabReport) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`labReports/${record.id}`), record);
+    } catch (error) {
+      alert("ल्याब रिपोर्ट सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteLabReport = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`labReports/${id}`));
+    } catch (error) {
+      alert("ल्याब रिपोर्ट हटाउन सकिएन।");
+    }
+  };
+
+  const handleSavePariwarSewaRecord = async (record: PariwarSewaRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`pariwarSewaRecords/${record.id}`), record);
+    } catch (error) {
+      alert("परिवार नियोजन रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeletePariwarSewaRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`pariwarSewaRecords/${id}`));
+    } catch (error) {
+      alert("परिवार नियोजन रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveXRayRecord = async (record: XRayRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`xrayRecords/${record.id}`), record);
+    } catch (error) {
+      alert("एक्स-रे रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteXRayRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`xrayRecords/${id}`));
+    } catch (error) {
+      alert("एक्स-रे रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveECGRecord = async (record: ECGRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`ecgRecords/${record.id}`), record);
+    } catch (error) {
+      alert("ई.सी.जी. रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteECGRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`ecgRecords/${id}`));
+    } catch (error) {
+      alert("ई.सी.जी. रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveUSGRecord = async (record: USGRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`usgRecords/${record.id}`), record);
+    } catch (error) {
+      alert("यु.एस.जी. रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteUSGRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`usgRecords/${id}`));
+    } catch (error) {
+      alert("यु.एस.जी. रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSavePhysiotherapyRecord = async (record: PhysiotherapyRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`physiotherapyRecords/${record.id}`), record);
+    } catch (error) {
+      alert("फिजियोथेरापी रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeletePhysiotherapyRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`physiotherapyRecords/${id}`));
+    } catch (error) {
+      alert("फिजियोथेरापी रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleSaveIPDRecord = async (record: IPDRecord) => {
+    if (!currentUser) return;
+    try {
+      await set(getOrgRef(`ipdRecords/${record.id}`), record);
+    } catch (error) {
+      alert("IPD रेकर्ड सुरक्षित गर्न सकिएन।");
+    }
+  };
+
+  const handleDeleteIPDRecord = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`ipdRecords/${id}`));
+    } catch (error) {
+      alert("IPD रेकर्ड हटाउन सकिएन।");
+    }
+  };
+
+  const handleUpdateLeaveStatus = async (id: string, status: LeaveStatus, rejectionReason?: string) => {
+      if (!currentUser) return;
+      try {
+          const appRef = getOrgRef(`leaveApplications/${id}`);
+          const application = leaveApplications.find(a => a.id === id);
+
+          if (status === 'Approved' && application) {
+              const balance = leaveBalances.find(b => b.userId === application.userId);
+              if (balance) {
+                  const calculateDuration = (start: string, end: string) => {
+                      try {
+                          const d1 = new Date(new NepaliDate(start).toJsDate());
+                          const d2 = new Date(new NepaliDate(end).toJsDate());
+                          const diffTime = Math.abs(d2.getTime() - d1.getTime());
+                          return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                      } catch (e) { return 0; }
+                  };
+
+                  const duration = calculateDuration(application.startDate, application.endDate);
+                  const newBalance = { ...balance };
+                  
+                  if (application.leaveType === 'Casual & Festival') {
+                      // Deduct from Casual first, then Festival
+                      let remainingToDeduct = duration;
+                      
+                      if (newBalance.casual >= remainingToDeduct) {
+                          newBalance.casual -= remainingToDeduct;
+                          remainingToDeduct = 0;
+                      } else {
+                          remainingToDeduct -= newBalance.casual;
+                          newBalance.casual = 0;
+                      }
+
+                      if (remainingToDeduct > 0) {
+                          newBalance.festival = Math.max(0, (newBalance.festival || 0) - remainingToDeduct);
+                      }
+                  } else if (application.leaveType === 'Sick') {
+                      newBalance.sick = (newBalance.sick || 0) - duration;
+                  } else if (application.leaveType === 'Home') {
+                      newBalance.home = (newBalance.home || 0) - duration;
+                  } else if (application.leaveType === 'Maternity') {
+                      newBalance.maternity = (newBalance.maternity || 0) - duration;
+                  } else if (application.leaveType === 'Kiriya') {
+                      newBalance.kiriya = (newBalance.kiriya || 0) - duration;
+                  } else if (application.leaveType === 'Study') {
+                      newBalance.study = (newBalance.study || 0) - duration;
+                  } else if (application.leaveType === 'Extraordinary') {
+                      newBalance.extraordinary = (newBalance.extraordinary || 0) - duration;
+                  } else if (application.leaveType === 'Other') {
+                      newBalance.other = (newBalance.other || 0) - duration;
+                  }
+
+                  await set(getOrgRef(`leaveBalances/${balance.id}`), newBalance);
+              }
+          }
+
+          await update(appRef, { 
+              status, 
+              rejectionReason: rejectionReason || null, 
+              approvedBy: currentUser.fullName,
+              approverDesignation: allUsers.find(u => u.id === currentUser.id)?.designation || currentUser.designation,
+              approvalDate: new NepaliDate().format('YYYY-MM-DD')
+          });
+      } catch (error) {
+          alert("बिदाको अवस्था अपडेट गर्न सकिएन।");
+      }
+  };
+
+  const handleDeleteLeaveApplication = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await remove(getOrgRef(`leaveApplications/${id}`));
+    } catch (error) {
+      alert("बिदा आवेदन हटाउन सकिएन।");
+    }
+  };
+
+  // Auto Accrual Logic
+  useEffect(() => {
+      if (!currentUser || leaveBalances.length === 0) return;
+
+      const today = new NepaliDate();
+      const currentMonth = today.format('YYYY-MM');
+      const currentYear = today.format('YYYY');
+
+      const processAccruals = async () => {
+          for (const balance of leaveBalances) {
+              let updated = false;
+              const newBalance = { ...balance };
+
+              // Monthly Accrual for Permanent Employees ONLY
+              if (balance.serviceType === 'Permanent' && balance.lastAccrualMonth !== currentMonth) {
+                  newBalance.home = (newBalance.home || 0) + 2.5;
+                  newBalance.sick = (newBalance.sick || 0) + 1;
+                  newBalance.lastAccrualMonth = currentMonth;
+                  updated = true;
+              }
+
+              // Fiscal Year Reset for Permanent Employees ONLY
+              if (balance.serviceType === 'Permanent' && balance.lastFiscalYearReset !== currentYear) {
+                  newBalance.casual = 6;
+                  newBalance.festival = 6;
+                  newBalance.lastFiscalYearReset = currentYear;
+                  updated = true;
+              }
+
+              if (updated) {
+                  await set(getOrgRef(`leaveBalances/${balance.id}`), newBalance);
+              }
+          }
+      };
+
+      processAccruals();
+  }, [currentUser, leaveBalances.length]);
 
   const handleSaveUser = async (u: User) => {
       try {
@@ -272,14 +802,21 @@ const App: React.FC = () => {
           const orgPath = `orgData/${safeOrgName}`;
           const updates: Record<string, any> = {};
           updates[`${orgPath}/issueReports/${report.id}`] = report;
+          if (report.status === 'Issued') {
+              const magFormSnap = await get(ref(db, `${orgPath}/magForms/${report.magFormId}`));
+              if (magFormSnap.exists()) {
+                  const magForm = magFormSnap.val();
+                  if (magForm.demandBy) {
+                      updates[`${orgPath}/magForms/${report.magFormId}/receiver`] = magForm.demandBy;
+                  }
+              }
+          }
           if (report.status === 'Issued' && !!report.selectedStoreId && !!report.itemType) {
               const currentInvSnap = await get(ref(db, `${orgPath}/inventory`));
               const currentInvData = currentInvSnap.val() || {};
               const currentInvList: InventoryItem[] = Object.keys(currentInvData).map(k => ({ ...currentInvData[k], id: k }));
               const nowBs = new NepaliDate().format('YYYY-MM-DD');
               const nowAd = new Date().toISOString().split('T')[0];
-              
-              // 1. Deduct Stock
               for (const issueItem of report.items) {
                   let remainingIssuedQty = parseFloat(issueItem.quantity) || 0;
                   let potentialInventoryItems = currentInvList.filter(inv => {
@@ -306,21 +843,6 @@ const App: React.FC = () => {
                               lastUpdateDateBs: nowBs, lastUpdateDateAd: nowAd, receiptSource: 'Issued',
                           };
                           remainingIssuedQty -= qtyToDeduct;
-                      }
-                  }
-              }
-
-              // 2. Update Receiver in Mag Faram
-              if (report.magFormId) {
-                  const magFormSnap = await get(ref(db, `${orgPath}/magForms/${report.magFormId}`));
-                  if (magFormSnap.exists()) {
-                      const magFormVal = magFormSnap.val();
-                      if (magFormVal.demandBy) {
-                          updates[`${orgPath}/magForms/${report.magFormId}/receiver`] = {
-                              name: magFormVal.demandBy.name,
-                              designation: magFormVal.demandBy.designation,
-                              date: report.issueDate || nowBs
-                          };
                       }
                   }
               }
@@ -516,14 +1038,17 @@ const App: React.FC = () => {
     <>
       {currentUser ? (
         <Dashboard 
-          onLogout={() => setCurrentUser(null)} currentUser={currentUser} currentFiscalYear={currentFiscalYear} 
+          onLogout={() => {
+            setCurrentUser(null);
+            localStorage.removeItem('smart_inv_active_item');
+          }} currentUser={currentUser} currentFiscalYear={currentFiscalYear} 
           users={allUsers} onAddUser={handleSaveUser}
           onUpdateUser={handleSaveUser} onDeleteUser={handleDeleteUser}
           onChangePassword={(id, pass) => update(ref(db, `users/${id}`), { password: pass })}
           isDbLocked={isDbLocked}
           generalSettings={generalSettings} onUpdateGeneralSettings={(s) => set(getOrgRef('settings'), s)}
           magForms={magForms} onSaveMagForm={handleSaveMagForm} onDeleteMagForm={handleDeleteMagForm}
-          purchaseOrders={purchaseOrders} onUpdatePurchaseOrder={(o) => set(getOrgRef(`purchaseOrders/${o.id}`), o)} onDeletePurchaseOrder={(id) => remove(getOrgRef(`purchaseOrders/${id}`))}
+          purchaseOrders={purchaseOrders} onUpdatePurchaseOrder={(o) => set(getOrgRef(`purchaseOrders/${o.id}`), o)}
           issueReports={issueReports} onUpdateIssueReport={handleUpdateIssueReport}
           rabiesPatients={rabiesPatients} onAddRabiesPatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)}
           onUpdatePatient={(p) => set(getOrgRef(`rabiesPatients/${p.id}`), p)} onDeletePatient={(id) => remove(getOrgRef(`rabiesPatients/${id}`))}
@@ -538,62 +1063,70 @@ const App: React.FC = () => {
           dakhilaReports={dakhilaReports} onSaveDakhilaReport={(r) => set(getOrgRef(`dakhilaReports/${r.id}`), r)} returnEntries={returnEntries} onSaveReturnEntry={handleSaveReturnEntry}
           marmatEntries={marmatEntries} onSaveMarmatEntry={(e) => set(getOrgRef(`marmatEntries/${e.id}`), e)} dhuliyaunaEntries={dhuliyaunaEntries} onSaveDhuliyaunaEntry={(e) => set(getOrgRef(`disposalEntries/${e.id}`), e)}
           logBookEntries={logBookEntries} onSaveLogBookEntry={(e) => set(getOrgRef(`logBook/${e.id}`), e)} onClearData={(p) => remove(getOrgRef(p))} onUploadData={handleUploadDatabase}
-          serviceSeekerRecords={serviceSeekerRecords} onSaveServiceSeekerRecord={(r) => set(getOrgRef(`serviceSeekers/${r.id}`), r)} onDeleteServiceSeekerRecord={(id) => remove(getOrgRef(`serviceSeekers/${id}`))}
-          opdRecords={opdRecords} onSaveOPDRecord={(r) => set(getOrgRef(`opdRecords/${r.id}`), r)} onDeleteOPDRecord={(id) => remove(getOrgRef(`opdRecords/${id}`))}
-          emergencyRecords={emergencyRecords} onSaveEmergencyRecord={(r) => set(getOrgRef(`emergencyRecords/${r.id}`), r)} onDeleteEmergencyRecord={(id) => remove(getOrgRef(`emergencyRecords/${id}`))}
-          cbimnciRecords={cbimnciRecords} onSaveCBIMNCIRecord={(r) => set(getOrgRef(`cbimnciRecords/${r.id}`), r)} onDeleteCBIMNCIRecord={(id) => remove(getOrgRef(`cbimnciRecords/${id}`))}
-          billingRecords={billingRecords} onSaveBillingRecord={(r) => set(getOrgRef(`billingRecords/${r.id}`), r)} onDeleteBillingRecord={(id) => remove(getOrgRef(`billingRecords/${id}`))}
-          dispensaryRecords={dispensaryRecords} onSaveDispensaryRecord={(r) => set(getOrgRef(`dispensaryRecords/${r.id}`), r)} onDeleteDispensaryRecord={(id) => remove(getOrgRef(`dispensaryRecords/${id}`))}
-          serviceItems={serviceItems} onSaveServiceItem={(i) => set(getOrgRef(`serviceItems/${i.id}`), i)} onDeleteServiceItem={(id) => remove(getOrgRef(`serviceItems/${id}`))}
-          labReports={labReports} onSaveLabReport={(r) => set(getOrgRef(`labReports/${r.id}`), r)} onDeleteLabReport={(id) => remove(getOrgRef(`labReports/${id}`))}
-          garbhawotiRecords={garbhawotiRecords} onSaveGarbhawotiRecord={(r) => set(getOrgRef(`garbhawotiRecords/${r.id}`), r)} onDeleteGarbhawotiRecord={(id) => remove(getOrgRef(`garbhawotiRecords/${id}`))}
-          prasutiRecords={prasutiRecords} onSavePrasutiRecord={(r) => set(getOrgRef(`prasutiRecords/${r.id}`), r)} onDeletePrasutiRecord={(id) => remove(getOrgRef(`prasutiRecords/${id}`))}
-          leaveApplications={leaveApplications} onAddLeaveApplication={(a) => set(getOrgRef(`leaveApplications/${a.id}`), a)}
-          onUpdateLeaveStatus={(id, status, rejectionReason) => {
-              if (!currentUser) return;
-              const safeOrgName = currentUser.organizationName.trim().replace(/[.#$[\]]/g, "_");
-              const orgPath = `orgData/${safeOrgName}`;
-              const updates: Record<string, any> = {};
-              updates[`${orgPath}/leaveApplications/${id}/status`] = status;
-              if (rejectionReason) updates[`${orgPath}/leaveApplications/${id}/rejectionReason`] = rejectionReason;
-              if (status === 'Approved') {
-                  updates[`${orgPath}/leaveApplications/${id}/approvedBy`] = currentUser.fullName;
-                  updates[`${orgPath}/leaveApplications/${id}/approvalDate`] = new NepaliDate().format('YYYY-MM-DD');
-                  get(ref(db, `${orgPath}/leaveApplications/${id}`)).then(snap => {
-                      const app = snap.val();
-                      if (app) {
-                          get(ref(db, `${orgPath}/leaveBalances/${app.userId}`)).then(balSnap => {
-                              let balance = balSnap.val();
-                              if (!balance) balance = { id: app.userId, userId: app.userId, fiscalYear: currentFiscalYear, casual: 0, festival: 0, sick: 0, home: 0, other: 0, maternity: 0, kiriya: 0, study: 0, extraordinary: 0, serviceType: 'Permanent' };
-                              
-                              const d1 = new Date(new NepaliDate(app.startDate).toJsDate());
-                              const d2 = new Date(new NepaliDate(app.endDate).toJsDate());
-                              const diffTime = Math.abs(d2.getTime() - d1.getTime());
-                              const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-                              let field = '';
-                              if (app.leaveType === 'Casual & Festival') field = 'casual'; 
-                              else if (app.leaveType === 'Sick Leave') field = 'sick';
-                              else if (app.leaveType === 'Home Leave') field = 'home';
-                              else if (app.leaveType === 'Maternity Leave') field = 'maternity';
-                              else if (app.leaveType === 'Kiriya Leave') field = 'kiriya';
-                              else if (app.leaveType === 'Study Leave') field = 'study';
-                              else if (app.leaveType === 'Extraordinary Leave') field = 'extraordinary';
-                              else if (app.leaveType === 'Other Leave') field = 'other';
-                              
-                              if (field) {
-                                  // @ts-ignore
-                                  balance[field] = Math.max(0, (balance[field] || 0) - days);
-                                  update(ref(db), { [`${orgPath}/leaveBalances/${app.userId}`]: balance });
-                              }
-                          });
-                      }
-                  });
-              }
-              update(ref(db), updates);
-          }}
-          onDeleteLeaveApplication={(id) => remove(getOrgRef(`leaveApplications/${id}`))}
-          leaveBalances={leaveBalances} onSaveLeaveBalance={(b) => set(getOrgRef(`leaveBalances/${b.id}`), b)}
+          leaveApplications={leaveApplications}
+          onAddLeaveApplication={handleAddLeaveApplication}
+          onUpdateLeaveStatus={handleUpdateLeaveStatus}
+          onDeleteLeaveApplication={handleDeleteLeaveApplication}
+          leaveBalances={leaveBalances}
+          onSaveLeaveBalance={handleSaveLeaveBalance}
+    dartaEntries={dartaEntries}
+    onSaveDarta={handleSaveDarta}
+    onDeleteDarta={handleDeleteDarta}
+    chalaniEntries={chalaniEntries}
+    onSaveChalani={handleSaveChalani}
+    onDeleteChalani={handleDeleteChalani}
+    bharmanAdeshEntries={bharmanAdeshEntries}
+    onSaveBharmanAdesh={handleSaveBharmanAdesh}
+    onDeleteBharmanAdesh={handleDeleteBharmanAdesh}
+    garbhawotiRecords={garbhawotiRecords}
+    onSaveGarbhawotiRecord={handleSaveGarbhawotiRecord}
+    onDeleteGarbhawotiRecord={handleDeleteGarbhawotiRecord}
+    prasutiRecords={prasutiRecords}
+    onSavePrasutiRecord={handleSavePrasutiRecord}
+    onDeletePrasutiRecord={handleDeletePrasutiRecord}
+    serviceSeekerRecords={serviceSeekerRecords}
+    onSaveServiceSeekerRecord={handleSaveServiceSeekerRecord}
+    onDeleteServiceSeekerRecord={handleDeleteServiceSeekerRecord}
+    opdRecords={opdRecords}
+    onSaveOPDRecord={handleSaveOPDRecord}
+    onDeleteOPDRecord={handleDeleteOPDRecord}
+    emergencyRecords={emergencyRecords}
+    onSaveEmergencyRecord={handleSaveEmergencyRecord}
+    onDeleteEmergencyRecord={handleDeleteEmergencyRecord}
+    cbimnciRecords={cbimnciRecords}
+    onSaveCBIMNCIRecord={handleSaveCBIMNCIRecord}
+    onDeleteCBIMNCIRecord={handleDeleteCBIMNCIRecord}
+    billingRecords={billingRecords}
+    onSaveBillingRecord={handleSaveBillingRecord}
+    onDeleteBillingRecord={handleDeleteBillingRecord}
+    serviceItems={serviceItems}
+    onSaveServiceItem={handleSaveServiceItem}
+    onDeleteServiceItem={handleDeleteServiceItem}
+    labReports={labReports}
+    onSaveLabReport={handleSaveLabReport}
+    onDeleteLabReport={handleDeleteLabReport}
+    pariwarSewaRecords={pariwarSewaRecords}
+    onSavePariwarSewaRecord={handleSavePariwarSewaRecord}
+    onDeletePariwarSewaRecord={handleDeletePariwarSewaRecord}
+    xrayRecords={xrayRecords}
+    onSaveXRayRecord={handleSaveXRayRecord}
+    onDeleteXRayRecord={handleDeleteXRayRecord}
+    ecgRecords={ecgRecords}
+    onSaveECGRecord={handleSaveECGRecord}
+    onDeleteECGRecord={handleDeleteECGRecord}
+    usgRecords={usgRecords}
+    onSaveUSGRecord={handleSaveUSGRecord}
+    onDeleteUSGRecord={handleDeleteUSGRecord}
+    physiotherapyRecords={physiotherapyRecords}
+    onSavePhysiotherapyRecord={handleSavePhysiotherapyRecord}
+    onDeletePhysiotherapyRecord={handleDeletePhysiotherapyRecord}
+    ipdRecords={ipdRecords}
+    onSaveIPDRecord={handleSaveIPDRecord}
+    onDeleteIPDRecord={handleDeleteIPDRecord}
+    onUpdateReadNotifications={handleUpdateReadNotifications}
+    activeOrgName={activeOrgName}
+    onSetActiveOrgName={setActiveOrgName}
+    allUsers={allUsers}
         />
       ) : (
         <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
