@@ -94,7 +94,6 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
   const [showExistingResults, setShowExistingResults] = useState(false);
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [hasDangerSigns, setHasDangerSigns] = useState<boolean | null>(null);
-  const [hasInfantDangerSigns, setHasInfantDangerSigns] = useState<boolean | null>(null);
   const [hasCoughOrBreathingDifficulty, setHasCoughOrBreathingDifficulty] = useState<boolean | null>(null);
   const [hasDiarrhea, setHasDiarrhea] = useState<boolean | null>(null);
   const [hasFever, setHasFever] = useState<boolean | null>(null);
@@ -141,40 +140,6 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
   const [investigationSearch, setInvestigationSearch] = useState('');
   const [showInvestigationResults, setShowInvestigationResults] = useState(false);
   
-  const calculateAgeInMonths = (patient: ServiceSeekerRecord | null | undefined): number => {
-    if (!patient) return 0;
-    
-    if (patient.dobAd) {
-      const birthDate = new Date(patient.dobAd);
-      const today = new Date();
-      const diffTime = Math.abs(today.getTime() - birthDate.getTime());
-      return diffTime / (1000 * 60 * 60 * 24 * 30.44);
-    }
-    
-    if (patient.ageDays !== undefined && patient.ageDays > 0 && (patient.ageYears || 0) === 0 && (patient.ageMonths || 0) === 0) {
-      return patient.ageDays / 30.44;
-    }
-    
-    return (patient.ageYears || 0) * 12 + (patient.ageMonths || 0);
-  };
-
-  const calculateAgeInDays = (patient: ServiceSeekerRecord | null | undefined): number => {
-    if (!patient) return 0;
-    
-    if (patient.dobAd) {
-      const birthDate = new Date(patient.dobAd);
-      const today = new Date();
-      const diffTime = Math.abs(today.getTime() - birthDate.getTime());
-      return Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    }
-    
-    if (patient.ageDays !== undefined && patient.ageDays > 0 && (patient.ageYears || 0) === 0 && (patient.ageMonths || 0) === 0) {
-      return patient.ageDays;
-    }
-    
-    return ((patient.ageYears || 0) * 365) + ((patient.ageMonths || 0) * 30.44);
-  };
-
   const printRef = useRef<HTMLDivElement>(null);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -189,7 +154,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       const regMatch = r.registrationNumber.includes(query);
       
       // Filter by age: 5 years or less
-      const ageInMonths = calculateAgeInMonths(r);
+      const ageInMonths = (r.ageYears || 0) * 12 + (r.ageMonths || 0);
       const isAgeValid = ageInMonths <= 60; // 5 years = 60 months
       
       return (idMatch || nameMatch || regMatch) && isAgeValid;
@@ -257,8 +222,13 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     setHasEarProblem(null);
     
     // Auto-select module based on age
-    const ageInMonths = calculateAgeInMonths(patient);
-    const isInfant = ageInMonths < 2; // Less than 2 months
+    let isInfant = false;
+    if (patient.ageDays !== undefined && patient.ageDays > 0) {
+      isInfant = patient.ageDays < 60;
+    } else {
+      const ageInMonths = (patient.ageYears || 0) * 12 + (patient.ageMonths || 0);
+      isInfant = ageInMonths < 2; // Less than 2 months
+    }
     const module = isInfant ? 'Infant' : 'Child';
     setModuleType(module);
     setAssessmentData({
@@ -635,75 +605,32 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
               <span>१. खतराका संकेतहरू (Danger Signs / PSBI)</span>
               <span className="text-xs font-normal text-blue-600">Booklet Page 14</span>
             </h4>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-2">के बच्चामा खतराका संकेतहरू छन्? (Are there any danger signs?)</label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2">
-                  <input 
-                    type="radio" 
-                    checked={hasInfantDangerSigns === true} 
-                    onChange={() => setHasInfantDangerSigns(true)} 
-                    className="text-blue-600 focus:ring-blue-500"
-                  />
-                  <span>छ (Yes)</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input 
-                    type="radio" 
-                    checked={hasInfantDangerSigns === false} 
-                    onChange={() => {
-                      setHasInfantDangerSigns(false);
-                      setAssessmentData({...assessmentData, dangerSigns: []});
-                    }} 
-                    className="text-blue-600 focus:ring-blue-500"
-                  />
-                  <span>छैन (No)</span>
-                </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                {['काँप्ने (Convulsions)', 'दूध चुस्न/निल्न नसक्ने (Unable to feed)', 'सुस्त वा बेहोस (Lethargic/Unconscious)', 'कोखा हान्ने (Severe chest in-drawing)', 'नाक फुलाउने (Nasal flaring)', 'कन्कने (Grunting)', 'तालु फुलेको (Bulging fontanelle)'].map(sign => (
+                  <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={assessmentData.dangerSigns?.includes(sign)}
+                      onChange={(e) => {
+                        const current = assessmentData.dangerSigns || [];
+                        const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
+                        setAssessmentData({...assessmentData, dangerSigns: next});
+                      }}
+                      className="rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    {sign}
+                  </label>
+                ))}
               </div>
-            </div>
-
-            {hasInfantDangerSigns === true && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  {['काँप्ने (Convulsions)', 'दूध चुस्न/निल्न नसक्ने (Unable to feed)', 'सुस्त वा बेहोस (Lethargic/Unconscious)', 'कोखा हान्ने (Severe chest in-drawing)', 'नाक फुलाउने (Nasal flaring)', 'कन्कने (Grunting)', 'तालु फुलेको (Bulging fontanelle)', 'नाईटोको रातोपना छालासम्म फैलिएको'].map(sign => (
-                    <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={assessmentData.dangerSigns?.includes(sign)}
-                        onChange={(e) => {
-                          const current = assessmentData.dangerSigns || [];
-                          const next = e.target.checked ? [...current, sign] : current.filter((s: string) => s !== sign);
-                          setAssessmentData({...assessmentData, dangerSigns: next});
-                        }}
-                        className="rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      {sign}
-                    </label>
-                  ))}
-                  {(calculateAgeInDays(currentPatient) <= 7) && (
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={assessmentData.dangerSigns?.includes('श्वासदर ६० वा सो भन्दा बढी')}
-                        onChange={(e) => {
-                          const current = assessmentData.dangerSigns || [];
-                          const next = e.target.checked ? [...current, 'श्वासदर ६० वा सो भन्दा बढी'] : current.filter((s: string) => s !== 'श्वासदर ६० वा सो भन्दा बढी');
-                          setAssessmentData({...assessmentData, dangerSigns: next});
-                        }}
-                        className="rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      श्वासदर ६० वा सो भन्दा बढी
-                    </label>
-                  )}
-                </div>
-                <div className="space-y-3">
-                  <Input 
-                    label="सासको दर (प्रति मिनेट)" 
-                    type="number"
-                    value={assessmentData.breathingRate || ''} 
-                    onChange={(e) => setAssessmentData({...assessmentData, breathingRate: e.target.value})} 
-                    placeholder="६० वा सोभन्दा बढी भए खतरा"
-                  />
+              <div className="space-y-3">
+                <Input 
+                  label="सासको दर (प्रति मिनेट)" 
+                  type="number"
+                  value={assessmentData.breathingRate || ''} 
+                  onChange={(e) => setAssessmentData({...assessmentData, breathingRate: e.target.value})} 
+                  placeholder="६० वा सोभन्दा बढी भए खतरा"
+                />
                 <div className="grid grid-cols-2 gap-2">
                   <Input 
                     label="तापक्रम (Celsius)" 
@@ -758,7 +685,6 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                 </div>
               </div>
             </div>
-            )}
           </div>
 
           {/* Jaundice */}
@@ -798,7 +724,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">जलवियोजनका संकेतहरू (Dehydration Signs)</label>
-                {['सुस्त वा बेहोस (Lethargic/Unconscious)', 'आँखा गडेको (Sunken eyes)', 'छाला तान्दा धेरै ढिलो फर्कने (Skin pinch very slow)', 'छाला तान्दा ढिलो फर्कने (Skin pinch slow)', 'चटपटिने, झिझिने (Restless/Irritable)'].map(sign => (
+                {['सुस्त वा बेहोस (Lethargic/Unconscious)', 'आँखा गडेको (Sunken eyes)', 'छाला तान्दा धेरै ढिलो फर्कने (Skin pinch very slow)', 'छाला तान्दा ढिलो फर्कने (Skin pinch slow)'].map(sign => (
                   <label key={sign} className="flex items-center gap-2 text-sm cursor-pointer">
                     <input 
                       type="checkbox" 
@@ -1573,20 +1499,12 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     const classifications: string[] = [];
     
     if (moduleType === 'Infant') {
-      const ageDays = calculateAgeInDays(currentPatient);
-      const breathingRate = parseFloat(assessmentData.breathingRate);
-
       // PSBI
       const hasDangerSign = (assessmentData.dangerSigns?.length > 0) || 
-                            (ageDays <= 7 && breathingRate >= 60) ||
+                            (parseFloat(assessmentData.breathingRate) >= 60) ||
                             (parseFloat(assessmentData.temperature) >= 37.5) ||
                             (parseFloat(assessmentData.temperature) <= 35.5);
       if (hasDangerSign) classifications.push('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease');
-
-      // Pneumonia for 7-59 days
-      if (ageDays > 7 && ageDays <= 59 && breathingRate >= 60) {
-        classifications.push('Pneumonia');
-      }
       
       // Local Infection
       if (assessmentData.localInfection?.length > 0) classifications.push('Local Bacterial Infection');
@@ -1602,14 +1520,8 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       // Dehydration
       if (assessmentData.diarrheaDays) {
         const dehydSigns = assessmentData.dehydrationSigns || [];
-        
-        // Severe Dehydration: Any 2 of Lethargic, Sunken eyes, Skin pinch very slow
-        const severeSigns = ['सुस्त वा बेहोस (Lethargic/Unconscious)', 'आँखा गडेको (Sunken eyes)', 'छाला तान्दा धेरै ढिलो फर्कने (Skin pinch very slow)'];
-        const severeCount = dehydSigns.filter((s: string) => severeSigns.includes(s)).length;
-        
-        // Some Dehydration: Any 2 of Restless/Irritable, Sunken eyes, Skin pinch slow
-        const someSigns = ['चटपटिने, झिझिने (Restless/Irritable)', 'आँखा गडेको (Sunken eyes)', 'छाला तान्दा ढिलो फर्कने (Skin pinch slow)'];
-        const someCount = dehydSigns.filter((s: string) => someSigns.includes(s)).length;
+        const severeCount = dehydSigns.filter((s: string) => s.includes('Lethargic') || s.includes('Sunken') || s.includes('very slow')).length;
+        const someCount = dehydSigns.length;
         
         if (severeCount >= 2) {
           classifications.push('Severe Dehydration');
@@ -1628,6 +1540,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                                 assessmentData.suckling === 'Not at all';
       
       const weight = parseFloat(assessmentData.weight || '0');
+      const ageDays = currentPatient?.ageDays || 0;
       const isWeightNormal = weight >= 2.5;
 
       if (hasFeedingProblem) {
@@ -1656,7 +1569,14 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
 
       // Pneumonia
       const rate = parseInt(assessmentData.breathingRate);
-      const ageInMonths = calculateAgeInMonths(currentPatient);
+      let isInfant = false;
+      if (currentPatient?.ageDays !== undefined && currentPatient?.ageDays > 0) {
+        isInfant = currentPatient.ageDays < 60;
+      } else {
+        const ageInMonths = (currentPatient?.ageYears || 0) * 12 + (currentPatient?.ageMonths || 0);
+        isInfant = ageInMonths < 2;
+      }
+      const ageInMonths = (currentPatient?.ageYears || 0) * 12 + (currentPatient?.ageMonths || 0);
       const isFast = (ageInMonths < 12 && rate >= 50) || (ageInMonths >= 12 && rate >= 40);
       
       if (assessmentData.respiratorySigns?.includes('शान्त रहेको बच्चामा स्ट्राइडर (Stridor in calm child)')) {
@@ -1905,7 +1825,9 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       }
       if (classifications.includes('Pneumonia')) {
         let amoxDose = '';
-        const totalMonths = calculateAgeInMonths(currentPatient);
+        const ageYears = currentPatient?.ageYears || 0;
+        const ageMonths = currentPatient?.ageMonths || 0;
+        const totalMonths = ageYears * 12 + ageMonths;
 
         if (weight >= 4 && weight < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
         else if (weight >= 6 && weight < 8) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
@@ -1962,7 +1884,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         treatments.push('Follow-up in 5 days');
       }
       if (classifications.includes('Dysentery')) {
-        const ageInMonths = calculateAgeInMonths(currentPatient);
+        const ageInMonths = (currentPatient?.ageYears || 0) * 12 + (currentPatient?.ageMonths || 0);
         let ciproDose = '';
         
         if (ageInMonths < 6) {
@@ -1992,7 +1914,9 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       }
       if (classifications.includes('Acute Ear Infection')) {
         let amoxDose = '';
-        const totalMonths = calculateAgeInMonths(currentPatient);
+        const ageYears = currentPatient?.ageYears || 0;
+        const ageMonths = currentPatient?.ageMonths || 0;
+        const totalMonths = ageYears * 12 + ageMonths;
 
         if (weight >= 4 && weight < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
         else if (weight >= 6 && weight < 8) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
@@ -2082,7 +2006,9 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       // Paracetamol for high fever or ear pain/infection
       const temp = parseFloat(assessmentData.temperature) || 0;
       if (temp >= 38.5 || assessmentData.earPain || classifications.includes('Acute Ear Infection')) {
-        const totalMonths = calculateAgeInMonths(currentPatient);
+        const ageYears = currentPatient?.ageYears || 0;
+        const ageMonths = currentPatient?.ageMonths || 0;
+        const totalMonths = ageYears * 12 + ageMonths;
         let pcmDose = '';
         
         // In Child module (2m-5y), we always give at least 5ml
@@ -2104,7 +2030,14 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     const weight = parseFloat(assessmentData.weight);
     
     // Calculate precise age in months
-    const ageMonths = calculateAgeInMonths(currentPatient);
+    const today = new Date();
+    const birthDate = currentPatient.dobAd ? new Date(currentPatient.dobAd) : null;
+    let ageMonths = (currentPatient.ageYears || 0) * 12 + (currentPatient.ageMonths || 0);
+    
+    if (birthDate) {
+      const diffTime = Math.abs(today.getTime() - birthDate.getTime());
+      ageMonths = diffTime / (1000 * 60 * 60 * 24 * 30.44);
+    }
 
     // More granular WHO Weight-for-Age Z-score (WAZ) logic (Approximate Median and SD)
     const wazData: any = {

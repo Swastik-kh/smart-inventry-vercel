@@ -1,5 +1,5 @@
 {
-  "name": "IMCI Nepal Infant Classifier",
-  "description": "A tool for health workers in Nepal to classify neonatal and infant illnesses based on respiratory rate and age according to IMCI guidelines.",
+  "name": "Smart Inventory",
+  "description": "A professional inventory management system with secure login and fiscal year tracking.",
   "requestFramePermissions": []
 }
