@@ -1499,12 +1499,27 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     const classifications: string[] = [];
     
     if (moduleType === 'Infant') {
-      // PSBI
+      const ageDays = currentPatient?.ageDays || 0;
+      const rate = parseFloat(assessmentData.breathingRate || '0');
+      const temp = parseFloat(assessmentData.temperature || '0');
+      
+      // PSBI / Possible Serious Bacterial Infection
       const hasDangerSign = (assessmentData.dangerSigns?.length > 0) || 
-                            (parseFloat(assessmentData.breathingRate) >= 60) ||
-                            (parseFloat(assessmentData.temperature) >= 37.5) ||
-                            (parseFloat(assessmentData.temperature) <= 35.5);
-      if (hasDangerSign) classifications.push('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease');
+                            (temp >= 37.5) ||
+                            (temp <= 35.5);
+      
+      if (ageDays < 7) {
+        if (hasDangerSign || rate >= 60) {
+          classifications.push('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease (ब्याक्टेरियाको सम्भावित गम्भीर संक्रमण वा धेरै कडा रोग)');
+        }
+      } else {
+        // 7 to 59 days
+        if (hasDangerSign) {
+          classifications.push('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease (ब्याक्टेरियाको सम्भावित गम्भीर संक्रमण वा धेरै कडा रोग)');
+        } else if (rate >= 60) {
+          classifications.push('Pneumonia');
+        }
+      }
       
       // Local Infection
       if (assessmentData.localInfection?.length > 0) classifications.push('Local Bacterial Infection');
@@ -1540,7 +1555,6 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                                 assessmentData.suckling === 'Not at all';
       
       const weight = parseFloat(assessmentData.weight || '0');
-      const ageDays = currentPatient?.ageDays || 0;
       const isWeightNormal = weight >= 2.5;
 
       if (hasFeedingProblem) {
@@ -1743,7 +1757,8 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     if (classifications.length === 0) return null;
     
     if (moduleType === 'Infant') {
-      if (classifications.includes('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease')) return 'Immediate';
+      if (classifications.includes('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease (ब्याक्टेरियाको सम्भावित गम्भीर संक्रमण वा धेरै कडा रोग)')) return 'Immediate';
+      if (classifications.includes('Pneumonia')) return '3 days';
       if (classifications.includes('Local Bacterial Infection')) return '3 days';
       if (classifications.includes('Jaundice') || classifications.includes('Severe Jaundice')) return '3 days';
       if (classifications.includes('Some Dehydration') || classifications.includes('Severe Dehydration')) return '2 days';
@@ -1763,7 +1778,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
 
     if (moduleType === 'Infant') {
       const weight = parseFloat(assessmentData.weight) || 0;
-      if (classifications.includes('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease')) {
+      if (classifications.includes('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease (ब्याक्टेरियाको सम्भावित गम्भीर संक्रमण वा धेरै कडा रोग)')) {
         let gentDose = '';
         let ampDose = '';
         if (weight > 0) {
@@ -1775,6 +1790,17 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         treatments.push('Refer URGENTLY to hospital');
         treatments.push('Prevent low blood sugar (breastfeed or sugar water)');
         treatments.push('Keep infant warm');
+      }
+      if (classifications.includes('Pneumonia')) {
+        let amoxDose = '';
+        if (weight >= 2 && weight < 3.5) amoxDose = '125mg (2.5ml syrup) twice daily';
+        else if (weight >= 3.5 && weight < 5) amoxDose = '250mg (5ml syrup) twice daily';
+        else amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
+        
+        treatments.push(`Give Amoxicillin for 5 days: ${amoxDose}`);
+        treatments.push('Soothe the throat and relieve cough with safe remedy');
+        treatments.push('Advise mother when to return immediately');
+        treatments.push('Follow-up in 3 days');
       }
       if (classifications.includes('Local Bacterial Infection')) {
         let amoxDose = '';
