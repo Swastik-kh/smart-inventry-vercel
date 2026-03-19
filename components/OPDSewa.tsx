@@ -71,14 +71,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
     investigation: '',
     prescriptions: [],
     advice: '',
-    nextVisitDate: '',
-    vitals: {
-      bp: '',
-      weight: '',
-      pulse: '',
-      temperature: '',
-      rr: ''
-    }
+    nextVisitDate: ''
   });
   const [prescriptionItems, setPrescriptionItems] = useState<PrescriptionItem[]>([]);
   const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
@@ -219,14 +212,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
       investigation: '',
       prescriptions: [],
       advice: '',
-      nextVisitDate: '',
-      vitals: {
-        bp: '',
-        weight: '',
-        pulse: '',
-        temperature: '',
-        rr: ''
-      }
+      nextVisitDate: ''
     });
     setPrescriptionItems([]);
     setEditingRecordId(null);
@@ -257,14 +243,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
       investigation: latestRecord.investigation,
       prescriptions: latestRecord.prescriptions || [],
       advice: latestRecord.advice,
-      nextVisitDate: latestRecord.nextVisitDate,
-      vitals: latestRecord.vitals || {
-        bp: '',
-        weight: '',
-        pulse: '',
-        temperature: '',
-        rr: ''
-      }
+      nextVisitDate: latestRecord.nextVisitDate
     });
     setPrescriptionItems(latestRecord.prescriptions || []);
     setEditingRecordId(latestRecord.id);
@@ -316,8 +295,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
       investigation: opdData.investigation || '',
       prescriptions: prescriptionItems,
       advice: opdData.advice,
-      nextVisitDate: opdData.nextVisitDate,
-      vitals: opdData.vitals
+      nextVisitDate: opdData.nextVisitDate
     };
 
     onSaveRecord(newRecord);
@@ -330,14 +308,7 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
       investigation: '',
       prescriptions: [],
       advice: '',
-      nextVisitDate: '',
-      vitals: {
-        bp: '',
-        weight: '',
-        pulse: '',
-        temperature: '',
-        rr: ''
-      }
+      nextVisitDate: ''
     });
     setPrescriptionItems([]);
     setEditingRecordId(null);
@@ -453,60 +424,6 @@ export const OPDSewa: React.FC<OPDSewaProps> = ({
 
               {activeTab === 'form' && (
               <div className="space-y-6 animate-in fade-in">
-                {/* Vitals Section */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">BP (mmHg)</label>
-                    <input
-                      type="text"
-                      value={opdData.vitals?.bp || ''}
-                      onChange={(e) => setOpdData({...opdData, vitals: {...(opdData.vitals || {}), bp: e.target.value}})}
-                      className="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-primary-500"
-                      placeholder="120/80"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Weight (kg)</label>
-                    <input
-                      type="text"
-                      value={opdData.vitals?.weight || ''}
-                      onChange={(e) => setOpdData({...opdData, vitals: {...(opdData.vitals || {}), weight: e.target.value}})}
-                      className="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-primary-500"
-                      placeholder="65"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Pulse (/min)</label>
-                    <input
-                      type="text"
-                      value={opdData.vitals?.pulse || ''}
-                      onChange={(e) => setOpdData({...opdData, vitals: {...(opdData.vitals || {}), pulse: e.target.value}})}
-                      className="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-primary-500"
-                      placeholder="72"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Temp (°F)</label>
-                    <input
-                      type="text"
-                      value={opdData.vitals?.temperature || ''}
-                      onChange={(e) => setOpdData({...opdData, vitals: {...(opdData.vitals || {}), temperature: e.target.value}})}
-                      className="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-primary-500"
-                      placeholder="98.6"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">RR (/min)</label>
-                    <input
-                      type="text"
-                      value={opdData.vitals?.rr || ''}
-                      onChange={(e) => setOpdData({...opdData, vitals: {...(opdData.vitals || {}), rr: e.target.value}})}
-                      className="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-primary-500"
-                      placeholder="18"
-                    />
-                  </div>
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">मुख्य समस्याहरू (Chief Complaints)</label>
                   <textarea

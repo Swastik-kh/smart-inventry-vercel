@@ -62,9 +62,9 @@ export const PrescriptionPrint: React.FC<PrescriptionPrintProps> = ({ record, ge
           <div>Provisional/Final Diagnosis :-</div>
           <div style={{ minHeight: '40px', fontWeight: 'bold' }}>{opdRecord?.diagnosis}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-            <div>Wt.: {opdRecord?.vitals?.weight}</div><div>BP: {opdRecord?.vitals?.bp}</div>
-            <div>Pulse: {opdRecord?.vitals?.pulse}</div><div>Temp: {opdRecord?.vitals?.temperature}</div>
-            <div>RR: {opdRecord?.vitals?.rr}</div>
+            <div>Wt.:</div><div>BP:</div>
+            <div>Pulse:</div><div>Temp:</div>
+            <div>RR:</div>
           </div>
         </div>
       </div>

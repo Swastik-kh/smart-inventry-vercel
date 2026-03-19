@@ -235,13 +235,6 @@ export interface OPDRecord {
   prescriptions: PrescriptionItem[];
   advice?: string;
   nextVisitDate?: string;
-  vitals?: {
-    bp?: string;
-    weight?: string;
-    pulse?: string;
-    temperature?: string;
-    rr?: string;
-  };
 }
 
 export interface EmergencyRecord {
