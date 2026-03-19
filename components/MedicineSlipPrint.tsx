@@ -35,6 +35,15 @@ export const MedicineSlipPrint: React.FC<MedicineSlipPrintProps> = ({ record, ge
         <div><strong>Age/Sex:</strong> {record.age} / {record.gender}</div>
         <div><strong>Date:</strong> {opdRecord.visitDate}</div>
         <div style={{ gridColumn: 'span 2' }}><strong>Address:</strong> {record.address}</div>
+        {opdRecord.vitals && (
+          <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', fontSize: '9pt', borderTop: '1px solid #eee', paddingTop: '5px', marginTop: '5px' }}>
+            <div>Wt: {opdRecord.vitals.weight}</div>
+            <div>BP: {opdRecord.vitals.bp}</div>
+            <div>Pulse: {opdRecord.vitals.pulse}</div>
+            <div>Temp: {opdRecord.vitals.temperature}</div>
+            <div>RR: {opdRecord.vitals.rr}</div>
+          </div>
+        )}
       </div>
 
       {/* Prescription */}
