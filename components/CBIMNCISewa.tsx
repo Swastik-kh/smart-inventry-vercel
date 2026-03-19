@@ -141,6 +141,40 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
   const [investigationSearch, setInvestigationSearch] = useState('');
   const [showInvestigationResults, setShowInvestigationResults] = useState(false);
   
+  const calculateAgeInMonths = (patient: ServiceSeekerRecord | null | undefined): number => {
+    if (!patient) return 0;
+    
+    if (patient.dobAd) {
+      const birthDate = new Date(patient.dobAd);
+      const today = new Date();
+      const diffTime = Math.abs(today.getTime() - birthDate.getTime());
+      return diffTime / (1000 * 60 * 60 * 24 * 30.44);
+    }
+    
+    if (patient.ageDays !== undefined && patient.ageDays > 0 && (patient.ageYears || 0) === 0 && (patient.ageMonths || 0) === 0) {
+      return patient.ageDays / 30.44;
+    }
+    
+    return (patient.ageYears || 0) * 12 + (patient.ageMonths || 0);
+  };
+
+  const calculateAgeInDays = (patient: ServiceSeekerRecord | null | undefined): number => {
+    if (!patient) return 0;
+    
+    if (patient.dobAd) {
+      const birthDate = new Date(patient.dobAd);
+      const today = new Date();
+      const diffTime = Math.abs(today.getTime() - birthDate.getTime());
+      return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    }
+    
+    if (patient.ageDays !== undefined && patient.ageDays > 0 && (patient.ageYears || 0) === 0 && (patient.ageMonths || 0) === 0) {
+      return patient.ageDays;
+    }
+    
+    return ((patient.ageYears || 0) * 365) + ((patient.ageMonths || 0) * 30.44);
+  };
+
   const printRef = useRef<HTMLDivElement>(null);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -155,7 +189,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       const regMatch = r.registrationNumber.includes(query);
       
       // Filter by age: 5 years or less
-      const ageInMonths = (r.ageYears || 0) * 12 + (r.ageMonths || 0);
+      const ageInMonths = calculateAgeInMonths(r);
       const isAgeValid = ageInMonths <= 60; // 5 years = 60 months
       
       return (idMatch || nameMatch || regMatch) && isAgeValid;
@@ -223,13 +257,8 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     setHasEarProblem(null);
     
     // Auto-select module based on age
-    let isInfant = false;
-    if (patient.ageDays !== undefined && patient.ageDays > 0) {
-      isInfant = patient.ageDays < 60;
-    } else {
-      const ageInMonths = (patient.ageYears || 0) * 12 + (patient.ageMonths || 0);
-      isInfant = ageInMonths < 2; // Less than 2 months
-    }
+    const ageInMonths = calculateAgeInMonths(patient);
+    const isInfant = ageInMonths < 2; // Less than 2 months
     const module = isInfant ? 'Infant' : 'Child';
     setModuleType(module);
     setAssessmentData({
@@ -651,7 +680,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                       {sign}
                     </label>
                   ))}
-                  {(currentPatient?.ageDays !== undefined && currentPatient.ageDays <= 7) && (
+                  {(calculateAgeInDays(currentPatient) <= 7) && (
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input 
                         type="checkbox" 
@@ -1544,12 +1573,20 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     const classifications: string[] = [];
     
     if (moduleType === 'Infant') {
+      const ageDays = calculateAgeInDays(currentPatient);
+      const breathingRate = parseFloat(assessmentData.breathingRate);
+
       // PSBI
       const hasDangerSign = (assessmentData.dangerSigns?.length > 0) || 
-                            (parseFloat(assessmentData.breathingRate) >= 60) ||
+                            (ageDays <= 7 && breathingRate >= 60) ||
                             (parseFloat(assessmentData.temperature) >= 37.5) ||
                             (parseFloat(assessmentData.temperature) <= 35.5);
       if (hasDangerSign) classifications.push('Possible Serious Bacterial Infection (PSBI) or Very Severe Disease');
+
+      // Pneumonia for 7-59 days
+      if (ageDays > 7 && ageDays <= 59 && breathingRate >= 60) {
+        classifications.push('Pneumonia');
+      }
       
       // Local Infection
       if (assessmentData.localInfection?.length > 0) classifications.push('Local Bacterial Infection');
@@ -1591,7 +1628,6 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
                                 assessmentData.suckling === 'Not at all';
       
       const weight = parseFloat(assessmentData.weight || '0');
-      const ageDays = currentPatient?.ageDays || 0;
       const isWeightNormal = weight >= 2.5;
 
       if (hasFeedingProblem) {
@@ -1620,14 +1656,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
 
       // Pneumonia
       const rate = parseInt(assessmentData.breathingRate);
-      let isInfant = false;
-      if (currentPatient?.ageDays !== undefined && currentPatient?.ageDays > 0) {
-        isInfant = currentPatient.ageDays < 60;
-      } else {
-        const ageInMonths = (currentPatient?.ageYears || 0) * 12 + (currentPatient?.ageMonths || 0);
-        isInfant = ageInMonths < 2;
-      }
-      const ageInMonths = (currentPatient?.ageYears || 0) * 12 + (currentPatient?.ageMonths || 0);
+      const ageInMonths = calculateAgeInMonths(currentPatient);
       const isFast = (ageInMonths < 12 && rate >= 50) || (ageInMonths >= 12 && rate >= 40);
       
       if (assessmentData.respiratorySigns?.includes('शान्त रहेको बच्चामा स्ट्राइडर (Stridor in calm child)')) {
@@ -1876,9 +1905,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       }
       if (classifications.includes('Pneumonia')) {
         let amoxDose = '';
-        const ageYears = currentPatient?.ageYears || 0;
-        const ageMonths = currentPatient?.ageMonths || 0;
-        const totalMonths = ageYears * 12 + ageMonths;
+        const totalMonths = calculateAgeInMonths(currentPatient);
 
         if (weight >= 4 && weight < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
         else if (weight >= 6 && weight < 8) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
@@ -1935,7 +1962,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
         treatments.push('Follow-up in 5 days');
       }
       if (classifications.includes('Dysentery')) {
-        const ageInMonths = (currentPatient?.ageYears || 0) * 12 + (currentPatient?.ageMonths || 0);
+        const ageInMonths = calculateAgeInMonths(currentPatient);
         let ciproDose = '';
         
         if (ageInMonths < 6) {
@@ -1965,9 +1992,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       }
       if (classifications.includes('Acute Ear Infection')) {
         let amoxDose = '';
-        const ageYears = currentPatient?.ageYears || 0;
-        const ageMonths = currentPatient?.ageMonths || 0;
-        const totalMonths = ageYears * 12 + ageMonths;
+        const totalMonths = calculateAgeInMonths(currentPatient);
 
         if (weight >= 4 && weight < 6) amoxDose = '250mg tab: 3/4 tab BD OR Syrup 125mg/5ml: 7.5 ml BD';
         else if (weight >= 6 && weight < 8) amoxDose = '250mg tab: 1 tab BD OR Syrup 125mg/5ml: 10 ml BD';
@@ -2057,9 +2082,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
       // Paracetamol for high fever or ear pain/infection
       const temp = parseFloat(assessmentData.temperature) || 0;
       if (temp >= 38.5 || assessmentData.earPain || classifications.includes('Acute Ear Infection')) {
-        const ageYears = currentPatient?.ageYears || 0;
-        const ageMonths = currentPatient?.ageMonths || 0;
-        const totalMonths = ageYears * 12 + ageMonths;
+        const totalMonths = calculateAgeInMonths(currentPatient);
         let pcmDose = '';
         
         // In Child module (2m-5y), we always give at least 5ml
@@ -2081,14 +2104,7 @@ export const CBIMNCISewa: React.FC<CBIMNCISewaProps> = ({
     const weight = parseFloat(assessmentData.weight);
     
     // Calculate precise age in months
-    const today = new Date();
-    const birthDate = currentPatient.dobAd ? new Date(currentPatient.dobAd) : null;
-    let ageMonths = (currentPatient.ageYears || 0) * 12 + (currentPatient.ageMonths || 0);
-    
-    if (birthDate) {
-      const diffTime = Math.abs(today.getTime() - birthDate.getTime());
-      ageMonths = diffTime / (1000 * 60 * 60 * 24 * 30.44);
-    }
+    const ageMonths = calculateAgeInMonths(currentPatient);
 
     // More granular WHO Weight-for-Age Z-score (WAZ) logic (Approximate Median and SD)
     const wazData: any = {
